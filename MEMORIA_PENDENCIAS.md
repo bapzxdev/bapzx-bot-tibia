@@ -31,6 +31,16 @@ Atualizar sempre que algo mudar de estado.
 
 ## Qualidade / docs
 
+- [ ] **Loop do formato compacto RESOLVIDO (12/09, v1.14.13)** — dono digitou
+      "inmortals - 1250 - pix" e o bot nao reconhecia (caia na IA, que respondia
+      a saudacao fixa para "sim"). Parser tolerante implementado (fallback de
+      quantidade/char, dicas no looks_like_order, bloqueio de pedido sem qtd/char).
+      Validado ao vivo: mensagem compacta -> CONFIRMAÇÃO DO PEDIDO -> "sim" ->
+      pedido 49 (inmortals, 1250, R$112,50) + QR MP pending. Pedido 48 foi o
+      "lixo" (char/tc null) que o bloqueio agora evita. A confirmar com o dono:
+      repetir o fluxo no celular para conferir a experiência real.
+- [ ] **Limpeza de pedidos de teste 22/32/33/34/35/36/37/38/47/48/49** (chat do
+      dono) — todos pendentes no Supabase.
 - [ ] Conferir visualmente a **resposta da IA em atendimento real** (o pedido
       grava certo; falta confirmar a qualidade da resposta no chat, pois o
       Google Login mudou o fluxo).
