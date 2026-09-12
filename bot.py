@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.7"
+VERSION = "1.14.8"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -159,10 +159,13 @@ COMPRA_TEXT = (
 )
 
 SITE_TEXT = (
-    "Site da BAPZX:\n"
-    f"{PORTFOLIO_URL}\n\n"
-    "Lá você encontra informações sobre a RUBINI COINS e os services BAPZX.\n"
-    "Para comprar RC, use /compra. Para falar com um atendente, use /vendedor."
+    "💰 Consulte a tabela de preços usando [/preco](tg://bot_command?command=preco).\n\n"
+    "⚡ Entrega em até 10 minutos após a confirmação do pagamento.\n\n"
+    "🌐 Site oficial da BAPZX:\n"
+    f"[{PORTFOLIO_URL}]({PORTFOLIO_URL})\n\n"
+    "No site, você encontra informações sobre as Rubini Coins (RC) e os Services da BAPZX.\n\n"
+    "🛒 Para comprar Rubini Coins, use [/compra](tg://bot_command?command=compra).\n\n"
+    "💬 Para falar com um atendente, use [/vendedor](tg://bot_command?command=vendedor)."
 )
 
 SERVICO_TEXT = (
@@ -239,8 +242,10 @@ def ask_ai(text):
     return f"IA ocupada, tente em instantes. ({last})"
 
 
-def send_message(chat_id, text, reply_markup=None):
+def send_message(chat_id, text, reply_markup=None, parse_mode=None):
     payload = {"chat_id": chat_id, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
     if reply_markup:
         payload["reply_markup"] = reply_markup
     try:
@@ -747,13 +752,14 @@ def webhook():
         elif cb_data == "menu_servico":
             send_message(cb_chat_id, SERVICO_TEXT)
         elif cb_data == "menu_site":
-            send_message(cb_chat_id, SITE_TEXT)
+            send_message(cb_chat_id, SITE_TEXT, parse_mode="Markdown")
         elif cb_data == "menu_info":
             send_message(cb_chat_id, ABOUT_TEXT)
         elif cb_data == "menu_vendedor":
             reply_vendor(cb_chat_id, cb_username)
         elif cb_data == "menu_comprar":
             send_message(cb_chat_id, COMPRA_TEXT)
+            send_message(cb_chat_id, SITE_TEXT, parse_mode="Markdown")
         return "ok", 200
 
     message = update.get("message") or {}
@@ -788,11 +794,12 @@ def webhook():
         return "ok", 200
 
     if command == "/site":
-        send_message(chat_id, SITE_TEXT)
+        send_message(chat_id, SITE_TEXT, parse_mode="Markdown")
         return "ok", 200
 
     if command == "/compra":
         send_message(chat_id, COMPRA_TEXT)
+        send_message(chat_id, SITE_TEXT, parse_mode="Markdown")
         return "ok", 200
 
     if command == "/vendedor":
