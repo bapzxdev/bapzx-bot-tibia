@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no Ãºltimo check-out)
 
-- Onde paramos: v1.14.7 (12/09, fechamento da sessao): nova mensagem de entrada de compra a pedido do dono - COMPRA_TEXT reescrito exatamente no formato pedido ("🛒 COMPRAR RUBINI COINS (RC) ... informe os 3 dados: 1 char, 2 quantidade, 3 pagamento Pix; exemplo sem mundo; /preco; entrega 10min"). Prompt da IA alinhado (3 dados obrigatorios, sem mundo). Obs.: o parser continua aceitando mundo se o cliente escrever (ex.: "mundo pacera"); a confirmacao manual mostra "Mundo: -" quando o cliente nao informa. Deploy no Render confirmado (/health v1.14.7; /compra ao vivo 200). Vem da v1.14.6 (errorhandler global que loga + avisa o dono no Telegram quando algum endpoint da 500; char_sim voltou 200 ao vivo; 500 era intermitente aparentemente por rede do Telegram, blindado no v1.14.5) e v1.14.4/portfolio v3.1 (ver log do ROADMAP). Pendentes: limpeza dos pedidos de teste 22/32/33/35/36 no Supabase (chat do dono); publish Google OAuth; Fase C/1a venda vetadas pelo dono.
+- Onde paramos: v1.14.8 (12/09, fechamento): a pedido do dono, a sequencia de compra agora tem 2 mensagens - (1) COMPRA_TEXT (v1.14.7: "🛒 COMPRAR RUBINI COINS (RC) ... 3 dados: char, quantidade, pagamento Pix; exemplo; /preco; entrega 10min") e (2) nova mensagem com links clicaveis Markdown (preco, entrega 10min, Site oficial BAPZX com link, compra e vendedor) - implementada como novo SITE_TEXT e enviada apos o COMPRA_TEXT em /compra e menu_comprar; /site e menu_site tambem usam o novo SITE_TEXT. send_message ganhou parametro parse_mode (Markdown). Deploy confirmado (/health v1.14.8); Marido: o Markdown foi validado direto na API do Telegram (sendMessage parse_mode=Markdown -> HTTP 200) e a 2a mensagem ja chegou no chat do dono. Parser de pedido continua aceitando "mundo X" se o cliente escrever. Pendentes: limpeza pedidos de teste 22/32/33/35/36; publish Google OAuth; Fase C/1a venda vetadas. Historico v1.14.6: errorhandler global (loga + avisa dono em 500) e fluxo completo validado ao vivo; v1.14.5: Telegram helpers blindados; v1.14.4: textos "BAPZX revende Rubini Coins".
 - Proximo passo: conferir no Telegram as respostas com a nova mensagem de entrada (v1.14.7) e ajustar se desejar; monitorar 'ERRO 500' via errorhandler; depois limpar pedidos de teste (22/32/33/35/36) e decidir o publish do Google OAuth + 1a venda real.
-- Arquivos tocados: bot.py (VERSION 1.14.7, COMPRA_TEXT novo com 3 dados, prompt da IA alinhado, errorhandler global v1.14.6, try/except nas chamadas Telegram v1.14.5, textos BAPZX revenda v1.14.4), persona.txt, test_v170 (21 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP; portfolio v3.1.
+- Arquivos tocados: bot.py (VERSION 1.14.8, SITE_TEXT com links Markdown + parse_mode, sequencia COMPRA_TEXT+SITE_TEXT em /compra e menu_comprar; COMPRA_TEXT 3 dados v1.14.7; errorhandler global v1.14.6; try/except Telegram v1.14.5; textos BAPZX revenda v1.14.4), persona.txt, test_v170 (21 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP; portfolio v3.1.
 - Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram.)
 - Dias restantes: 9 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-VersÃ£o atual do bot: 1.14.7.
+VersÃ£o atual do bot: 1.14.8.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 
