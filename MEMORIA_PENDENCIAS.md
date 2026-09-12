@@ -39,7 +39,13 @@ Atualizar sempre que algo mudar de estado.
       pedido 49 (inmortals, 1250, R$112,50) + QR MP pending. Pedido 48 foi o
       "lixo" (char/tc null) que o bloqueio agora evita. A confirmar com o dono:
       repetir o fluxo no celular para conferir a experiência real.
-- [ ] **Limpeza de pedidos de teste 22/32/33/34/35/36/37/38/47/48/49** (chat do
+- [ ] **API do RubiNot REMOVIDA (12/09, v1.14.14)** — pedido do dono (muito
+      empenho entrar em contato com a staff). Confirmacao agora usa o char
+      digitado pelo cliente, sem consulta externa; curl_cffi fora do
+      requirements. Validado ao vivo: "inmortals - 1250 - pix" ->
+      CONFIRMAÇÃO DO PEDIDO -> "sim" -> pedido 51 + QR MP pending. Removida
+      tambem a pendencia de contatar a staff do RubiNot.
+- [ ] **Limpeza de pedidos de teste 22/32/33/34/35/36/37/38/47/48/49/50/51** (chat do
       dono) — todos pendentes no Supabase.
 - [ ] Conferir visualmente a **resposta da IA em atendimento real** (o pedido
       grava certo; falta confirmar a qualidade da resposta no chat, pois o
@@ -52,8 +58,9 @@ Atualizar sempre que algo mudar de estado.
 - [ ] **Teste ao vivo (v1.13.0)** — FEITO: webhook com secret validado, confirmacao manual
     (SIM salva / NAO cancela) testada ao vivo com Inmortals e Rei Leao.
     RubiNot 403 a partir do Render (IP de datacenter bloqueado) -> fallback
-    manual implementado. Pendente: publicar app Google, revisar manual.txt
-    e decidir se contata staff do RubiNot para liberar acesso API.
+    manual implementado. ENCERRADO 12/09 (v1.14.14): API do RubiNot removida
+    a pedido do dono; confirmacao usa o char digitado. Pendente: publicar
+    app Google e revisar manual.txt.
 
 - [x] **Teste ao vivo v1.14.0 (CONCLUÍDO 12/09, v1.14.6)** — migração
     `supabase_migracao_v114.sql` aplicada e verificada (feedback/feedback_score OK).

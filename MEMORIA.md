@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no Ãºltimo check-out)
 
-- Onde paramos: v1.14.13 (12/09, fechamento): PARSER TOLERANTE a formatos compactos, corrigindo o loop ao vivo (dono digitou "inmortals - 1250 - pix"; antes nao passava no parse e caia na IA que respondia com a saudacao fixa para "sim"). v1.14.13: parse_amount com fallback p/ numero "pelado"; extracao de char com fallback (remove numeros/stop-words/palavras de intencao, evita pegar "saber"/"antica" como char); looks_like_order aceita numero + dica (pix/pagamento/rc/tc/coins); BLOQUEIO de pedido incompleto: mensagem sem qtd OU char agora pergunta o dado faltante em vez de salvar lixo (pedido 48 foi esse lixo, char=None). Antes: v1.14.12 saudacao fixa da IA; v1.14.11 confirmacao sem tracos/linha extra; v1.14.10 CONFIRMACAO DO PEDIDO padrao + QR na hora + e-mail padrao. Validado ao vivo: "inmortals - 1250 - pix" -> CONFIRMACAO DO PEDIDO; "sim" -> pedido 49 salvo (inmortals, 1250, R$112,50, Pix) + cobranca MP pending R$112,50 com QR (173 chars). Suite v170 28 OK? (contagem), test_rubinot_v112 alinhado ao novo padrão (bloqueio sem char, CONFIRMAÇÃO DO PEDIDO), test_parse_rc/test_auth/test_planilha verdes. Pendentes: limpeza pedidos de teste 22/32/33/34/35/36/37/38/47/48/49; publish Google OAuth; Fase C/1a venda vetadas.
-- Proximo passo: pedir ao dono para repetir o teste real no celular ("inmortals - 1250 - pix" + "sim") e confirmar que o QR chega; depois limpar pedidos de teste (…/48/49) e decidir publish do Google OAuth + 1a venda real.
-- Arquivos tocados: bot.py (VERSION 1.14.13; INTENT_WORDS, _char_fallback, parse_amount com fallback bare-number, extract_order_details com fallback de char, looks_like_order com dicas, guarda de pedido incompleto no caminho direto ~linha 1020), test_v170 (28 checagens com compacto+bloqueio), test_rubinot_v112 alinhado, MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP.
-- Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram; RubiNot segue 403/Cloudflare do Render -> confirmacao manual e o caminho esperado.)
+- Onde paramos: v1.14.14 (12/09, fechamento): API do RUBINOT REMOVIDA a pedido do dono (seria muito empenho entrar em contato com a staff; /health e o fluxo rodaram perfeito). Removidos: RUBINOT_CHAR_URL/RUBINOT_VALIDATE/RUBINOT_UA, funcao rubinot_char_info, ramos de validacao no caminho de pedido, override de char/mundo por dados oficiais em _finalizar_confirmacao_char. curl_cffi sai do requirements. Comportamento atual: pedido com char -> CONFIRMACAO DO PEDIDO com o CHAR DIGITADO + botoes SIM/NÃO (sem consulta externa); sim -> salva com char como digitado + QR na hora. Nunca salva pedido sem qtd/char (pergunta o dado faltante - v1.14.13). Validado ao vivo: "inmortals - 1250 - pix" -> confirmacao; "sim" -> pedido 51 (inmortals, 1250, R$112,50) + cobranca MP pending com QR. Suites verdes: v170 27 OK, rubinot (renomeada na pratica p/ confirmacao sem API; 12 checagens), parse_rc, auth, planilha. Pendentes: limpeza pedidos de teste 22/32/33/34/35/36/37/38/47/48/49/50/51; publish Google OAuth; Fase C/1a venda vetadas.
+- Proximo passo: pedir ao dono para repetir no celular ("inmortals - 1250 - pix" + "sim") confirmando que o QR chega com o formato sem consulta; limpar pedidos de teste; decidir publish Google OAuth + 1a venda.
+- Arquivos tocados: bot.py (VERSION 1.14.14; RubiNot removido; confirmacao com char digitado), requirements.txt (curl_cffi fora), test_v170 (27 checagens), test_rubinot_v112 (reescrito: confirmacao sem API), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP.
+- Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram.)
 - Dias restantes: 9 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-VersÃ£o atual do bot: 1.14.13.
+VersÃ£o atual do bot: 1.14.14.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 
