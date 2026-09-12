@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.8"
+VERSION = "1.14.9"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -122,9 +122,9 @@ MODELS = [
 PRICES = {
     100: "R$9,00",
     250: "R$22,50",
-    500: "R$45",
-    1000: "R$90",
-    2500: "R$225",
+    500: "R$45,00",
+    1000: "R$90,00",
+    2500: "R$225,00",
 }
 
 HELP_TEXT = (
@@ -180,10 +180,26 @@ SERVICO_TEXT = (
 
 
 def price_table_text():
-    lines = [f"TABELA DE PREÇOS - Rubini Coins (RC) - BAPZX"]
+    return (
+        "🪙 TABELA DE PREÇOS — BAPZX COINS\n\n"
+        "100 RC  — R$ 9,00\n"
+        "250 RC  — R$ 22,50\n"
+        "500 RC  — R$ 45,00\n"
+        "1.000 RC — R$ 90,00\n"
+        "2.500 RC — R$ 225,00\n\n"
+        "💳 Pagamento: Pix\n\n"
+        "⚡ Entrega:\n"
+        "Trade in-game em até 10 minutos após a confirmação do pagamento.\n\n"
+        "🛒 Para comprar, use /compra\n"
+        "💬 Atendimento: /vendedor"
+    )
+
+
+def price_table_compact():
+    lines = []
     for value, price in PRICES.items():
-        lines.append(f"  {value} RC - {price}")
-    lines.append('\nPagamento: Pix. Entrega: Trade in-game em até 10 min após o pagamento confirmado.')
+        qtd = f"{value:,}".replace(",", ".")
+        lines.append(f"  {qtd} RC - {price}")
     return "\n".join(lines)
 
 
@@ -207,7 +223,7 @@ def ask_ai(text):
         return "IA nao configurada (sem GOOGLE_API_KEY)."
     client = genai.Client(api_key=key)
     persona = load_persona()
-    tabela = price_table_text()
+    tabela = price_table_compact()
     prompt = (
         f"{persona}\n\n"
         f"TABELA DE PREÇOS OFICIAL (use EXATAMENTE estes valores, nunca outros):\n"
