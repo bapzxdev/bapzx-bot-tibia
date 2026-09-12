@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.4"
+VERSION = "1.14.5"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -241,21 +241,30 @@ def send_message(chat_id, text, reply_markup=None):
     payload = {"chat_id": chat_id, "text": text}
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    requests.post(f"{BASE}/sendMessage", json=payload, timeout=15)
+    try:
+        requests.post(f"{BASE}/sendMessage", json=payload, timeout=15)
+    except Exception as error:
+        print(f"[telegram] sendMessage falhou ({chat_id}): {error}")
 
 
 def answer_callback_query(callback_id, text=None):
     payload = {"callback_query_id": callback_id}
     if text:
         payload["text"] = text
-    requests.post(f"{BASE}/answerCallbackQuery", json=payload, timeout=15)
+    try:
+        requests.post(f"{BASE}/answerCallbackQuery", json=payload, timeout=15)
+    except Exception as error:
+        print(f"[telegram] answerCallbackQuery falhou ({callback_id}): {error}")
 
 
 def edit_message_reply_markup(chat_id, message_id, reply_markup=None):
     payload = {"chat_id": chat_id, "message_id": message_id}
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    requests.post(f"{BASE}/editMessageReplyMarkup", json=payload, timeout=15)
+    try:
+        requests.post(f"{BASE}/editMessageReplyMarkup", json=payload, timeout=15)
+    except Exception as error:
+        print(f"[telegram] editMessageReplyMarkup falhou ({chat_id}): {error}")
 
 
 def _finalizar_confirmacao_char(chat_id, confirmado):
