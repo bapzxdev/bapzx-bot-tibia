@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.9"
+VERSION = "1.14.10"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -22,7 +22,7 @@ SERVICE_NAME = "Service BAPZX"
 SERVICE_PRICE = "R$20 por hora"
 SERVICE_WHATSAPP_DISPLAY = "(19) 99181-3598"
 SERVICE_WHATSAPP_LINK = "https://wa.me/5519991813598"
-DELIVERY_NOTE = 'Entrega: em até 10 minutos após a confirmação do pagamento, via trade no seu char.'
+DELIVERY_NOTE = 'Entrega: enviada em até 10 minutos após a confirmação do pagamento.'
 
 if sys.platform == "win32":
     try:
@@ -139,7 +139,7 @@ HELP_TEXT = (
 
 ABOUT_TEXT = (
     "A BAPZX é a loja que revende Rubini Coins (RC) da RUBINI COINS: venda rápida e segura.\n"
-    "Pagamento via Pix e entrega por Trade in-game na sua world/char.\n"
+    "Pagamento via Pix e entrega enviada em até 10 minutos após a confirmação.\n"
     "Entrega em até 10 minutos após a confirmação do pagamento.\n"
     "Use /compra para comprar RC, /site para o site da loja, "
     "/servico para os services BAPZX, /vendedor para falar com um atendente humano "
@@ -189,7 +189,7 @@ def price_table_text():
         "2.500 RC — R$ 225,00\n\n"
         "💳 Pagamento: Pix\n\n"
         "⚡ Entrega:\n"
-        "Trade in-game em até 10 minutos após a confirmação do pagamento.\n\n"
+        "Será enviada em até 10 minutos após a confirmação do pagamento.\n\n"
         "🛒 Para comprar, use /compra\n"
         "💬 Atendimento: /vendedor"
     )
@@ -201,6 +201,38 @@ def price_table_compact():
         qtd = f"{value:,}".replace(",", ".")
         lines.append(f"  {qtd} RC - {price}")
     return "\n".join(lines)
+
+
+def confirmacao_pedido_text(entry):
+    qtd = entry.get("tc") or "-"
+    try:
+        qtd = f"{int(qtd):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        pass
+    preco = entry.get("preco") or "-"
+    if preco.startswith("R$") and not preco.startswith("R$ "):
+        preco = "R$ " + preco[2:]
+    return "\n".join([
+        "🪙 CONFIRMAÇÃO DO PEDIDO",
+        "",
+        f"- Valor: {qtd} RC",
+        f"- Preço: {preco}",
+        "- Forma de pagamento: Pix",
+        f"- Nome do personagem: {entry.get('char') or '-'}",
+        "",
+        "✅ Confira os dados acima para gerar o QR Code de pagamento.",
+        "",
+        "⚡ Após a confirmação do pagamento, será enviado em até 10 minutos.",
+    ])
+
+
+def _default_payer_email():
+    admin = load_env_key("ADMIN_EMAILS")
+    if admin:
+        first = admin.split(",")[0].strip()
+        if first:
+            return first
+    return "cliente@bapzx.com"
 
 
 def load_persona():
@@ -316,12 +348,13 @@ def _finalizar_confirmacao_char(chat_id, confirmado):
     notify_owner(entry)
     push_to_sheet(entry)
     if MP_ACCESS_TOKEN and entry.get("id"):
-        AWAITING_EMAIL[chat_id] = {"order_id": entry["id"], "ts": time.time()}
-        send_message(
-            chat_id,
-            'Pedido registrado! Já calculei o valor. Para gerar seu QR Code do Pix, '
-            "me responda com o seu e-mail (ex.: nome@exemplo.com).",
-        )
+        ok_pix, result = create_pix_charge(entry, _default_payer_email())
+        if ok_pix:
+            send_qr(chat_id, result, entry)
+            notify_owner_pix(result, entry)
+        else:
+            send_message(chat_id, 'Não consegui gerar o Pix agora. ' + result)
+            notify_payment(entry)
         return
     notify_payment(entry)
 
@@ -846,11 +879,11 @@ def webhook():
             if result == "nao encontrado":
                 send_message(chat_id, f"Não achei o pedido {order_id}.")
                 return "ok", 200
-            send_message(chat_id, f"Pedido {order_id} marcado como PAGO. Cliente avisado para combinar o trade.")
+            send_message(chat_id, f"Pedido {order_id} marcado como PAGO. Cliente avisado para combinar a entrega.")
             if order:
                 send_message(
                     order["chat_id"],
-                    "Seu pagamento foi CONFIRMADO. O atendente vai te chamar aqui para combinar o trade.\n"
+                    "Seu pagamento foi CONFIRMADO. O atendente vai te chamar aqui para combinar a entrega.\n"
                     'Preparado o char certo e on-line no horário combinado.',
                 )
             return "ok", 200
@@ -971,64 +1004,44 @@ def webhook():
                 return "ok", 200
             if status == "ok" and player:
                 nome = player.get("name") or entry["char"]
-                nivel = player.get("level")
-                vocacao = player.get("vocation")
                 mundo = player.get("world")
-                linhas = [
-                    f"Encontrei o personagem no RubiNot: {nome}",
-                ]
-                if nivel:
-                    linhas.append(f"  Level: {nivel}")
-                if vocacao:
-                    linhas.append(f"  Vocação: {vocacao}")
-                if mundo:
-                    linhas.append(f"  Mundo: {mundo}")
+                msg_confirm = confirmacao_pedido_text(dict(entry, char=nome))
                 if entry.get("mundo") and mundo and entry["mundo"].lower() != mundo.lower():
-                    linhas.append("")
-                    linhas.append(
-                        f"Você informou o mundo {entry['mundo']}, mas o personagem "
+                    msg_confirm += (
+                        f"\n\nVocê informou o mundo {entry['mundo']}, mas o personagem "
                         f"está no mundo {mundo}. Confirmar mesmo assim? (sim / não)"
                     )
-                else:
-                    linhas.append("")
-                    linhas.append('Confirma esse personagem para o pedido? (sim / não)')
                 AWAITING_CHAR[chat_id] = {
                     "entry": dict(entry),
                     "player": player,
                     "ts": time.time(),
                 }
-                send_message(chat_id, "\n".join(linhas), reply_markup=CONFIRM_KEYBOARD)
+                send_message(chat_id, msg_confirm, reply_markup=CONFIRM_KEYBOARD)
                 return "ok", 200
             if status == "erro":
-                linhas = [
-                    "Confirma este pedido antes de eu registrar?",
-                    f"  Char: {entry.get('char')}",
-                    f"  Mundo: {entry.get('mundo') or '-'}",
-                ]
-                if entry.get("tc"):
-                    linhas.append(f"  RC: {entry['tc']}")
-                if entry.get("preco"):
-                    linhas.append(f"  Valor: {entry['preco']}")
-                linhas.append("")
-                linhas.append("Confere os dados acima? Responda SIM ou NÃO.")
                 AWAITING_CHAR[chat_id] = {
                     "entry": dict(entry),
                     "player": {},
                     "ts": time.time(),
                 }
-                send_message(chat_id, "\n".join(linhas), reply_markup=CONFIRM_KEYBOARD)
+                send_message(
+                    chat_id,
+                    confirmacao_pedido_text(entry),
+                    reply_markup=CONFIRM_KEYBOARD,
+                )
                 return "ok", 200
 
         entry = save_order(entry)
         notify_owner(entry)
         push_to_sheet(entry)
         if MP_ACCESS_TOKEN and entry.get("id"):
-            AWAITING_EMAIL[chat_id] = {"order_id": entry["id"], "ts": time.time()}
-            send_message(
-                chat_id,
-                'Pedido registrado! Já calculei o valor. Para gerar seu QR Code do Pix, '
-                "me responda com o seu e-mail (ex.: nome@exemplo.com).",
-            )
+            ok_pix, result = create_pix_charge(entry, _default_payer_email())
+            if ok_pix:
+                send_qr(chat_id, result, entry)
+                notify_owner_pix(result, entry)
+            else:
+                send_message(chat_id, 'Não consegui gerar o Pix agora. ' + result)
+                notify_payment(entry)
             return "ok", 200
         notify_payment(entry)
 
@@ -1081,7 +1094,7 @@ def webhook_mp():
     owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
     send_message(
         order["chat_id"],
-        "Seu pagamento foi CONFIRMADO. O atendente vai te chamar aqui para combinar o trade.\n"
+        "Seu pagamento foi CONFIRMADO. O atendente vai te chamar aqui para combinar a entrega.\n"
         'Deixa o char certo on-line no horário combinado.',
     )
     if owner_chat:
@@ -1095,7 +1108,7 @@ def webhook_mp():
         if order.get("mundo"):
             linhas.append(f"Mundo: {order['mundo']}")
         linhas.append("Pagamento confirmado automaticamente via Mercado Pago.")
-        linhas.append(f"Chame o cliente para o trade e use /entregue {order_id}")
+        linhas.append(f"Chame o cliente para a entrega e use /entregue {order_id}")
         send_message(owner_chat, "\n".join(linhas))
     return "ok", 200
 
