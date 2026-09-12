@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.5"
+VERSION = "1.14.6"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -657,6 +657,23 @@ def security_headers(response):
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     return response
+
+
+@app.errorhandler(Exception)
+def _error500(error):
+    import traceback as tb
+
+    ext = tb.format_exc()
+    print("ERRO 500:", request.path, ext)
+    try:
+        dono = load_env_key("TELEGRAM_OWNER_CHAT_ID")
+        if dono:
+            linhas = ext.splitlines()
+            resumo = linhas[-2] if linhas else ""
+            send_message(dono, f"⚠️ ERRO 500 em {request.path}\n{resumo[:400]}")
+    except Exception:
+        pass
+    return "erro", 500
 
 GOOGLE_OAUTH_READY = False
 _oauth = None
