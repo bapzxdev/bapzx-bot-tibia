@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.6"
+VERSION = "1.14.7"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -147,13 +147,15 @@ ABOUT_TEXT = (
 )
 
 COMPRA_TEXT = (
-    "🛒 PARA COMPRAR RUBINI COINS (RC), me informe estes 4 dados:\n"
-    "1. Nome do char\n"
-    "2. Quantidade de Rubini Coins (RC)\n"
-    "3. Mundo\n"
-    "4. Forma de pagamento (Pix)\n\n"
-    "Exemplo: quero comprar 500 rc, mundo pacera, char Teste, pagamento pix\n\n"
-    "Veja a tabela de preços com /preco. Entrega em até 10 minutos após o pagamento."
+    "🛒 COMPRAR RUBINI COINS (RC)\n\n"
+    "Para realizar sua compra, informe os 3 dados abaixo:\n\n"
+    "1️⃣ Nome do char\n"
+    "2️⃣ Quantidade de Rubini Coins (RC)\n"
+    "3️⃣ Forma de pagamento: Pix\n\n"
+    "📝 Exemplo:\n"
+    "Quero comprar 500 RC, char Teste, pagamento Pix.\n\n"
+    "💰 Consulte os preços usando /preco\n\n"
+    "⚡ Entrega em até 10 minutos após a confirmação do pagamento."
 )
 
 SITE_TEXT = (
@@ -209,8 +211,8 @@ def ask_ai(text):
         f"{tabela}\n\n"
         "REGRAS DE RESPOSTA:\n"
         '- Nunca use asteriscos (*), negrito ou marcação de texto. Responda em texto simples.\n'
-        '- Quando o cliente quiser comprar, peça/confirme os 4 dados obrigatórios:\n'
-        "  nome do char, quantidade de RC, mundo e forma de pagamento (Pix).\n"
+        '- Quando o cliente quiser comprar, peça/confirme os 3 dados obrigatórios:\n'
+        "  nome do char, quantidade de RC e forma de pagamento (Pix).\n"
         '- O e-mail do cliente quem pede é o próprio sistema (depois de fechar o pedido);\n'
         '  não peça e-mail na conversa da IA.\n'
         "- Para calcular o valor de uma quantidade de TC fora da tabela acima, use a "
