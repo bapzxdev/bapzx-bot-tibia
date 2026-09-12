@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.11"
+VERSION = "1.14.12"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
