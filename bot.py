@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.10"
+VERSION = "1.14.11"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -215,13 +215,12 @@ def confirmacao_pedido_text(entry):
     return "\n".join([
         "🪙 CONFIRMAÇÃO DO PEDIDO",
         "",
-        f"- Valor: {qtd} RC",
-        f"- Preço: {preco}",
-        "- Forma de pagamento: Pix",
-        f"- Nome do personagem: {entry.get('char') or '-'}",
+        f"Valor: {qtd} RC",
+        f"Preço: {preco}",
+        "Forma de pagamento: Pix",
+        f"Nome do personagem: {entry.get('char') or '-'}",
         "",
         "✅ Confira os dados acima para gerar o QR Code de pagamento.",
-        "",
         "⚡ Após a confirmação do pagamento, será enviado em até 10 minutos.",
     ])
 
