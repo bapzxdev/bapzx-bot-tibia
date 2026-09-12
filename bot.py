@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.12"
+VERSION = "1.14.13"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -406,9 +406,33 @@ def parse_amount(text):
         text,
         re.IGNORECASE,
     )
-    if not m:
-        return None
-    return int(m.group(1).replace(".", "").replace(",", ""))
+    if m:
+        return int(m.group(1).replace(".", "").replace(",", ""))
+    m2 = re.search(r"\b(\d{1,4}(?:[.,]\d{3})?)\b", text)
+    if m2:
+        return int(m2.group(1).replace(".", "").replace(",", ""))
+    return None
+
+
+INTENT_WORDS = {
+    "quero", "quer", "querendo", "querendo", "gostaria", "vou", "preciso",
+    "precisava", "queria", "comprar", "compra", "comprando", "compras",
+    "pedindo", "pedir", "pedido", "fazer", "passo", "to", "estou", "me",
+    "pro", "pra", "para", "do", "da", "de", "em", "no", "na", "dos", "das",
+    "um", "uma", "meu", "minha", "o", "a", "e", "se", "seu", "sua", "vc",
+    "voce", "quanto", "custa", "valor", "vale", "seria", "fica", "eh", "e",
+    "saber", "ajuda", "duvida", "exemplo", "numero", "mais", "so", "somar",
+}
+
+
+def _char_fallback(text):
+    lower = re.sub(r"\d[\d.,]*", " ", text.lower())
+    tokens = re.findall(r"[a-z\u00e0-\u00ff]{2,}", lower)
+    keep = [t for t in tokens
+            if t not in CHAR_STOP_WORDS
+            and t not in INTENT_WORDS
+            and t not in ("rc", "tc", "coins", "rubini", "tibia", "pix")]
+    return " ".join(keep[:3]) or None
 
 
 def calc_price(tc):
@@ -444,7 +468,7 @@ def extract_order_details(text, pagamento=None):
         "preco": calc_price(tc) if tc else None,
         "pagamento": pagamento or ("Pix" if "pix" in lower else None),
         "mundo": mundo.group(1) if mundo else None,
-        "char": clean_char(char.group(1)) if char else None,
+        "char": clean_char(char.group(1)) if char else _char_fallback(text),
     }
 
 
@@ -651,9 +675,13 @@ def apply_status(order_id, status, ts_field=None):
 
 def looks_like_order(text):
     lower = text.lower()
-    markers = ["quero", "vou querer", "queria comprar", "confirm", "pode fechar",
-               "comprar", "fechado", "vou levar", "vou pegar", "pedido", "to comprando"]
-    return any(marker in lower for marker in markers)
+    markers = ["quero", "vou querer", "queria comprar", "pode fechar",
+               "comprar", "fechado", "vou levar", "vou pegar", "to comprando"]
+    if any(marker in lower for marker in markers):
+        return True
+    has_num = re.search(r"\d{1,4}(?:[.,]\d{3})?", lower) is not None
+    hints = ("pix", "pagamento", "rc", " tc ", " coi", "coins")
+    return has_num and any(h in lower for h in hints)
 
 
 def rate_limited(chat_id):
@@ -992,6 +1020,19 @@ def webhook():
 
     if chat_type == "private" and looks_like_order(text):
         entry = build_order(chat_id, username, text)
+        if not entry.get("tc") and not entry.get("char"):
+            send_message(
+                chat_id,
+                "Consegui ver que você quer comprar, mas faltou a quantidade de RC e o char. "
+                'Manda assim: "500 rc, char Teste, pagamento pix".',
+            )
+            return "ok", 200
+        if not entry.get("tc"):
+            send_message(chat_id, "Me diz a quantidade de Rubini Coins (ex.: 500 rc).")
+            return "ok", 200
+        if not entry.get("char"):
+            send_message(chat_id, "Me diz o nome do personagem (ex.: inmortals).")
+            return "ok", 200
         if entry.get("char") and RUBINOT_VALIDATE:
             player, status = rubinot_char_info(entry["char"])
             if status == "nao_encontrado":
