@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no Ãºltimo check-out)
 
-- Onde paramos: v1.14.9 (12/09, fechamento): /preco reescrito no formato pedido pelo dono ("🪙 TABELA DE PREÇOS — BAPZX COINS; 100 RC — R$ 9,00 ... 2.500 RC — R$ 225,00; 💳 Pix; ⚡ Trade in-game em até 10 min; 🛒 /compra; 💬 /vendedor"). PrECOS atualizados com ",00" (R$45->R$45,00 etc.) p/ consistencia com pagamento/confirmacao. Prompt da IA agora usa tabela COMPACTA separada (price_table_compact) - a apresentacao com emojis nao vai pro prompt. /preco e menu_preco usam o novo texto. Deploy OK (/health v1.14.9; /preco ao vivo 200). Vem da v1.14.8 (sequencia de compra com 2 mensagens: COMPRA_TEXT + SITE_TEXT com links Markdown validado na API Telegram). Pendentes: limpeza pedidos de teste 22/32/33/35/36; publish Google OAuth; Fase C/1a venda vetadas.
+- Onde paramos: v1.14.10 (12/09, fechamento): a pedido do dono, (a) mensagem de confirmacao do pedido reescrita no formato padrao POSIÇÃO ("🪙 CONFIRMAÇÃO DO PEDIDO - Valor/Preço/Forma/Pix/Nome do personagem + ✅ Confira os dados acima para gerar o QR Code de pagamento + ⚡ Após a confirmação do pagamento, será enviado em até 10 minutos") via helper confirmacao_pedido_text, usado nos dois caminhos (RubiNot ok e fallback erro); (b) o QR PASSOU a ser gerado IMEDIATAMENTE ao confirmar (SIM) - removido o passo de pedir e-mail ao cliente; create_pix_charge agora usa e-mail padrao (_default_payer_email: primeiro endereco de ADMIN_EMAILS do .env, senão cliente@bapzx.com); (c) removido "trade in-game" dos textos voltados ao cliente: /preco ("Será enviada em até 10 min..."), DELIVERY_NOTE ("Entrega: enviada em até 10 minutos...") e mensagens de pagamento confirmado ("combinar a entrega"). Validado ao vivo: pedido -> confirmacao padrao -> SIM -> cobrança MP criada (pedido 47, pending R$45, QR enviado). Suite v170 atualizada p/ novo fluxo (22 OK). Pendentes: limpeza pedidos de teste 22/32/33/34/35/36/37/38/47; publish Google OAuth; Fase C/1a venda vetadas. Historico: v1.14.9 tabela /preco; v1.14.8 sequencia 2 mensagens com links; v1.14.7 COMPRA_TEXT 3 dados.
 - Proximo passo: conferir no Telegram as respostas com a nova mensagem de entrada (v1.14.7) e ajustar se desejar; monitorar 'ERRO 500' via errorhandler; depois limpar pedidos de teste (22/32/33/35/36) e decidir o publish do Google OAuth + 1a venda real.
-- Arquivos tocados: bot.py (VERSION 1.14.9, price_table_text novos - tabela de precos formatada - e price_table_compact p/ prompt IA, PRICES com ,00; SITE_TEXT links Markdown + parse_mode v1.14.8; COMPRA_TEXT 3 dados v1.14.7; errorhandler v1.14.6; try/except Telegram v1.14.5; textos BAPZX revenda v1.14.4), persona.txt, test_v170 (21 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP; portfolio v3.1.
+- Arquivos tocados: bot.py (VERSION 1.14.10, confirmacao_pedido_text + _default_payer_email, QR imediato apos confirmar nos 2 caminhos, DELIVERY_NOTE/ABOUT/price_table/mensagens pagamento sem 'trade'; price_table novo v1.14.9; SITE_TEXT links v1.14.8; COMPRA_TEXT 3 dados v1.14.7), persona.txt, test_v170 (22 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP; portfolio v3.1.
 - Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram.)
 - Dias restantes: 9 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-VersÃ£o atual do bot: 1.14.9.
+VersÃ£o atual do bot: 1.14.10.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 
