@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no Ãºltimo check-out)
 
-- Onde paramos: v1.14.8 (12/09, fechamento): a pedido do dono, a sequencia de compra agora tem 2 mensagens - (1) COMPRA_TEXT (v1.14.7: "🛒 COMPRAR RUBINI COINS (RC) ... 3 dados: char, quantidade, pagamento Pix; exemplo; /preco; entrega 10min") e (2) nova mensagem com links clicaveis Markdown (preco, entrega 10min, Site oficial BAPZX com link, compra e vendedor) - implementada como novo SITE_TEXT e enviada apos o COMPRA_TEXT em /compra e menu_comprar; /site e menu_site tambem usam o novo SITE_TEXT. send_message ganhou parametro parse_mode (Markdown). Deploy confirmado (/health v1.14.8); Marido: o Markdown foi validado direto na API do Telegram (sendMessage parse_mode=Markdown -> HTTP 200) e a 2a mensagem ja chegou no chat do dono. Parser de pedido continua aceitando "mundo X" se o cliente escrever. Pendentes: limpeza pedidos de teste 22/32/33/35/36; publish Google OAuth; Fase C/1a venda vetadas. Historico v1.14.6: errorhandler global (loga + avisa dono em 500) e fluxo completo validado ao vivo; v1.14.5: Telegram helpers blindados; v1.14.4: textos "BAPZX revende Rubini Coins".
+- Onde paramos: v1.14.9 (12/09, fechamento): /preco reescrito no formato pedido pelo dono ("🪙 TABELA DE PREÇOS — BAPZX COINS; 100 RC — R$ 9,00 ... 2.500 RC — R$ 225,00; 💳 Pix; ⚡ Trade in-game em até 10 min; 🛒 /compra; 💬 /vendedor"). PrECOS atualizados com ",00" (R$45->R$45,00 etc.) p/ consistencia com pagamento/confirmacao. Prompt da IA agora usa tabela COMPACTA separada (price_table_compact) - a apresentacao com emojis nao vai pro prompt. /preco e menu_preco usam o novo texto. Deploy OK (/health v1.14.9; /preco ao vivo 200). Vem da v1.14.8 (sequencia de compra com 2 mensagens: COMPRA_TEXT + SITE_TEXT com links Markdown validado na API Telegram). Pendentes: limpeza pedidos de teste 22/32/33/35/36; publish Google OAuth; Fase C/1a venda vetadas.
 - Proximo passo: conferir no Telegram as respostas com a nova mensagem de entrada (v1.14.7) e ajustar se desejar; monitorar 'ERRO 500' via errorhandler; depois limpar pedidos de teste (22/32/33/35/36) e decidir o publish do Google OAuth + 1a venda real.
-- Arquivos tocados: bot.py (VERSION 1.14.8, SITE_TEXT com links Markdown + parse_mode, sequencia COMPRA_TEXT+SITE_TEXT em /compra e menu_comprar; COMPRA_TEXT 3 dados v1.14.7; errorhandler global v1.14.6; try/except Telegram v1.14.5; textos BAPZX revenda v1.14.4), persona.txt, test_v170 (21 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP; portfolio v3.1.
+- Arquivos tocados: bot.py (VERSION 1.14.9, price_table_text novos - tabela de precos formatada - e price_table_compact p/ prompt IA, PRICES com ,00; SITE_TEXT links Markdown + parse_mode v1.14.8; COMPRA_TEXT 3 dados v1.14.7; errorhandler v1.14.6; try/except Telegram v1.14.5; textos BAPZX revenda v1.14.4), persona.txt, test_v170 (21 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP; portfolio v3.1.
 - Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram.)
 - Dias restantes: 9 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-VersÃ£o atual do bot: 1.14.8.
+VersÃ£o atual do bot: 1.14.9.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 
