@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.3"
+VERSION = "1.14.4"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -138,7 +138,7 @@ HELP_TEXT = (
 )
 
 ABOUT_TEXT = (
-    "RUBINI COINS é a loja de Rubini Coins (RC) da BAPZX: venda rápida e segura.\n"
+    "A BAPZX é a loja que revende Rubini Coins (RC) da RUBINI COINS: venda rápida e segura.\n"
     "Pagamento via Pix e entrega por Trade in-game na sua world/char.\n"
     "Entrega em até 10 minutos após a confirmação do pagamento.\n"
     "Use /compra para comprar RC, /site para o site da loja, "
@@ -673,6 +673,9 @@ STORE = OrderStore(
     key=load_env_key("SUPABASE_KEY"),
 )
 
+print(f"[start] v{VERSION} | STORE.remote={bool(STORE.remote)}")
+print(f"[start] TELEGRAM_OWNER_CHAT_ID={load_env_key('TELEGRAM_OWNER_CHAT_ID')!r}")
+
 
 @app.route("/", methods=["GET"])
 def home():
@@ -775,6 +778,7 @@ def webhook():
     if command in ("/pago", "/entregue"):
         owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
         if str(chat_id) != str(owner_chat):
+            print(f"[owner] {command} recusado: chat={chat_id} | TELEGRAM_OWNER_CHAT_ID={owner_chat!r}")
             send_message(chat_id, 'Comando indisponível. Se precisar, use /vendedor.')
             return "ok", 200
         parts = text.strip().split()
@@ -821,6 +825,7 @@ def webhook():
     if command == "/relatorio":
         owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
         if str(chat_id) != str(owner_chat):
+            print(f"[owner] /relatorio recusado: chat={chat_id} | TELEGRAM_OWNER_CHAT_ID={owner_chat!r}")
             send_message(chat_id, 'Comando indisponível. Se precisar, use /vendedor.')
             return "ok", 200
         send_message(chat_id, relatorio_mensal())
