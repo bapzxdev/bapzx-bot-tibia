@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.13"
+VERSION = "1.14.14"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -84,9 +84,6 @@ EMAIL_RE = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
 CHAT_HISTORY = {}
 EMAIL_EXPIRY_SECONDS = 30 * 60
 CHAR_EXPIRY_SECONDS = 15 * 60
-RUBINOT_CHAR_URL = "https://rubinot.com.br/api/characters/search"
-RUBINOT_VALIDATE = (load_env_key("RUBINOT_VALIDATE") or "1").lower() not in ("0", "false", "no", "off")
-RUBINOT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"
 CHAR_YES_WORDS = {"sim", "confirmo", "confirmar", "pode", "pode confirmar", "ok", "isso", "afirmativo", "yes", "ss"}
 AWAITING_FEEDBACK = {}
 FEEDBACK_EXPIRY_SECONDS = 7 * 24 * 60 * 60
@@ -338,11 +335,6 @@ def _finalizar_confirmacao_char(chat_id, confirmado):
         )
         return
     entry = pending.get("entry") or {}
-    player = pending.get("player") or {}
-    if player.get("name"):
-        entry["char"] = player["name"]
-    if player.get("world"):
-        entry["mundo"] = player["world"]
     entry = save_order(entry)
     notify_owner(entry)
     push_to_sheet(entry)
@@ -486,49 +478,6 @@ def build_order(chat_id, username, text):
 
 def save_order(entry):
     return STORE.save(entry)
-
-
-def rubinot_char_info(nome):
-    engines = ["requests"]
-    try:
-        import curl_cffi
-
-        engines.append("curl_cffi")
-    except Exception:
-        pass
-    for engine in engines:
-        try:
-            if engine == "curl_cffi":
-                from curl_cffi import requests as ccurl
-
-                response = ccurl.get(
-                    RUBINOT_CHAR_URL,
-                    params={"name": nome},
-                    impersonate="chrome",
-                    timeout=15,
-                )
-            else:
-                response = requests.get(
-                    RUBINOT_CHAR_URL,
-                    params={"name": nome},
-                    headers={"User-Agent": RUBINOT_UA},
-                    timeout=15,
-                )
-            if response.status_code == 200:
-                data = response.json()
-                player = data.get("player") or {}
-                if player and player.get("name"):
-                    return player, "ok"
-                return None, "nao_encontrado"
-            if response.status_code == 404:
-                return None, "nao_encontrado"
-            print(
-                f"[rubinot] char '{nome}' status {response.status_code} via {engine}: {str(response.text)[:200]}",
-                flush=True,
-            )
-        except Exception as error:
-            print(f"[rubinot] char '{nome}' erro via {engine}: {error}", flush=True)
-    return None, "erro"
 
 
 def payment_text(entry):
@@ -1033,43 +982,16 @@ def webhook():
         if not entry.get("char"):
             send_message(chat_id, "Me diz o nome do personagem (ex.: inmortals).")
             return "ok", 200
-        if entry.get("char") and RUBINOT_VALIDATE:
-            player, status = rubinot_char_info(entry["char"])
-            if status == "nao_encontrado":
-                send_message(
-                    chat_id,
-                    f"Não encontrei o personagem {entry['char']} no RubiNot. "
-                    "Confere o nome e tenta de novo?",
-                )
-                return "ok", 200
-            if status == "ok" and player:
-                nome = player.get("name") or entry["char"]
-                mundo = player.get("world")
-                msg_confirm = confirmacao_pedido_text(dict(entry, char=nome))
-                if entry.get("mundo") and mundo and entry["mundo"].lower() != mundo.lower():
-                    msg_confirm += (
-                        f"\n\nVocê informou o mundo {entry['mundo']}, mas o personagem "
-                        f"está no mundo {mundo}. Confirmar mesmo assim? (sim / não)"
-                    )
-                AWAITING_CHAR[chat_id] = {
-                    "entry": dict(entry),
-                    "player": player,
-                    "ts": time.time(),
-                }
-                send_message(chat_id, msg_confirm, reply_markup=CONFIRM_KEYBOARD)
-                return "ok", 200
-            if status == "erro":
-                AWAITING_CHAR[chat_id] = {
-                    "entry": dict(entry),
-                    "player": {},
-                    "ts": time.time(),
-                }
-                send_message(
-                    chat_id,
-                    confirmacao_pedido_text(entry),
-                    reply_markup=CONFIRM_KEYBOARD,
-                )
-                return "ok", 200
+        AWAITING_CHAR[chat_id] = {
+            "entry": dict(entry),
+            "ts": time.time(),
+        }
+        send_message(
+            chat_id,
+            confirmacao_pedido_text(entry),
+            reply_markup=CONFIRM_KEYBOARD,
+        )
+        return "ok", 200
 
         entry = save_order(entry)
         notify_owner(entry)
