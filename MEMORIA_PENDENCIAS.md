@@ -45,12 +45,17 @@ Atualizar sempre que algo mudar de estado.
     manual implementado. Pendente: publicar app Google, revisar manual.txt
     e decidir se contata staff do RubiNot para liberar acesso API.
 
-- [ ] **Teste ao vivo v1.14.0 (EM ANDAMENTO)** — migração `supabase_migracao_v114.sql`
-    APLICADA pelo dono e verificada (feedback/feedback_score OK via REST). Teste iniciado:
-    pedido TESTE-VIVO aceito no `/webhook` (200); callback `char_sim` retornou **HTTP 500**
-    em prod (sem exceção no repro local com mocks) — investigar com `save_order` real/logs
-    e retomar o fluxo: botoes inline SIM/NAO e menu [Comprar RC] [/site] [/info] no /start,
-    feedback pós-entrega, /relatorio (dono).
+- [x] **Teste ao vivo v1.14.0 (CONCLUÍDO 12/09, v1.14.6)** — migração
+    `supabase_migracao_v114.sql` aplicada e verificada (feedback/feedback_score OK).
+    Fluxo completo validado ao vivo no Supabase: order → char_sim → email →
+    `/pago` → `/entregue` → feedback (nota 5 + texto gravados). `/pago`/`/entregue`
+    voltaram a funcionar após o dono inserir `TELEGRAM_OWNER_CHAT_ID` na env do
+    Render (antes respondiam "Comando indisponível"). char_sim dava 500
+    INTERMITENTE após salvar (sem exceção local com Supabase real; suspeita:
+    timeout de rede do Telegram) → v1.14.5 blindou as chamadas ao Telegram e
+    v1.14.6 adicionou errorhandler global que loga e avisa o dono no Telegram
+    (última rodada: char_sim 200). Suite v170 reconstruída (21 checagens OK).
+    Pendente: **limpar pedidos de teste 22/32/33/35** (chat do dono).
 
 ## Concluído (manter como histórico; reabrir se voltar a aparecer)
 
