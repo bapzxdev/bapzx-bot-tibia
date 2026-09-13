@@ -39,6 +39,10 @@ Atualizar sempre que algo mudar de estado.
       pedido 49 (inmortals, 1250, R$112,50) + QR MP pending. Pedido 48 foi o
       "lixo" (char/tc null) que o bloqueio agora evita. A confirmar com o dono:
       repetir o fluxo no celular para conferir a experiência real.
+- [ ] **ERRO 500 em /webhook CORRIGIDO (12/09, v1.14.15)** — duplo toque/reenvio
+      do botão SIM fazia _finalizar_confirmacao_char rodar com AWAITING_CHAR
+      vazio → KeyError (reproduzido localmente) → 500. Guarda `if not pending`
+      no topo resolveu; validado ao vivo (2× char_sim → 200, sem novo pedido).
 - [ ] **API do RubiNot REMOVIDA (12/09, v1.14.14)** — pedido do dono (muito
       empenho entrar em contato com a staff). Confirmacao agora usa o char
       digitado pelo cliente, sem consulta externa; curl_cffi fora do

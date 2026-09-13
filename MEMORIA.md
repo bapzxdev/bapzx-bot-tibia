@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no Ãºltimo check-out)
 
-- Onde paramos: v1.14.14 (12/09, fechamento): API do RUBINOT REMOVIDA a pedido do dono (seria muito empenho entrar em contato com a staff; /health e o fluxo rodaram perfeito). Removidos: RUBINOT_CHAR_URL/RUBINOT_VALIDATE/RUBINOT_UA, funcao rubinot_char_info, ramos de validacao no caminho de pedido, override de char/mundo por dados oficiais em _finalizar_confirmacao_char. curl_cffi sai do requirements. Comportamento atual: pedido com char -> CONFIRMACAO DO PEDIDO com o CHAR DIGITADO + botoes SIM/NÃO (sem consulta externa); sim -> salva com char como digitado + QR na hora. Nunca salva pedido sem qtd/char (pergunta o dado faltante - v1.14.13). Validado ao vivo: "inmortals - 1250 - pix" -> confirmacao; "sim" -> pedido 51 (inmortals, 1250, R$112,50) + cobranca MP pending com QR. Suites verdes: v170 27 OK, rubinot (renomeada na pratica p/ confirmacao sem API; 12 checagens), parse_rc, auth, planilha. Pendentes: limpeza pedidos de teste 22/32/33/34/35/36/37/38/47/48/49/50/51; publish Google OAuth; Fase C/1a venda vetadas.
-- Proximo passo: pedir ao dono para repetir no celular ("inmortals - 1250 - pix" + "sim") confirmando que o QR chega com o formato sem consulta; limpar pedidos de teste; decidir publish Google OAuth + 1a venda.
-- Arquivos tocados: bot.py (VERSION 1.14.14; RubiNot removido; confirmacao com char digitado), requirements.txt (curl_cffi fora), test_v170 (27 checagens), test_rubinot_v112 (reescrito: confirmacao sem API), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP.
+- Onde paramos: v1.14.15 (12/09, fechamento): corrigido ERRO 500 em /webhook reportado pelo dono durante teste real. Causa: duplo toque/reenvio do botao SIM (ou "sim" com AWAITING_CHAR ja consumido) -> _finalizar_confirmacao_char processava pending vazio -> save_order({}) + notify_owner({}) -> KeyError. Correcao: guarda `if not pending: return` no topo. REPRODUZIDO localmente (KeyError 'chat_id') e validado ao vivo (2 callbacks char_sim -> 200, sem novo pedido). Vem da v1.14.14 (RubiNot removido a pedido do dono; confirmacao com char digitado). Suites verdes: v170 27 OK, rubinot (com checagens novas de duplo callback), parse_rc, auth, planilha. Pendentes: limpeza pedidos de teste 22/32/33/34/35/36/37/38/47/48/49/50/51; publish Google OAuth; Fase C/1a venda vetadas.
+- Proximo passo: pedir ao dono para repetir no celular o fluxo ("inmortals - 1250 - pix" + sim/SIM) certo de que o 500 sumiu; conferir se o site no celular ficou bom (sim, tem viewport+@media no bapzx-portfolio); limpar pedidos de teste; decidir publish Google OAuth + 1a venda.
+- Arquivos tocados: bot.py (VERSION 1.14.15; guarda de pending vazio em _finalizar_confirmacao_char), test_rubinot_v112 (6 cenarios + duplo callback), test_v170 (27 checagens), MEMORIA.md, MEMORIA_PENDENCIAS.md, ROADMAP.
 - Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram.)
 - Dias restantes: 9 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-VersÃ£o atual do bot: 1.14.14.
+VersÃ£o atual do bot: 1.14.15.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 
