@@ -31,6 +31,14 @@ Atualizar sempre que algo mudar de estado.
 
 ## Qualidade / docs
 
+- [x] **Scan de segurança com OWASP ZAP (13/09, v1.14.16) — CONCLUÍDO.** Primeiro scan
+      (spider + passive + active) em bapzx-bot-tibia.onrender.com. Único achado real:
+      rotas inexistentes e método errado davam 500 "erro" (Application Error
+      Disclosure) e cada probe avisava o dono no Telegram (spam). Correção: handlers
+      `404` e de `HTTPException` no bot.py — 404/405 limpos e sem aviso; 500 real
+      mantém o aviso ao dono. Alertas Medium do ZAP (anti-clickjacking/CSP/CORS*/SRI)
+      são do PORTFÓLIO no GitHub Pages (o ZAP seguiu o 302 da `/`), não do bot —
+      sem ação no código do bot; opcional: adicionar CSP no portfólio depois.
 - [ ] **Loop do formato compacto RESOLVIDO (12/09, v1.14.13)** — dono digitou
       "inmortals - 1250 - pix" e o bot nao reconhecia (caia na IA, que respondia
       a saudacao fixa para "sim"). Parser tolerante implementado (fallback de

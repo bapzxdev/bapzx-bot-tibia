@@ -11,10 +11,11 @@ from datetime import datetime, timedelta
 
 import requests
 from flask import Flask, request, redirect, session
+from werkzeug.exceptions import HTTPException
 
 from storage import OrderStore
 
-VERSION = "1.14.15"
+VERSION = "1.14.16"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -691,6 +692,17 @@ def security_headers(response):
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     return response
+
+
+@app.errorhandler(404)
+def _error404(error):
+    print("404:", request.path)
+    return "nao encontrado", 404
+
+
+@app.errorhandler(HTTPException)
+def _error_http(error):
+    return error.name, error.code
 
 
 @app.errorhandler(Exception)
