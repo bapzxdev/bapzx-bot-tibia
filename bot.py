@@ -14,7 +14,7 @@ from flask import Flask, request, redirect, session
 
 from storage import OrderStore
 
-VERSION = "1.14.14"
+VERSION = "1.14.15"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -320,6 +320,8 @@ def edit_message_reply_markup(chat_id, message_id, reply_markup=None):
 
 def _finalizar_confirmacao_char(chat_id, confirmado):
     pending = AWAITING_CHAR.pop(chat_id, None) or {}
+    if not pending:
+        return
     expired = bool(pending) and time.time() - pending.get("ts", 0) > CHAR_EXPIRY_SECONDS
     if expired:
         send_message(
