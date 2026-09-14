@@ -5,6 +5,15 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
+- [ ] **Aplicar `supabase_migracao_v116.sql` (v1.16.0)** — Supabase → SQL Editor →
+      colar o conteúdo de `supabase_migracao_v116.sql` → Run. Cria a tabela
+      `tickets`, a tabela `config` (com o seed de preços) e as colunas
+      `personagem`/`mundo`/`bloqueado` em `profiles`. Sem isso: `/admin/tickets`
+      e `/admin/config` exibem vazio (com aviso no log) e o bot usa os preços
+      padrão (PRICES) em vez dos configurados na nova aba Configurações.
+      Depois de rodar: abrir `/admin/tickets` e `/admin/config` no painel para
+      confirmar que carregam; testar um ticket de ponta a ponta
+      (cliente abre `/cliente/suporte` → admin responde → cliente vê a resposta).
 - [ ] **Publish do app Google (OAuth)** — console.cloud.google.com/auth →
       Settings → Branding → Publishing status → **Publish app**.
       Hoje o app está em modo Teste: só o e-mail `lucascristianini1@gmail.com`

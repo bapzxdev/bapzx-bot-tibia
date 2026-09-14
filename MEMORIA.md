@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
-- Onde paramos (14/09, v1.15.0): painel de administração completo criado (painel.py Blueprint), integrado ao bot.py. Rotas: /admin (dashboard com faturado/pedidos/clientes/visitas/audit), /admin/pedidos, /admin/marcar (com CSRF), /admin/itens (CRUD com upload de imagem via Supabase Storage), /api/itens (pública), /api/track (tracking de páginas). Segurança: CSRF em todas as mutações, rate limit em memória por IP, IP whitelist opcional (ADMIN_IP_ALLOWLIST), audit_log em Supabase, CORS restrito por host (origin matching). SQL migration criado (supabase_migracao_v115.sql) com tabelas itens, visitas, audit_log + bucket Storage público. Bot.py atualizado: rotas /admin e /admin/marcar antigas removidas, blueprint registrado, VERSION 1.15.0. Portfólio v3.2: itens.html consumindo /api/itens com renderização dinâmica, track.js adicionado a todas as páginas, CORS validado (allowlist por host, não por path).
-- Proximo passo: aplicar supabase_migracao_v115.sql no Supabase SQL Editor (DDL não via REST), deploy no Render, testar upload de imagem + CRUD completo, validate /api/itens e /api/track ao vivo, atualizar README/ROADMAP, commit + push dos dois repos.
-- Arquivos tocados: bot.py (v1.15.0, blueprint import, rotas /admin removidas), painel.py (novo, ~760 linhas), supabase_migracao_v115.sql (novo), bapzx-portfolio/itens.html (consumo /api/itens), bapzx-portfolio/track.js (novo), todas as páginas HTML do portfólio (script track.js adicionado).
-- Bloqueios: migração SQL precisa ser aplicada manualmente no Supabase SQL Editor antes do deploy.
-- Dias restantes: 7 de 15.
+- Onde paramos (14/09, v1.16.0): painel de administração e área do cliente expandidos — 4 itens concluídos em sequência: (1) aba Clientes no admin (lista perfis, detalhe com histórico, editar personagem/mundo/role, bloquear/desbloquear) + Perfil do cliente (/cliente/perfil) salvando personagem/mundo em profiles; (2) aba Pagamentos (cards pendentes/aprovados/entregues/cancelados/faturado + tabelas por status); (3) Tickets/Suporte — tabela nova `tickets` (aberto/respondido/encerrado, prioridade), admin responde/encerra/exclui, cliente abre chamados em /cliente/suporte e ver em /cliente/suporte/<id>; (4) Configurações — preços globais editáveis (tabela `config`, chave precos) que o bot lê via calc_price com cache de 2 min e fallback PRICES, e notificar_pedido. Segurança: CSRF reutilizado (painel) nos formulários do cliente, host allowlist. SQL migration supabase_migracao_v116.sql criado (colunas profiles personagem/mundo/bloqueado, tabela tickets, tabela config + seed de precos, índices de pedidos). VERSION bot e painel 1.16.0. Testes locais: py_compile OK, rotas registradas (34), GET em todas as páginas admin/cliente 200, POST /cliente/suporte com CSRF 302 e sem CSRF 403, calc_price lê config com fallback. Também nesta sessão: corrigido ALLOWED_HOSTS (d5b2a5b) após /login dar 403 (Origem inválida) — add bapzx-bot-tibia.onrender.com ao set; credenciais SUPABASE_URL/KEY erradas no Render eram a causa do 500 de /api/itens e foram corrigidas pelo dono (produção voltou a 200).
+- Proximo passo: aplicar supabase_migracao_v116.sql no Supabase SQL Editor (cria tickets/config e colunas de profiles — sem isso, /admin/tickets e /admin/config leem vazio e os preços globais ficam com fallback PRICES); depois verificar deploy do Render (auto no push), /login 200 no host remoto, teste do ciclo completo cliente→ticket→admin responde. Teste pendente ao vivo também para /admin/clientes (bloquear), /admin/pagamentos e a resposta do bot usando preco da config.
+- Arquivos tocados: bot.py (v1.16.0, rotas /cliente/perfil e /cliente/suporte com CSRF, calc_price lendo config, ALLOWED_HOSTS), painel.py (v1.16.0, rotas admin clientes/pagamentos/tickets/config, ~1300 linhas), supabase_migracao_v116.sql (novo), MEMORIA_EXPLICACAO.md (novo).
+- Bloqueios: migração v1.16 precisa ser aplicada manualmente no Supabase SQL Editor (tickets/config/colunas de profiles); até lá, tickets/config mostram estado vazio e o bot usa PRICES padrão.
+- Dias restantes: 6 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-Versão atual do bot: 1.15.0.
+Versão atual do bot: 1.16.0.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 
@@ -29,7 +29,8 @@ Versão atual do bot: 1.15.0.
 - `pedidos.json` â€” pedidos salvos (runtime, fora do git, usado como fallback).
 - `scripts/criar_tabela_supabase.sql` â€” DDL da tabela `public.pedidos` para o Supabase.
 - `requirements.txt` â€” flask, requests, google-genai.
-- `.env` â€” segredos (fora do git).
+- `.env` — segredos (fora do git).
+- `MEMORIA_EXPLICACAO.md` — passo a passo (com capturas de tela) de como configurar o Render (supabase_migracao_v115.sql, variáveis de ambiente, deploy). Referência aprovada pelo dono.
 
 ## VariÃ¡veis de ambiente
 
