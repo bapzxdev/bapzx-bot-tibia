@@ -2,6 +2,7 @@
 import html
 import json
 import os
+import json
 import re
 import secrets
 import sys
@@ -432,11 +433,40 @@ def _char_fallback(text):
     return " ".join(keep[:3]) or None
 
 
+_PRECOS_CACHE = {"ts": 0.0, "dados": {}}
+
+
+def _precos_config():
+    if time.time() - _PRECOS_CACHE["ts"] < 120:
+        return _PRECOS_CACHE["dados"]
+    dados = {}
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/config?chave=eq.precos&select=valor",
+                headers=STORE._headers(),
+                timeout=10,
+            )
+            if response.status_code == 200 and response.json():
+                raw = response.json()[0].get("valor") or ""
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and parsed:
+                    dados = {int(k): str(v) for k, v in parsed.items() if str(k).isdigit()}
+        except Exception:
+            dados = {}
+    if not dados:
+        dados = PRICES
+    _PRECOS_CACHE["ts"] = time.time()
+    _PRECOS_CACHE["dados"] = dados
+    return dados
+
+
 def calc_price(tc):
     if not tc:
         return None
-    if tc in PRICES:
-        return PRICES[tc]
+    tabela = _precos_config()
+    if tc in tabela:
+        return tabela[tc]
     value = tc * 90 / 1000
     return f"R${value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
