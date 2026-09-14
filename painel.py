@@ -11,7 +11,7 @@ from flask import Blueprint, jsonify, redirect, request, session
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "1.16.0"
+VERSION = "1.16.1"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -350,6 +350,7 @@ def _page(user, title, body, active=""):
     )
     top = (
         f"<a href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>Ver site</a>"
+        f"<a href='/acesso'>Trocar área</a>"
         f"<a href='/logout'>Sair</a>"
     )
     return (

@@ -18,7 +18,7 @@ from storage import OrderStore
 from painel import bp as painel_bp
 from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 
-VERSION = "1.16.0"
+VERSION = "1.16.1"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -1412,13 +1412,49 @@ def oauth_callback():
     session["role"] = role
     session["sub"] = sub
     session.permanent = True
-    return redirect("/admin" if role == "admin" else "/cliente")
+    return redirect("/acesso")
 
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(PORTFOLIO_URL)
+
+
+@app.route("/acesso")
+def acesso():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    top = (
+        "<span style='color:#94a3b8;font-size:12px'>"
+        f"Bem-vindo, {html.escape(user['name'])}</span> "
+        "<a href='/logout' style='margin-left:8px'>Sair</a>"
+    )
+    admin_btn = ""
+    if user.get("role") == "admin":
+        admin_btn = (
+            "<a href='/admin' style='display:block;background:linear-gradient(135deg,#312e81,#4c1d95);"
+            "border:2px solid #7c3aed;border-radius:14px;padding:28px 32px;text-decoration:none;color:#e2e8f0;flex:1;min-width:200px'>"
+            "<div style='font-size:28px;margin-bottom:8px'>&#9881;</div>"
+            "<div style='font-size:22px;font-weight:bold;margin-bottom:4px'>Administra&ccedil;&atilde;o</div>"
+            "<div style='font-size:13px;color:#c4b5fd'>Pedidos, clientes, tickets, configura&ccedil;&otilde;es e itens</div>"
+            "</a>"
+        )
+    body = (
+        "<section style='background:transparent;padding:0'>"
+        "<h2 style='font-size:16px;margin-bottom:20px'>Para onde deseja ir?</h2>"
+        "<div style='display:flex;gap:16px;flex-wrap:wrap'>"
+        "<a href='/cliente' style='display:block;background:linear-gradient(135deg,#064e3b,#065f46);"
+        "border:2px solid #10b981;border-radius:14px;padding:28px 32px;text-decoration:none;color:#e2e8f0;flex:1;min-width:200px'>"
+        "<div style='font-size:28px;margin-bottom:8px'>&#128100;</div>"
+        "<div style='font-size:22px;font-weight:bold;margin-bottom:4px'>Cliente</div>"
+        "<div style='font-size:13px;color:#6ee7b7'>Meus pedidos, perfil e suporte</div>"
+        "</a>"
+        f"{admin_btn}"
+        "</div></section>"
+    )
+    return _page("Entrar", "Escolha a &aacute;rea", top, body)
 
 
 @app.route("/cliente")
@@ -1436,6 +1472,7 @@ def cliente():
         "<a href='/cliente/perfil' style='padding:6px 12px;background:rgba(52,211,153,.12);border-radius:6px;text-decoration:none;color:#34d399;font-size:13px'>Meu perfil</a> "
         "<a href='/cliente/suporte' style='padding:6px 12px;background:rgba(96,165,250,.12);border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Suporte</a> "
         f"<span style='color:#94a3b8;font-size:12px;margin-left:12px'>{html.escape(user['name'])}</span> "
+        "<a href='/acesso' style='margin-left:8px'>Trocar área</a> "
         "<a href='/logout' style='margin-left:8px'>Sair</a>"
     )
     body = (
