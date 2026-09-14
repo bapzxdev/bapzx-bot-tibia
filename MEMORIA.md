@@ -4,14 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
-- Onde paramos (13/09, v1.14.16): primeiro scan de segurança do bot com OWASP ZAP (via MCP, skill security-testing) entregue. Único achado real: mesmo fix de segurança aplicado — rotas inexistentes davam 500 "erro" e cada probe avisava o dono; agora 404 limpo. Correção: handlers `@app.errorhandler(404)` e `@app.errorhandler(HTTPException)` (get wrong method posted to POST-only route = 405), deixando o `_error500` só para erros reais (mesmo aviso ao dono preservado). Médio/CORS*/clicar jacking do ZAP são do portfólio (GitHub Pages), não do bot. Testes locais verdes.
-- Proximo passo: deployar v1.14.16 no Render (git push da branch de deploy no render), conferir /health v1.14.16 e repetir o comportamento 404/405 ao vivo; depois retomar fluxo do bot no celular ("inmortals - 1250 - pix" + sim), limpar pedidos de teste 22/32/33/34/35/36/37/38/47/48/49/50/51 e decidir publish Google OAuth + 1a venda (Fase C vetada). ZAP daemon pode ficar parado até o próximo scan (launcher ZAP-MCP.bat).
-- Arquivos tocados: bot.py (VERSION 1.14.16; handler 404 + HTTPException), MEMORIA.md, MEMORIA_PENDENCIAS.md. ZAP/auxiliar: config do ZAP e skill security-testing validados.
-- Bloqueios: nenhum. (Monitore 500 do char_sim via errorhandler no Telegram.)
-- Dias restantes: 8 de 15.
+- Onde paramos (14/09, v1.15.0): painel de administração completo criado (painel.py Blueprint), integrado ao bot.py. Rotas: /admin (dashboard com faturado/pedidos/clientes/visitas/audit), /admin/pedidos, /admin/marcar (com CSRF), /admin/itens (CRUD com upload de imagem via Supabase Storage), /api/itens (pública), /api/track (tracking de páginas). Segurança: CSRF em todas as mutações, rate limit em memória por IP, IP whitelist opcional (ADMIN_IP_ALLOWLIST), audit_log em Supabase, CORS restrito por host (origin matching). SQL migration criado (supabase_migracao_v115.sql) com tabelas itens, visitas, audit_log + bucket Storage público. Bot.py atualizado: rotas /admin e /admin/marcar antigas removidas, blueprint registrado, VERSION 1.15.0. Portfólio v3.2: itens.html consumindo /api/itens com renderização dinâmica, track.js adicionado a todas as páginas, CORS validado (allowlist por host, não por path).
+- Proximo passo: aplicar supabase_migracao_v115.sql no Supabase SQL Editor (DDL não via REST), deploy no Render, testar upload de imagem + CRUD completo, validate /api/itens e /api/track ao vivo, atualizar README/ROADMAP, commit + push dos dois repos.
+- Arquivos tocados: bot.py (v1.15.0, blueprint import, rotas /admin removidas), painel.py (novo, ~760 linhas), supabase_migracao_v115.sql (novo), bapzx-portfolio/itens.html (consumo /api/itens), bapzx-portfolio/track.js (novo), todas as páginas HTML do portfólio (script track.js adicionado).
+- Bloqueios: migração SQL precisa ser aplicada manualmente no Supabase SQL Editor antes do deploy.
+- Dias restantes: 7 de 15.
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-VersÃ£o atual do bot: 1.14.16.
+Versão atual do bot: 1.15.0.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 

@@ -14,8 +14,9 @@ from flask import Flask, request, redirect, session
 from werkzeug.exceptions import HTTPException
 
 from storage import OrderStore
+from painel import bp as painel_bp
 
-VERSION = "1.14.16"
+VERSION = "1.15.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -745,6 +746,8 @@ STORE = OrderStore(
     key=load_env_key("SUPABASE_KEY"),
 )
 
+app.register_blueprint(painel_bp)
+
 print(f"[start] v{VERSION} | STORE.remote={bool(STORE.remote)}")
 print(f"[start] TELEGRAM_OWNER_CHAT_ID={load_env_key('TELEGRAM_OWNER_CHAT_ID')!r}")
 
@@ -1414,61 +1417,6 @@ def cliente():
     )
     body += f"<section><h2>Meus pedidos</h2>{rows}</section><p class='note'>{note}</p>"
     return _page("Minha conta", "Minha conta", top, body)
-
-
-@app.route("/admin")
-def admin():
-    user = current_user()
-    if not user:
-        return redirect("/login")
-    if user["role"] != "admin":
-        return "Acesso restrito: somente administradores.", 403
-    orders = STORE.list()
-    faturado, por_dia, clientes, pagos = dashboard_metrics(orders)
-    total_brl = f"R$ {faturado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    cards = (
-        "<div class='cards'>"
-        "<div class='card'><div class='num'>{f}</div><div class='lbl'>Faturado (pagos)</div></div>"
-        "<div class='card'><div class='num'>{p}</div><div class='lbl'>Pagos</div></div>"
-        "<div class='card'><div class='num'>{n}</div><div class='lbl'>Pedidos</div></div>"
-        "<div class='card'><div class='num'>{c}</div><div class='lbl'>Clientes</div></div>"
-        "</div>"
-    ).format(f=total_brl, p=pagos, n=len(orders), c=len(clientes))
-    top = (
-        f"<span style='color:#4ade80;font-size:12px'>{html.escape(user['name'])} (admin)</span> "
-        f"<a href='/logout'>Sair</a>"
-    )
-    body = cards + (
-        "<section><h2>Todos os pedidos</h2>"
-        "<table><tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
-        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
-        f"{_orders_rows(orders, with_actions=True)}</table></section>"
-    )
-    return _page("Administração", "Admin", top, body)
-
-
-@app.route("/admin/marcar", methods=["POST"])
-def admin_marcar():
-    user = current_user()
-    if not user or user["role"] != "admin":
-        return "Acesso restrito.", 403
-    from urllib.parse import urlparse
-
-    host = request.host.split(":")[0]
-    try:
-        referer_host = (urlparse(request.referrer or "").hostname or "").lower()
-    except Exception:
-        referer_host = ""
-    if referer_host != host:
-        return "Origem inválida.", 403
-    order_id_text = (request.form.get("order_id") or "").strip()
-    status = (request.form.get("status") or "").strip()
-    if not order_id_text.isdigit() or status not in ("pago", "entregue"):
-        return "Parâmetros inválidos.", 400
-    order_id = int(order_id_text)
-    ts_field = "pix_confirmado_em" if status == "pago" else "entregue_em"
-    apply_status(order_id, status, ts_field)
-    return redirect("/admin")
 
 
 def notify_owner(entry):
