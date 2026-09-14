@@ -11,7 +11,7 @@ from flask import Blueprint, jsonify, redirect, request, session
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "1.16.1"
+VERSION = "1.16.2"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -285,6 +285,33 @@ def _cors_ok():
     return False
 
 
+_ICONS = {
+    "grid": "<rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/>",
+    "cart": "<circle cx='9' cy='21' r='1'/><circle cx='20' cy='21' r='1'/><path d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6'/>",
+    "package": "<path d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/><polyline points='3.27 6.96 12 12.01 20.73 6.96'/><line x1='12' y1='22.08' x2='12' y2='12'/>",
+    "users": "<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>",
+    "wallet": "<path d='M21 12V7H5a2 2 0 0 1 0-4h14v4'/><path d='M3 5v14a2 2 0 0 0 2 2h16v-5'/><path d='M18 12a2 2 0 0 0 0 4h4v-4Z'/>",
+    "support": "<circle cx='12' cy='12' r='10'/><path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/><line x1='12' y1='17' x2='12.01' y2='17'/>",
+    "gear": "<circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/>",
+    "external": "<path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/><polyline points='15 3 21 3 21 9'/><line x1='10' y1='14' x2='21' y2='3'/>",
+    "swap": "<polyline points='16 3 21 3 21 8'/><line x1='4' y1='20' x2='21' y2='3'/><polyline points='21 16 21 21 16 21'/><line x1='15' y1='15' x2='21' y2='21'/><line x1='4' y1='4' x2='9' y2='9'/>",
+    "logout": "<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16 17 21 12 16 7'/><line x1='21' y1='12' x2='9' y2='12'/>",
+    "search": "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/>",
+    "bell": "<path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/>",
+    "chevron": "<polyline points='6 9 12 15 18 9'/>",
+    "menu": "<line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='18' x2='21' y2='18'/>",
+    "dollar": "<line x1='12' y1='1' x2='12' y2='23'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>",
+    "checks": "<path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/>",
+}
+
+
+def _icon(name):
+    return (
+        "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' "
+        "stroke-linecap='round' stroke-linejoin='round'>" + _ICONS.get(name, "") + "</svg>"
+    )
+
+
 LAYOUT_HEAD = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -293,41 +320,135 @@ LAYOUT_HEAD = """<!DOCTYPE html>
 <title>{title}</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-body {{ font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color:#e2e8f0; }}
-nav {{ background:#111a2e; border-bottom:1px solid #1e2c40; padding:12px 22px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; }}
-nav .brand {{ font-family:'Sora',sans-serif; font-weight:800; letter-spacing:2px; color:#fff; }}
-nav .brand span {{ background:linear-gradient(135deg,#34d399,#60a5fa); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }}
-nav a {{ color:#8ea0b8; text-decoration:none; font-size:14px; padding:8px 12px; border-radius:9px; }}
-nav a:hover, nav a.active {{ color:#fff; background:rgba(52,211,153,.12); }}
-main {{ max-width:1100px; margin:0 auto; padding:24px 22px 60px; }}
-.cards {{ display:flex; gap:14px; flex-wrap:wrap; margin:18px 0; }}
-.card {{ background:#16203a; border:1px solid #1e2c40; border-radius:12px; padding:14px 18px; flex:1; min-width:150px; }}
-.card .num {{ font-size:24px; font-weight:800; color:#34d399; }}
-.card .lbl {{ font-size:12px; color:#8ea0b8; }}
-section {{ background:#111a2e; border:1px solid #1e2c40; border-radius:12px; padding:18px 20px; margin:16px 0; }}
-section h2 {{ margin-top:0; font-size:16px; }}
-table {{ width:100%; border-collapse:collapse; font-size:13px; }}
-th, td {{ text-align:left; padding:7px 8px; border-bottom:1px solid #1e2c40; vertical-align:middle; }}
-th {{ color:#8ea0b8; font-weight:normal; }}
-.status {{ padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }}
-.status.pendente {{ background:#78350f; color:#fbbf24; }}
-.status.pago {{ background:#064e3b; color:#4ade80; }}
-.status.entregue {{ background:#1e3a5f; color:#60a5fa; }}
-.status.cancelado {{ background:#7f1d1d; color:#f87171; }}
-.acts form, .acts form button {{ display:inline; }}
-.acts button {{ background:#334155; border:0; color:#e2e8f0; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px; }}
-.acts button.pago {{ background:#064e3b; color:#4ade80; }}
-.acts button.entregue {{ background:#1e3a5f; color:#60a5fa; }}
-.btn {{ display:inline-block; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; text-decoration:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; }}
-.btn.ghost {{ background:transparent; border:1px solid #1e2c40; color:#e2e8f0; }}
-input, textarea, select {{ background:#0b1120; border:1px solid #2a3a52; color:#e2e8f0; border-radius:9px; padding:10px 12px; font-size:14px; width:100%; box-sizing:border-box; }}
-label {{ display:block; font-size:13px; color:#8ea0b8; margin:12px 0 4px; }}
-img.preview {{ max-width:120px; border-radius:8px; border:1px solid #1e2c40; margin-bottom:8px; }}
-.kicker {{ color:#34d399; font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }}
-.box {{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }}
-@media(max-width:760px){{ .box {{ grid-template-columns:1fr; }} }}
-.notice {{ background:#0f2a22; border:1px solid #14532d; color:#4ade80; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:14px; }}
-.error {{ background:#2a1020; border:1px solid #7f1d1d; color:#f87171; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:14px; }}
+* { box-sizing:border-box; }
+body { font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color:#e2e8f0; }
+.shell { display:flex; min-height:100vh; }
+.sidebar { position:fixed; top:0; left:0; bottom:0; width:250px; background:#0e1626; border-right:1px solid #1e2c40; display:flex; flex-direction:column; z-index:50; }
+.side-brand { display:flex; align-items:center; gap:11px; padding:18px 18px 16px; border-bottom:1px solid #1e2c40; }
+.side-logo { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#34d399,#60a5fa); display:flex; align-items:center; justify-content:center; color:#04111b; font-weight:800; font-family:'Sora',sans-serif; font-size:12px; letter-spacing:1px; }
+.brand-name { font-family:'Sora',sans-serif; font-weight:800; letter-spacing:2px; font-size:15px; color:#fff; }
+.brand-name span { background:linear-gradient(135deg,#34d399,#60a5fa); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.side-nav { flex:1; overflow-y:auto; padding:14px 10px 8px; }
+.side-group { font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:#5b6b82; margin:18px 10px 6px; font-weight:600; }
+.side-group:first-child { margin-top:2px; }
+.side-item { display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:9px; color:#8ea0b8; text-decoration:none; font-size:14px; margin:2px 0; }
+.side-item svg { width:18px; height:18px; flex:none; }
+.side-item:hover { color:#fff; background:rgba(52,211,153,.08); }
+.side-item.active { color:#fff; background:linear-gradient(135deg,rgba(52,211,153,.16),rgba(96,165,250,.14)); box-shadow:inset 0 0 0 1px rgba(52,211,153,.28); }
+.side-item.active svg { color:#34d399; }
+.side-foot { padding:12px 10px; border-top:1px solid #1e2c40; }
+.side-foot .side-item { margin:0; }
+.wrap { flex:1; margin-left:250px; min-width:0; display:flex; flex-direction:column; }
+.topbar { position:sticky; top:0; z-index:40; background:rgba(11,17,32,.88); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-bottom:1px solid #1e2c40; display:flex; align-items:center; gap:14px; padding:12px 22px; }
+.hamburger { display:none; background:transparent; border:1px solid #2a3a52; color:#e2e8f0; width:38px; height:38px; border-radius:9px; cursor:pointer; align-items:center; justify-content:center; padding:0; }
+.hamburger svg { width:18px; height:18px; }
+.top-title { flex:1; min-width:0; }
+.crumb { font-size:12px; color:#5b6b82; margin-bottom:3px; }
+.crumb b { color:#8ea0b8; font-weight:600; }
+.top-title h1 { margin:0; font-size:20px; font-weight:700; font-family:'Sora',sans-serif; line-height:1.2; }
+.top-search { position:relative; }
+.top-search svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#5b6b82; pointer-events:none; }
+.top-search input { width:250px; padding-left:38px; }
+.top-actions { display:flex; align-items:center; gap:9px; }
+.icon-btn { position:relative; width:38px; height:38px; border-radius:9px; border:1px solid #2a3a52; background:transparent; color:#a0aec0; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+.icon-btn:hover { color:#fff; border-color:#3b4d6b; }
+.icon-btn svg { width:18px; height:18px; }
+.badge { position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; border-radius:9px; background:#ef4444; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px; box-sizing:border-box; box-shadow:0 0 0 2px #0b1120; }
+.user-chip { display:flex; align-items:center; gap:9px; border:1px solid #2a3a52; background:transparent; border-radius:10px; padding:5px 10px 5px 6px; cursor:pointer; color:#e2e8f0; }
+.user-chip:hover { border-color:#3b4d6b; }
+.user-avatar { width:27px; height:27px; border-radius:7px; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; text-transform:uppercase; }
+.user-chip .u-name { font-size:13px; font-weight:600; }
+.user-chip svg { width:14px; height:14px; color:#5b6b82; }
+.dropdown { position:relative; }
+.menu { position:absolute; right:0; top:calc(100% + 8px); min-width:240px; background:#111a2e; border:1px solid #1e2c40; border-radius:12px; box-shadow:0 14px 34px rgba(0,0,0,.5); padding:6px; display:none; z-index:60; }
+.menu.open { display:block; }
+.menu-head { padding:10px 12px; border-bottom:1px solid #1e2c40; margin-bottom:6px; }
+.menu-head b { display:block; font-size:13px; color:#e2e8f0; }
+.menu-head span { font-size:12px; color:#5b6b82; word-break:break-all; }
+.menu a { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; color:#8ea0b8; text-decoration:none; font-size:13px; }
+.menu a:hover { color:#fff; background:rgba(52,211,153,.1); }
+.menu a svg { width:16px; height:16px; flex:none; }
+.menu a.danger { color:#f87171; }
+.menu a.danger:hover { background:rgba(127,29,29,.4); color:#fca5a5; }
+.menu-empty { padding:10px 12px; color:#5b6b82; font-size:13px; }
+.content { flex:1; width:100%; max-width:1200px; margin:0 auto; padding:24px 24px 64px; box-sizing:border-box; }
+.scrim { position:fixed; inset:0; background:rgba(2,6,17,.62); z-index:45; display:none; }
+.scrim.show { display:block; }
+.page-sub { color:#8ea0b8; font-size:14px; margin:4px 0 6px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(225px,1fr)); gap:14px; margin:20px 0 10px; }
+.kpi { background:#16203a; border:1px solid #1e2c40; border-radius:14px; padding:16px 18px; display:flex; flex-direction:column; gap:11px; }
+.kpi .k-top { display:flex; align-items:center; justify-content:space-between; }
+.kpi .k-ico { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(52,211,153,.12); color:#34d399; }
+.kpi .k-ico svg { width:18px; height:18px; }
+.kpi .k-lbl { font-size:11px; color:#8ea0b8; letter-spacing:.5px; text-transform:uppercase; font-weight:600; }
+.kpi .k-num { font-size:26px; font-weight:800; color:#fff; font-family:'Sora',sans-serif; line-height:1; }
+.kpi .k-sub { font-size:12px; color:#5b6b82; }
+.charts { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:16px; margin:16px 0; }
+.chart-card { background:#16203a; border:1px solid #1e2c40; border-radius:14px; padding:16px 18px; min-width:0; overflow-x:auto; }
+.chart-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.chart-head h2 { margin:0; font-size:15px; }
+.chart-period { font-size:12px; color:#5b6b82; background:#0b1120; border:1px solid #1e2c40; padding:3px 9px; border-radius:6px; white-space:nowrap; }
+.barchart { display:flex; align-items:flex-end; gap:7px; height:190px; padding-top:16px; }
+.bar-col { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px; }
+.bar-val { font-size:10px; color:#8ea0b8; line-height:1; }
+.bar { width:100%; max-width:26px; border-radius:6px 6px 2px 2px; background:linear-gradient(180deg,#34d399,#22c55e); min-height:3px; }
+.bar-col:hover .bar { background:linear-gradient(180deg,#4ade80,#34d399); }
+.bar-lbl { font-size:10px; color:#5b6b82; white-space:nowrap; }
+.stat-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.chip { font-size:12px; color:#8ea0b8; background:#0b1120; border:1px solid #1e2c40; border-radius:6px; padding:5px 10px; }
+.chip b { color:#e2e8f0; font-weight:600; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:13px; margin:16px 0; }
+.card { background:#16203a; border:1px solid #1e2c40; border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:5px; }
+.card .num { font-size:22px; font-weight:800; color:#34d399; font-family:'Sora',sans-serif; line-height:1.1; }
+.card .lbl { font-size:12px; color:#8ea0b8; }
+section { background:#16203a; border:1px solid #1e2c40; border-radius:14px; padding:16px 18px; margin:14px 0; min-width:0; overflow-x:auto; }
+section h2 { margin:0 0 10px; font-size:15px; }
+.chart-card .stat-chips, .chart-card table { min-width:0; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { text-align:left; padding:9px 8px; border-bottom:1px solid #1e2c40; vertical-align:middle; }
+th { color:#8ea0b8; font-weight:600; font-size:11px; letter-spacing:.5px; text-transform:uppercase; }
+tbody tr:hover { background:rgba(52,211,153,.04); }
+.status { padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+.status.pendente { background:#78350f; color:#fbbf24; }
+.status.pago { background:#064e3b; color:#4ade80; }
+.status.entregue { background:#1e3a5f; color:#60a5fa; }
+.status.cancelado { background:#7f1d1d; color:#f87171; }
+.acts form, .acts form button { display:inline; }
+.acts button { background:#334155; border:0; color:#e2e8f0; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px; }
+.acts button:hover { filter:brightness(1.15); }
+.acts button.pago { background:#064e3b; color:#4ade80; }
+.acts button.entregue { background:#1e3a5f; color:#60a5fa; }
+.btn { display:inline-block; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; text-decoration:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; border:0; cursor:pointer; }
+.btn:hover { filter:brightness(1.12); }
+.btn.ghost { background:transparent; border:1px solid #1e2c40; color:#e2e8f0; }
+input, textarea, select { background:#0b1120; border:1px solid #2a3a52; color:#e2e8f0; border-radius:9px; padding:10px 12px; font-size:14px; width:100%; box-sizing:border-box; }
+input:focus, textarea:focus, select:focus { outline:none; border-color:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.12); }
+label { display:block; font-size:13px; color:#8ea0b8; margin:12px 0 4px; }
+img.preview { max-width:120px; border-radius:8px; border:1px solid #1e2c40; margin-bottom:8px; }
+.kicker { color:#34d399; font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.box { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.notice { background:#0f2a22; border:1px solid #14532d; color:#4ade80; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+.error { background:#2a1020; border:1px solid #7f1d1d; color:#f87171; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+@media (max-width:1023px) {
+  .sidebar { transform:translateX(-100%); transition:transform .22s ease; }
+  .sidebar.open { transform:translateX(0); box-shadow:0 0 40px rgba(0,0,0,.55); }
+  .wrap { margin-left:0; }
+  .hamburger { display:flex; }
+  .box { grid-template-columns:1fr; }
+}
+@media (max-width:760px) {
+  .topbar { padding:10px 14px; gap:10px; flex-wrap:wrap; }
+  .top-search { order:3; width:100%; }
+  .top-search input { width:100%; }
+  .content { padding:16px 14px 50px; }
+  .charts { grid-template-columns:1fr; }
+  .kpis { grid-template-columns:1fr 1fr; }
+  .crumb { display:none; }
+  .u-name { display:none; }
+}
+@media (max-width:480px) {
+  .kpis { grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body>
@@ -335,31 +456,126 @@ img.preview {{ max-width:120px; border-radius:8px; border:1px solid #1e2c40; mar
 
 
 def _page(user, title, body, active=""):
-    nav_items = [
-        ("/admin", "Dashboard", "dash"),
-        ("/admin/pedidos", "Pedidos", "pedidos"),
-        ("/admin/itens", "Itens", "itens"),
-        ("/admin/clientes", "Clientes", "clientes"),
-        ("/admin/pagamentos", "Pagamentos", "pagamentos"),
-        ("/admin/tickets", "Tickets", "tickets"),
-        ("/admin/config", "Configurações", "config"),
+    groups = [
+        ("Principal", [("/admin", "Dashboard", "dash", "grid")]),
+        ("Vendas", [
+            ("/admin/pedidos", "Pedidos", "pedidos", "cart"),
+            ("/admin/itens", "Itens", "itens", "package"),
+            ("/admin/pagamentos", "Pagamentos", "pagamentos", "wallet"),
+        ]),
+        ("Clientes", [
+            ("/admin/clientes", "Clientes", "clientes", "users"),
+            ("/admin/tickets", "Tickets", "tickets", "support"),
+        ]),
+        ("Sistema", [("/admin/config", "Configurações", "config", "gear")]),
     ]
-    nav = "".join(
-        f"<a {'class=active ' if key == active else ''}href='{href}'>{label}</a>"
-        for href, label, key in nav_items
+    side_links = ""
+    for group_label, items in groups:
+        side_links += f"<div class='side-group'>{group_label}</div>"
+        for href, link_label, key, icon in items:
+            active_cls = " active" if key == active else ""
+            side_links += (
+                f"<a class='side-item{active_cls}' href='{href}'>"
+                + _icon(icon)
+                + f"<span>{link_label}</span></a>"
+            )
+    side_foot = (
+        f"<a class='side-item' href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>"
+        + _icon("external")
+        + "<span>Ver site</span></a>"
+        "<a class='side-item' href='/acesso'>" + _icon("swap") + "<span>Trocar área</span></a>"
+        "<a class='side-item' href='/logout'>" + _icon("logout") + "<span>Sair</span></a>"
     )
-    top = (
-        f"<a href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>Ver site</a>"
-        f"<a href='/acesso'>Trocar área</a>"
-        f"<a href='/logout'>Sair</a>"
+
+    pendentes_badge = 0
+    abertos_badge = 0
+    try:
+        pendentes_badge = _count("pedidos", "&status=eq.pendente")
+    except Exception:
+        pass
+    try:
+        abertos_badge = _count("tickets", "&status=eq.aberto")
+    except Exception:
+        pass
+    notif_items = ""
+    if pendentes_badge:
+        notif_items += f"<a href='/admin/pagamentos'>{pendentes_badge} pedido(s) pendente(s)</a>"
+    if abertos_badge:
+        notif_items += f"<a href='/admin/tickets'>{abertos_badge} ticket(s) aberto(s)</a>"
+    if not notif_items:
+        notif_items = "<div class='menu-empty'>Tudo em dia.</div>"
+    total_badge = pendentes_badge + abertos_badge
+
+    name = (user or {}).get("name") or (user or {}).get("email") or "Admin"
+    email = (user or {}).get("email") or ""
+    initial = html.escape((name or "A")[0].upper())
+
+    layout = (
+        "<div class='shell'>"
+        "<aside class='sidebar' id='sidebar'>"
+        "<div class='side-brand'><span class='side-logo'>BZ</span>"
+        "<span class='brand-name'>BAP<span>ZX</span></span></div>"
+        "<nav class='side-nav' id='sidenav'>" + side_links + "</nav>"
+        "<div class='side-foot'>" + side_foot + "</div>"
+        "</aside>"
+        "<div class='wrap'>"
+        "<header class='topbar'>"
+        "<button class='hamburger' id='hamburger' aria-label='Menu'>" + _icon("menu") + "</button>"
+        "<div class='top-title'>"
+        f"<div class='crumb'>Administração / <b>{html.escape(title)}</b></div>"
+        f"<h1>{html.escape(title)}</h1>"
+        "</div>"
+        "<div class='top-search'>" + _icon("search")
+        + "<input id='globalsearch' type='search' placeholder='Buscar na página...'></div>"
+        "<div class='top-actions'>"
+        "<div class='dropdown'>"
+        "<button class='icon-btn' data-dd='bellmenu' aria-label='Notificações'>"
+        + _icon("bell")
+        + (f"<span class='badge'>{total_badge}</span>" if total_badge else "")
+        + "</button>"
+        f"<div class='menu' id='bellmenu'>{notif_items}</div></div>"
+        "<div class='dropdown'>"
+        f"<button class='user-chip' data-dd='usermenu'>"
+        f"<span class='user-avatar'>{initial}</span>"
+        f"<span class='u-name'>{html.escape(name)}</span>"
+        + _icon("chevron")
+        + "</button>"
+        "<div class='menu' id='usermenu'>"
+        f"<div class='menu-head'><b>{html.escape(name)}</b><span>{html.escape(email)}</span></div>"
+        f"<a href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>" + _icon("external") + "Ver site</a>"
+        "<a href='/acesso'>" + _icon("swap") + "Trocar área</a>"
+        "<a href='/logout' class='danger'>" + _icon("logout") + "Sair</a>"
+        "</div></div></div></header>"
+        f"<main class='content'>{body}</main>"
+        "</div></div>"
+        "<div class='scrim' id='scrim'></div>"
+        "<script>"
+        "var hb=document.getElementById('hamburger'),sd=document.getElementById('sidebar'),sc=document.getElementById('scrim');"
+        "function closeDrawer(){if(sd){sd.classList.remove('open');}if(sc){sc.classList.remove('show');}}"
+        "if(hb){hb.addEventListener('click',function(){if(sd){sd.classList.toggle('open');}if(sc){sc.classList.toggle('show');}});}"
+        "if(sc){sc.addEventListener('click',closeDrawer);}"
+        "var links=document.querySelectorAll('#sidenav a,.side-foot a');"
+        "for(var i=0;i<links.length;i++){links[i].addEventListener('click',closeDrawer);}"
+        "document.addEventListener('click',function(e){"
+        "var t=e.target.closest('[data-dd]'),open=document.querySelectorAll('.menu.open');"
+        "if(t){var m=document.getElementById(t.getAttribute('data-dd'));"
+        "var was=m&&m.classList.contains('open');"
+        "for(var i=0;i<open.length;i++){open[i].classList.remove('open');}"
+        "if(m&&!was){m.classList.add('open');}return;}"
+        "for(var j=0;j<open.length;j++){open[j].classList.remove('open');}"
+        "});"
+        "var sea=document.getElementById('globalsearch');"
+        "if(sea){sea.addEventListener('input',function(){"
+        "var q=sea.value.trim().toLowerCase(),tables=document.querySelectorAll('.content table');"
+        "for(var i=0;i<tables.length;i++){var rows=tables[i].querySelectorAll('tr');"
+        "for(var j=0;j<rows.length;j++){var tr=rows[j];"
+        "if(tr.querySelector('th')){continue;}"
+        "tr.style.display=(!q||tr.textContent.toLowerCase().indexOf(q)>=0)?'':'none';}}});}"
+        "</script></body></html>"
     )
     return (
         LAYOUT_HEAD.replace("{title}", html.escape(title))
-        + "<nav><div class='brand'>BAP<span>ZX</span> ADMIN</div>"
-        + nav
-        + f"<span style='flex:1'></span>{top}</nav><main>"
-        + body
-        + "</main></body></html>",
+        + layout,
         200,
         {"Content-Type": "text/html; charset=utf-8"},
     )
@@ -467,26 +683,6 @@ def admin_dashboard():
         for a in audit
     ) or "<tr><td colspan='4' style='color:#64748b;text-align:center'>Sem auditoria ainda</td></tr>"
 
-    cards = (
-        "<div class='cards'>"
-        "<div class='card'><div class='num'>{f}</div><div class='lbl'>Faturado (pagos)</div></div>"
-        "<div class='card'><div class='num'>{p}</div><div class='lbl'>Pagos</div></div>"
-        "<div class='card'><div class='num'>{n}</div><div class='lbl'>Pedidos</div></div>"
-        "<div class='card'><div class='num'>{c}</div><div class='lbl'>Clientes</div></div>"
-        "<div class='card'><div class='num'>{v}</div><div class='lbl'>Visitas 7 dias</div></div>"
-        "<div class='card'><div class='num'>{v1}</div><div class='lbl'>Visitas hoje</div></div>"
-        "<div class='card'><div class='num'>{vt}</div><div class='lbl'>Visitas total</div></div>"
-        "</div>"
-    ).format(
-        f=_fmt_brl(faturado),
-        p=pagos,
-        n=len(orders),
-        c=len(clientes),
-        v=visitas7d,
-        v1=visitas1d,
-        vt=visitas_total,
-    )
-
     # grafico de pedidos por dia (14 dias)
     dias = []
     base = datetime.now().date()
@@ -494,31 +690,73 @@ def admin_dashboard():
         dia = base - timedelta(days=offset)
         dias.append((dia.isoformat(), por_dia.get(dia.isoformat(), 0)))
     max_dia = max((c for _, c in dias), default=0) or 1
-    bars = "".join(
-        f"<div style='display:flex;align-items:center;gap:10px;margin-bottom:6px'>"
-        f"<span style='width:110px;font-size:12px;color:#8ea0b8'>{dia}</span>"
-        f"<div style='flex:1;background:#334155;height:14px;border-radius:7px;overflow:hidden'>"
-        f"<div style='height:100%;width:{int(c / max_dia * 100)}%;background:#34d399'></div></div>"
-        f"<span style='width:28px;font-size:12px;text-align:right'>{c}</span></div>"
-        for dia, c in dias
+
+    sub = "<p class='page-sub'>Visão geral do sistema e indicadores recentes.</p>"
+
+    kpis = (
+        "<div class='kpis'>"
+        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Faturamento</span>"
+        "<span class='k-ico'>" + _icon("dollar") + "</span></div>"
+        f"<div class='k-num'>{_fmt_brl(faturado)}</div>"
+        "<div class='k-sub'>Total confirmado</div></div>"
+        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Pagamentos</span>"
+        "<span class='k-ico'>" + _icon("checks") + "</span></div>"
+        f"<div class='k-num'>{pagos}</div>"
+        "<div class='k-sub'>Pedidos pagos</div></div>"
+        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Pedidos</span>"
+        "<span class='k-ico'>" + _icon("cart") + "</span></div>"
+        f"<div class='k-num'>{len(orders)}</div>"
+        "<div class='k-sub'>Total registrado</div></div>"
+        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Clientes</span>"
+        "<span class='k-ico'>" + _icon("users") + "</span></div>"
+        f"<div class='k-num'>{len(clientes)}</div>"
+        "<div class='k-sub'>Contas únicas</div></div>"
+        "</div>"
     )
 
-    body = cards
-    body += f"<section><h2>Pedidos nos ultimos 14 dias</h2>{bars}</section>"
-    body += (
-        "<section><h2>Paginas mais visitadas</h2><table>"
-        "<tr><th>Pagina</th><th>Visitas</th></tr>" + top_rows + "</table></section>"
+    d0 = dias[0][0] if dias else ""
+    d1 = dias[-1][0] if dias else ""
+    periodo = f"{d0[8:10]}/{d0[5:7]} a {d1[8:10]}/{d1[5:7]}" if d0 and d1 else "14 dias"
+    colunas = ""
+    for iso, c in dias:
+        pct = int(c / max_dia * 100) if c else 3
+        colunas += (
+            f"<div class='bar-col' title='{iso} — {c} pedido(s)'>"
+            f"<span class='bar-val'>{c}</span>"
+            f"<span class='bar' style='height:{pct}%'></span>"
+            f"<span class='bar-lbl'>{iso[8:10]}</span></div>"
+        )
+    chart = (
+        "<div class='chart-card'>"
+        "<div class='chart-head'><h2>Pedidos nos últimos 14 dias</h2>"
+        f"<span class='chart-period'>{periodo}</span></div>"
+        f"<div class='barchart'>{colunas}</div></div>"
     )
+
+    chips = (
+        "<div class='stat-chips'>"
+        f"<span class='chip'>7 dias <b>{visitas7d}</b></span>"
+        f"<span class='chip'>Hoje <b>{visitas1d}</b></span>"
+        f"<span class='chip'>Total <b>{visitas_total}</b></span></div>"
+    )
+    pages = (
+        "<div class='chart-card'>"
+        "<div class='chart-head'><h2>Páginas mais visitadas</h2></div>"
+        + chips
+        + "<table><tr><th>Página</th><th>Visitas</th></tr>" + top_rows + "</table></div>"
+    )
+
+    body = sub + kpis + f"<div class='charts'>{chart}{pages}</div>"
     body += (
-        "<section><h2>Ultimas acoes do admin</h2><table>"
-        "<tr><th>Quando</th><th>Quem</th><th>Acao</th><th>Detalhes</th></tr>"
+        "<section><h2>Últimas ações do admin</h2><table>"
+        "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th></tr>"
         + audit_rows
         + "</table></section>"
     )
     body += (
-        "<section><h2>Ultimos pedidos</h2><table>"
+        "<section><h2>Últimos pedidos</h2><table>"
         "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
-        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Acoes</th></tr>"
+        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
         + _orders_rows(orders[:10], with_actions=True, csrf=_csrf_token())
         + "</table></section>"
     )

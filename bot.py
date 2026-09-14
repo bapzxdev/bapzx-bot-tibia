@@ -18,7 +18,7 @@ from storage import OrderStore
 from painel import bp as painel_bp
 from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 
-VERSION = "1.16.1"
+VERSION = "1.16.2"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
