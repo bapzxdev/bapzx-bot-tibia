@@ -1,4 +1,5 @@
 import html
+import json
 import os
 import secrets
 import time
@@ -10,7 +11,7 @@ from flask import Blueprint, jsonify, redirect, request, session
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "1.15.0"
+VERSION = "1.16.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -168,6 +169,47 @@ def _count_since(table, iso_dt):
     return int(total) if total.isdigit() else 0
 
 
+def _config_all():
+    try:
+        rows = _fetch("config", select="chave,valor")
+        return {r.get("chave"): r.get("valor", "") for r in rows}
+    except Exception:
+        return {}
+
+
+def _config_set(chave, valor):
+    requests.post(
+        f"{SUPA_URL}/rest/v1/config?on_conflict=chave",
+        headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+        json={"chave": chave, "valor": valor},
+        timeout=10,
+    )
+
+
+DEFAULT_PRECOS = {
+    "100": "R$ 9,00",
+    "250": "R$ 22,50",
+    "500": "R$ 45,00",
+    "1000": "R$ 90,00",
+    "2500": "R$ 225,00",
+}
+
+
+def _precos_atual():
+    raw = _config_all().get("precos") or ""
+    try:
+        dados = json.loads(raw)
+        if isinstance(dados, dict) and dados:
+            return {str(k): str(v) for k, v in dados.items()}
+    except Exception:
+        pass
+    return dict(DEFAULT_PRECOS)
+
+
+def _precos_texto():
+    return "\n".join(f"{k}={v}" for k, v in sorted(_precos_atual().items(), key=lambda kv: int(kv[0])))
+
+
 def _parse_brl(value):
     if not value:
         return 0.0
@@ -297,6 +339,10 @@ def _page(user, title, body, active=""):
         ("/admin", "Dashboard", "dash"),
         ("/admin/pedidos", "Pedidos", "pedidos"),
         ("/admin/itens", "Itens", "itens"),
+        ("/admin/clientes", "Clientes", "clientes"),
+        ("/admin/pagamentos", "Pagamentos", "pagamentos"),
+        ("/admin/tickets", "Tickets", "tickets"),
+        ("/admin/config", "Configurações", "config"),
     ]
     nav = "".join(
         f"<a {'class=active ' if key == active else ''}href='{href}'>{label}</a>"
@@ -495,6 +541,236 @@ def admin_pedidos():
     return _admin_page(user, "Pedidos", body, "pedidos")
 
 
+def _clientes_rows(profiles, orders):
+    pedidos_por_email = {}
+    for order in orders:
+        email = (order.get("email") or "").strip().lower()
+        if not email:
+            continue
+        item = pedidos_por_email.setdefault(email, {"pedidos": 0, "gasto": 0.0})
+        item["pedidos"] += 1
+        if (order.get("status") or "") in ("pago", "entregue"):
+            item["gasto"] += _parse_brl(order.get("preco"))
+    por_email = {p.get("email", "").strip().lower(): p for p in profiles}
+    emails = sorted(set(list(por_email) + list(pedidos_por_email)))
+    rows = ""
+    for email in emails:
+        profile = por_email.get(email) or {}
+        stats = pedidos_por_email.get(email, {})
+        bloqueado = "<span class='status cancelado'>bloqueado</span>" if profile.get("bloqueado") else ""
+        role = html.escape(str(profile.get("role") or "cliente"))
+        nome = html.escape(str(profile.get("name") or email))
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(email)}</td>"
+            f"<td>{nome}</td>"
+            f"<td>{role}</td>"
+            f"<td>{stats.get('pedidos', 0)}</td>"
+            f"<td>{_fmt_brl(stats.get('gasto', 0))}</td>"
+            f"<td>{bloqueado}</td>"
+            f"<td class='acts'><a class='btn ghost' style='padding:5px 10px;font-size:12px' "
+            f"href='/admin/clientes/{html.escape(email)}'>Ver</a></td>"
+            "</tr>"
+        )
+    if not rows:
+        rows = "<tr><td colspan='7' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum cliente encontrado.</td></tr>"
+    return rows
+
+
+@bp.route("/admin/clientes", methods=["GET"])
+def admin_clientes():
+    user = _require_admin()
+    if not user:
+        return redirect("/login")
+    profiles = _fetch("profiles", order="email.asc")
+    orders = _fetch("pedidos", order="data.asc")
+    body = f"<div class='cards'><div class='card'><div class='num'>{len(profiles)}</div><div class='lbl'>Perfis</div></div></div>"
+    body += (
+        "<section><h2>Clientes</h2><table>"
+        "<tr><th>E-mail</th><th>Nome</th><th>Papel</th><th>Pedidos</th><th>Gasto total</th><th>Status</th><th></th></tr>"
+        + _clientes_rows(profiles, orders)
+        + "</table></section>"
+    )
+    return _admin_page(user, "Clientes", body, "clientes")
+
+
+@bp.route("/admin/clientes/<email>", methods=["GET"])
+def admin_cliente_detalhe(email):
+    user = _require_admin()
+    if not user:
+        return redirect("/login")
+    email_decoded = (email or "").lower()
+    try:
+        from urllib.parse import unquote
+        email_decoded = unquote(email_decoded)
+    except Exception:
+        pass
+    profiles = _fetch("profiles", query=f"email=eq.{email_decoded}")
+    profile = profiles[0] if profiles else {}
+    orders = _fetch("pedidos", order="data.desc", range_="0-499")
+    mine = [o for o in orders if (o.get("email") or "").strip().lower() == email_decoded]
+    rows = _orders_rows(mine, with_actions=True, csrf=_csrf_token())
+    status_badge = "<span class='status cancelado'>bloqueado</span>" if profile.get("bloqueado") else "<span class='status pago'>ativo</span>"
+    form = (
+        "<section><h2>Dados do perfil</h2>"
+        f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/editar'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        f"<label>Nome</label><input name='name' value='{html.escape(str(profile.get('name') or ''))}'>"
+        f"<label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}'>"
+        f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}'>"
+        "<label>Papel</label>"
+        f"<select name='role'><option value='cliente' {'selected' if not profile.get('role') or profile.get('role') == 'cliente' else ''}>cliente</option>"
+        f"<option value='admin' {'selected' if profile.get('role') == 'admin' else ''}>admin</option></select>"
+        f"<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
+        f"<a class='btn ghost' href='/admin/clientes'>Voltar</a></p>"
+        "</form></section>"
+    )
+    acoes = ""
+    if profile.get("bloqueado"):
+        acoes = (
+            "<form method='post' action='/admin/clientes/{e}/bloquear' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<button class='btn' type='submit'>Desbloquear</button></form>"
+        ).format(e=html.escape(email_decoded))
+    else:
+        acoes = (
+            "<form method='post' action='/admin/clientes/{e}/bloquear' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer'>Bloquear</button></form>"
+        ).format(e=html.escape(email_decoded))
+    body = (
+        f"<div class='cards'><div class='card'><div class='num'>{email_decoded}</div><div class='lbl'>E-mail</div></div>"
+        f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
+        + form
+        + "<section><h2>Ações</h2>" + acoes + "</section>"
+        + "<section><h2>Pedidos do cliente</h2><table>"
+        + "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
+        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
+        + rows
+        + "</table></section>"
+    )
+    return _admin_page(user, "Cliente", body, "clientes")
+
+
+@bp.route("/admin/clientes/<email>/editar", methods=["POST"])
+def admin_cliente_editar(email):
+    user = _require_admin()
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    from urllib.parse import unquote
+    email_decoded = unquote(email).lower()
+    payload = {
+        "name": (request.form.get("name") or "").strip()[:200],
+        "personagem": (request.form.get("personagem") or "").strip()[:100],
+        "mundo": (request.form.get("mundo") or "").strip()[:100],
+        "role": (request.form.get("role") or "cliente")[:20],
+    }
+    try:
+        requests.post(
+            f"{SUPA_URL}/rest/v1/profiles?on_conflict=email",
+            headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+            json={"email": email_decoded, **payload},
+            timeout=15,
+        )
+        _audit(user, "cliente_editar", email_decoded)
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect(f"/admin/clientes/{email_decoded}")
+
+
+@bp.route("/admin/pagamentos", methods=["GET"])
+def admin_pagamentos():
+    user = _require_admin()
+    if not user:
+        return redirect("/login")
+    orders = _fetch("pedidos", order="data.desc", range_="0-999")
+    pendentes = [o for o in orders if (o.get("status") or "") == "pendente"]
+    pagos = [o for o in orders if (o.get("status") or "") == "pago"]
+    entregues = [o for o in orders if (o.get("status") or "") == "entregue"]
+    cancelados = [o for o in orders if (o.get("status") or "") in ("cancelado", "cancelada")]
+    soma = lambda lista: sum(_parse_brl(o.get("preco")) for o in lista)
+
+    def rows(lista, with_ts=False):
+        out = ""
+        for o in lista:
+            email = (o.get("email") or "-")
+            ts = html.escape(str(o.get("pix_confirmado_em") or o.get("data_pagamento") or ""))[:19] if with_ts else ""
+            out += (
+                "<tr>"
+                f"<td>{html.escape(str(o.get('id') or '-'))}</td>"
+                f"<td>{html.escape(str(o.get('data') or ''))[:16]}</td>"
+                f"<td>{html.escape(str(o.get('usuario') or '-'))}</td>"
+                f"<td>{html.escape(str(o.get('tc') or '-'))} RC</td>"
+                f"<td>{html.escape(str(o.get('preco') or '-'))}</td>"
+                f"<td>{html.escape(email)}</td>"
+                f"<td><span class='status {html.escape(o.get('status') or 'pendente')}'>{html.escape(o.get('status') or 'pendente')}</span></td>"
+                f"{f'<td>{ts}</td>' if with_ts else ''}"
+                "</tr>"
+            )
+        return out or "<tr><td colspan='8' class='empty' style='color:#64748b;padding:18px;text-align:center'>Sem pagamentos.</td></tr>"
+
+    cards = (
+        "<div class='cards'>"
+        "<div class='card'><div class='num'>{p}</div><div class='lbl'>Pendentes</div></div>"
+        "<div class='card'><div class='num'>{pg}</div><div class='lbl'>Aprovados</div></div>"
+        "<div class='card'><div class='num'>{e}</div><div class='lbl'>Entregues</div></div>"
+        "<div class='card'><div class='num'>{c}</div><div class='lbl'>Cancelados</div></div>"
+        "<div class='card'><div class='num'>{v}</div><div class='lbl'>Faturado</div></div>"
+        "</div>"
+    ).format(
+        p=len(pendentes),
+        pg=len(pagos),
+        e=len(entregues),
+        c=len(cancelados),
+        v=_fmt_brl(soma(pagos) + soma(entregues)),
+    )
+    tabs = (
+        "<section><h2>Pendentes (aguardando confirmação)</h2><table>"
+        "<tr><th>Id</th><th>Data</th><th>Cliente</th><th>Qtd</th><th>Valor</th><th>E-mail</th><th>Status</th></tr>"
+        + rows(pendentes)
+        + "</table></section>"
+        "<section><h2>Aprovados</h2><table>"
+        "<tr><th>Id</th><th>Data</th><th>Cliente</th><th>Qtd</th><th>Valor</th><th>E-mail</th><th>Status</th><th>Confirmado em</th></tr>"
+        + rows(pagos, with_ts=True)
+        + "</table></section>"
+        "<section><h2>Entregues</h2><table>"
+        "<tr><th>Id</th><th>Data</th><th>Cliente</th><th>Qtd</th><th>Valor</th><th>E-mail</th><th>Status</th></tr>"
+        + rows(entregues)
+        + "</table></section>"
+        "<section><h2>Cancelados</h2><table>"
+        "<tr><th>Id</th><th>Data</th><th>Cliente</th><th>Qtd</th><th>Valor</th><th>E-mail</th><th>Status</th></tr>"
+        + rows(cancelados)
+        + "</table></section>"
+    )
+    return _admin_page(user, "Pagamentos", cards + tabs, "pagamentos")
+
+
+@bp.route("/admin/clientes/<email>/bloquear", methods=["POST"])
+def admin_cliente_bloquear(email):
+    user = _require_admin()
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    from urllib.parse import unquote
+    email_decoded = unquote(email).lower()
+    profiles = _fetch("profiles", select="bloqueado", query=f"email=eq.{email_decoded}")
+    novo = not (profiles[0].get("bloqueado") if profiles else False)
+    try:
+        requests.post(
+            f"{SUPA_URL}/rest/v1/profiles?on_conflict=email",
+            headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+            json={"email": email_decoded, "bloqueado": novo},
+            timeout=15,
+        )
+        _audit(user, "cliente_bloquear" if novo else "cliente_desbloquear", email_decoded)
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect(f"/admin/clientes/{email_decoded}")
+
+
 @bp.route("/admin/marcar", methods=["POST"])
 def admin_marcar():
     user = _require_admin()
@@ -515,12 +791,186 @@ def admin_marcar():
             f"{SUPA_URL}/rest/v1/pedidos?id=eq.{int(order_id_text)}",
             headers=_headers(),
             json={"status": status, ts_field: now},
-            timeout=15,
+timeout=15,
         )
         _audit(user, f"marcar_pedido_{status}", f"pedido {order_id_text}")
     except Exception as error:
         return f"Falha: {error}", 500
     return redirect("/admin/pedidos")
+
+
+def _ticket_status_badge(status):
+    return f"<span class='status {html.escape(status or 'aberto')}'>{html.escape(status or 'aberto')}</span>"
+
+
+def _tickets_rows(tickets, with_ak=False, csrf=""):
+    rows = ""
+    for t in tickets:
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(str(t.get('id') or '-'))}</td>"
+            f"<td>{html.escape(str(t.get('criado_em') or ''))[:16]}</td>"
+            f"<td>{html.escape(str(t.get('email') or '-'))}</td>"
+            f"<td>{html.escape(str(t.get('assunto') or '-'))}</td>"
+            f"<td>{_ticket_status_badge(t.get('status'))}</td>"
+            f"<td>{html.escape(str(t.get('prioridade') or 'normal'))}</td>"
+            f"<td class='acts'><a class='btn ghost' style='padding:5px 10px;font-size:12px' "
+            f"href='/admin/tickets/{t.get('id')}'>Abrir</a></td>"
+            "</tr>"
+        )
+    return rows or "<tr><td colspan='7' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum ticket.</td></tr>"
+
+
+@bp.route("/admin/tickets", methods=["GET"])
+def admin_tickets():
+    user = _require_admin()
+    if not user:
+        return redirect("/login")
+    tickets = []
+    try:
+        tickets = _fetch("tickets", order="criado_em.desc", range_="0-499")
+    except Exception as error:
+        print(f"[painel] tickets indisponível: {error}")
+    abertos = [t for t in tickets if (t.get("status") or "aberto") == "aberto"]
+    respondidos = [t for t in tickets if (t.get("status") or "") == "respondido"]
+    encerrados = [t for t in tickets if (t.get("status") or "") == "encerrado"]
+    cards = (
+        "<div class='cards'>"
+        "<div class='card'><div class='num'>{a}</div><div class='lbl'>Abertos</div></div>"
+        "<div class='card'><div class='num'>{r}</div><div class='lbl'>Respondidos</div></div>"
+        "<div class='card'><div class='num'>{e}</div><div class='lbl'>Encerrados</div></div>"
+        "</div>"
+    ).format(a=len(abertos), r=len(respondidos), e=len(encerrados))
+    body = cards + (
+        "<section><h2>Todos os tickets</h2><table>"
+        "<tr><th>Id</th><th>Abertura</th><th>Cliente</th><th>Assunto</th><th>Status</th><th>Prioridade</th><th></th></tr>"
+        + _tickets_rows(tickets)
+        + "</table></section>"
+    )
+    return _admin_page(user, "Tickets", body, "tickets")
+
+
+@bp.route("/admin/tickets/<int:ticket_id>", methods=["GET", "POST"])
+def admin_ticket_detalhe(ticket_id):
+    user = _require_admin()
+    if not user:
+        return redirect("/login")
+    tickets = _fetch("tickets", query=f"id=eq.{ticket_id}")
+    if not tickets:
+        return "Ticket não encontrado.", 404
+    ticket = tickets[0]
+
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        acao = (request.form.get("acao") or "").strip()
+        if acao == "responder":
+            resposta = (request.form.get("resposta") or "").strip()[:3000]
+            if resposta:
+                json_payload = {
+                    "status": "respondido",
+                    "resposta": resposta,
+                    "respondido_em": datetime.utcnow().isoformat(),
+                    "respondido_por": user["email"],
+                }
+                try:
+                    requests.patch(
+                        f"{SUPA_URL}/rest/v1/tickets?id=eq.{ticket_id}",
+                        headers=_headers(),
+                        json=json_payload,
+                        timeout=15,
+                    )
+                    _audit(user, "ticket_responder", f"ticket {ticket_id}")
+                except Exception as exc:
+                    return f"Falha: {exc}", 500
+        elif acao == "encerrar":
+            try:
+                requests.patch(
+                    f"{SUPA_URL}/rest/v1/tickets?id=eq.{ticket_id}",
+                    headers=_headers(),
+                    json={"status": "encerrado"},
+                    timeout=15,
+                )
+            except Exception as exc:
+                return f"Falha: {exc}", 500
+        elif acao == "prioridade":
+            prioridade = (request.form.get("prioridade") or "normal")[:20]
+            try:
+                requests.patch(
+                    f"{SUPA_URL}/rest/v1/tickets?id=eq.{ticket_id}",
+                    headers=_headers(),
+                    json={"prioridade": prioridade},
+                    timeout=15,
+                )
+            except Exception as exc:
+                return f"Falha: {exc}", 500
+        return redirect(f"/admin/tickets/{ticket_id}")
+
+    top = (f"<a class='btn ghost' style='padding:6px 12px;font-size:12px' href='/admin/tickets'>Voltar</a>")
+    body = (
+        "<section><h2>Ticket #{id} &middot; {status}</h2>"
+        "<p style='color:#8ea0b8;font-size:13px'>"
+        "De: <b>{email}</b> &middot; Abertura: {criado} &middot; "
+        "Assunto: <b>{assunto}</b></p>"
+        "<p style='color:#e2e8f0'>{mensagem}</p>"
+        "{resposta_html}"
+        "</section>"
+        "<section><h2>Responder</h2>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<input type='hidden' name='acao' value='responder'>"
+        "<textarea name='resposta' rows='4' placeholder='Escreva a resposta do suporte...'></textarea>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Enviar resposta</button></p>"
+        "</form></section>"
+        "<section><h2>Ações</h2>"
+        "<form method='post' action='' style='display:inline'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<input type='hidden' name='acao' value='prioridade'>"
+        "<select name='prioridade'>"
+        f"<option value='normal' {'selected' if (ticket.get('prioridade') or '') in ('', 'normal') else ''}>normal</option>"
+        f"<option value='alta' {'selected' if ticket.get('prioridade') == 'alta' else ''}>alta</option>"
+        "<option value='urgente' >urgente</option>"
+        "</select>"
+        "<button class='btn ghost' type='submit'>Definir prioridade</button></form>"
+        "<form method='post' action='' style='display:inline'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<input type='hidden' name='acao' value='encerrar'>"
+        "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer' type='submit'>Encerrar ticket</button></form>"
+        "</section>"
+    ).format(
+        id=ticket.get("id"),
+        status=_ticket_status_badge(ticket.get("status")),
+        email=html.escape(str(ticket.get("email") or "-")),
+        criado=html.escape(str(ticket.get("criado_em") or ""))[:19],
+        assunto=html.escape(str(ticket.get("assunto") or "-")),
+        mensagem=html.escape(str(ticket.get("mensagem") or "-")),
+        resposta_html=(
+            "<p style='background:#0f2a22;border:1px solid #14532d;color:#4ade80;border-radius:9px;padding:10px 14px'>"
+            f"<b>Resposta:</b> {html.escape(str(ticket.get('resposta') or ''))}</p>"
+            if ticket.get("resposta")
+            else ""
+        ),
+    )
+    return _admin_page(user, "Ticket", top + body, "tickets")
+
+
+@bp.route("/admin/tickets/<int:ticket_id>/excluir", methods=["POST"])
+def admin_ticket_excluir(ticket_id):
+    user = _require_admin()
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    try:
+        requests.delete(
+            f"{SUPA_URL}/rest/v1/tickets?id=eq.{ticket_id}",
+            headers=_headers(),
+            timeout=15,
+        )
+        _audit(user, "ticket_excluir", str(ticket_id))
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/tickets")
 
 
 def _item_card(item):
@@ -728,12 +1178,86 @@ def admin_item_excluir(item_id):
         requests.delete(
             f"{SUPA_URL}/rest/v1/itens?id=eq.{item_id}",
             headers=_headers(),
-            timeout=15,
+timeout=15,
         )
         _audit(user, "item_excluir", item_id)
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/itens")
+
+
+@bp.route("/admin/config", methods=["GET"])
+def admin_config():
+    user = _require_admin()
+    if not user:
+        return redirect("/login")
+    cfg = _config_all()
+    precos_texto = cfg.get("precos") or _precos_texto()
+    form = (
+        "<section><h2>Preços por pacote (RC → R$)</h2>"
+        "<p style='color:#8ea0b8;font-size:13px'>Uma linha por pacote no formato "
+        "<b>quantia=preço</b>, separados por quebra de linha. Ex.: <code>100=R$ 9,00</code>. "
+        "Esse valor é usado na resposta do bot e no cálculo do Pix.</p>"
+        "<form method='post' action='/admin/config/salvar'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<input type='hidden' name='chave' value='precos'>"
+        f"<textarea name='valor' rows='6'>{html.escape(precos_texto)}</textarea>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar preços</button></p>"
+        "</form></section>"
+    )
+    notif_atual = cfg.get("notificar_pedido")
+    notif_block = (
+        "<section><h2>Notificações</h2>"
+        "<p style='color:#8ea0b8;font-size:13px'>Receber aviso no Telegram quando um "
+        "novo pedido chegar no bot.</p>"
+        "<form method='post' action='/admin/config/salvar'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<input type='hidden' name='chave' value='notificar_pedido'>"
+        "<label>Notificar dono</label>"
+        f"<select name='valor'>"
+        f"<option value='1' {'selected' if notif_atual in (None, '', '1') else ''}>Sim</option>"
+        f"<option value='0' {'selected' if notif_atual == '0' else ''}>Não</option>"
+        "</select>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
+        "</form></section>"
+    )
+    return _admin_page(user, "Configurações", form + notif_block, "config")
+
+
+@bp.route("/admin/config/salvar", methods=["POST"])
+def admin_config_salvar():
+    user = _require_admin()
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    chave = (request.form.get("chave") or "").strip()[:50]
+    valor = (request.form.get("valor") or "").strip()
+    if not chave:
+        return "Chave obrigatória.", 400
+    if chave == "precos":
+        try:
+            novo = {}
+            for linha in valor.splitlines():
+                linha = linha.strip()
+                if not linha:
+                    continue
+                k, sep, v = linha.rpartition("=")
+                if not sep:
+                    return f"Linha sem '=': {html.escape(linha)}", 400
+                k = k.strip()
+                if not k.isdigit():
+                    return f"Pacote inválido: {html.escape(k)}", 400
+                novo[k] = v.strip() or f"R$ {k}"
+            valor = json.dumps(novo, ensure_ascii=False)
+        except Exception as exc:
+            return f"Falha ao interpretar: {exc}", 400
+    try:
+        _config_set(chave, valor)
+        _audit(user, "config_salvar", chave)
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/config")
 
 
 @bp.route("/api/itens", methods=["GET"])

@@ -15,8 +15,9 @@ from werkzeug.exceptions import HTTPException
 
 from storage import OrderStore
 from painel import bp as painel_bp
+from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 
-VERSION = "1.15.0"
+VERSION = "1.16.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -1402,8 +1403,10 @@ def cliente():
     ]
     rows = _orders_rows(mine)
     top = (
-        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
-        f"<a href='/logout'>Sair</a>"
+        "<a href='/cliente/perfil' style='padding:6px 12px;background:rgba(52,211,153,.12);border-radius:6px;text-decoration:none;color:#34d399;font-size:13px'>Meu perfil</a> "
+        "<a href='/cliente/suporte' style='padding:6px 12px;background:rgba(96,165,250,.12);border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Suporte</a> "
+        f"<span style='color:#94a3b8;font-size:12px;margin-left:12px'>{html.escape(user['name'])}</span> "
+        "<a href='/logout' style='margin-left:8px'>Sair</a>"
     )
     body = (
         "<div class='cards'>"
@@ -1417,6 +1420,195 @@ def cliente():
     )
     body += f"<section><h2>Meus pedidos</h2>{rows}</section><p class='note'>{note}</p>"
     return _page("Minha conta", "Minha conta", top, body)
+
+
+@app.route("/cliente/perfil", methods=["GET", "POST"])
+def cliente_perfil():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    profiles = []
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/profiles?email=eq.{email}&select=*",
+                headers=STORE._headers(),
+                timeout=15,
+            )
+            if response.status_code == 200:
+                profiles = response.json()
+        except Exception:
+            profiles = []
+    profile = profiles[0] if profiles else {}
+
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        payload = {
+            "email": email,
+            "name": user["name"],
+            "sub": user.get("sub") or "",
+            "role": user.get("role") or "cliente",
+            "personagem": (request.form.get("personagem") or "").strip()[:100],
+            "mundo": (request.form.get("mundo") or "").strip()[:100],
+        }
+        if STORE.remote:
+            try:
+                requests.post(
+                    f"{STORE.url}/rest/v1/profiles?on_conflict=email",
+                    headers={**STORE._headers(), "Prefer": "resolution=merge-duplicates"},
+                    json=payload,
+                    timeout=15,
+                )
+            except Exception:
+                pass
+        return redirect("/cliente/perfil")
+
+    top = (
+        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
+        f"<a href='/logout'>Sair</a>"
+    )
+    body = (
+        "<section><h2>Meu perfil</h2>"
+        "<p style='color:#8ea0b8;font-size:13px'>"
+        "Informe seu personagem e mundo para agilizar seus próximos pedidos.</p>"
+        "<form method='post'>"
+        f"<label>E-mail</label><input value='{html.escape(email)}' disabled>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        f"<label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}' "
+        "placeholder='Nome do personagem'>"
+        f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}' "
+        "placeholder='Ex.: antica'>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar perfil</button></p>"
+        "</form></section>"
+    )
+    return _page("Meu perfil", "Meu perfil", top, body)
+
+
+@app.route("/cliente/suporte", methods=["GET", "POST"])
+def cliente_suporte():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    top = (
+        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
+        f"<a href='/logout'>Sair</a>"
+    )
+    email = user["email"].lower()
+
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        assunto = (request.form.get("assunto") or "").strip()[:200]
+        mensagem = (request.form.get("mensagem") or "").strip()[:3000]
+        if not assunto or not mensagem:
+            return "Assunto e mensagem obrigatórios.", 400
+        if STORE.remote:
+            try:
+                requests.post(
+                    f"{STORE.url}/rest/v1/tickets",
+                    headers={**STORE._headers(), "Prefer": "return=representation"},
+                    json={"email": email, "assunto": assunto, "mensagem": mensagem},
+                    timeout=15,
+                )
+                dono = load_env_key("TELEGRAM_OWNER_CHAT_ID")
+                if dono:
+                    send_message(
+                        dono,
+                        f"🎫 NOVO TICKET de {email}\n\nAssunto: {assunto}\n\n{mensagem[:400]}",
+                    )
+            except Exception:
+                pass
+        return redirect("/cliente/suporte")
+
+    tickets = []
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/tickets?email=eq.{email}&order=criado_em.desc&select=*",
+                headers=STORE._headers(),
+                timeout=15,
+            )
+            if response.status_code == 200:
+                tickets = response.json()
+        except Exception:
+            tickets = []
+    rows = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(t.get('id') or '-'))}</td>"
+        f"<td>{html.escape(str(t.get('criado_em') or ''))[:16]}</td>"
+        f"<td>{html.escape(str(t.get('assunto') or '-'))}</td>"
+        f"<td><span class='status {html.escape(t.get('status') or 'aberto')}'>{html.escape(t.get('status') or 'aberto')}</span></td>"
+        f"<td><a class='btn ghost' style='padding:4px 10px;font-size:12px' href='/cliente/suporte/{t.get('id')}'>Ver</a></td>"
+        "</tr>"
+        for t in tickets
+    ) or "<tr><td colspan='5' style='color:#64748b;text-align:center'>Nenhum chamado aberto.</td></tr>"
+    body = (
+        "<section><h2>Abrir chamado</h2>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label>Assunto</label><input name='assunto' required placeholder='Resumo curto'>"
+        "<label>Mensagem</label><textarea name='mensagem' rows='4' required></textarea>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Enviar chamado</button></p>"
+        "</form></section>"
+        "<section><h2>Meus chamados</h2><table>"
+        "<tr><th>Id</th><th>Data</th><th>Assunto</th><th>Status</th><th></th></tr>"
+        + rows
+        + "</table></section>"
+    )
+    return _page("Suporte", "Suporte", top, body)
+
+
+@app.route("/cliente/suporte/<int:ticket_id>", methods=["GET"])
+def cliente_suporte_detalhe(ticket_id):
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    tickets = []
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/tickets?id=eq.{ticket_id}&email=eq.{email}&select=*",
+                headers=STORE._headers(),
+                timeout=15,
+            )
+            if response.status_code == 200:
+                tickets = response.json()
+        except Exception:
+            tickets = []
+    if not tickets:
+        return "Chamado não encontrado.", 404
+    ticket = tickets[0]
+    top = (
+        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
+        f"<a href='/logout'>Sair</a>"
+    )
+    resposta = ""
+    if ticket.get("resposta"):
+        resposta = (
+            "<p style='background:#0f2a22;border:1px solid #14532d;color:#4ade80;"
+            "border-radius:9px;padding:10px 14px'><b>Resposta:</b> "
+            f"{html.escape(str(ticket.get('resposta') or ''))}</p>"
+        )
+    body = (
+        "<section><h2>Chamado #{id} &middot; {status}</h2>"
+        "<p style='color:#8ea0b8;font-size:13px'>Abertura: {criado}</p>"
+        "<p><b>{assunto}</b></p>"
+        "<p style='color:#e2e8f0'>{mensagem}</p>"
+        "{resposta}"
+        "</section>"
+        "<p><a class='btn ghost' href='/cliente/suporte'>Voltar aos chamados</a></p>"
+    ).format(
+        id=ticket.get("id"),
+        status=html.escape(ticket.get("status") or "aberto"),
+        criado=html.escape(str(ticket.get("criado_em") or ""))[:19],
+        assunto=html.escape(str(ticket.get("assunto") or "-")),
+        mensagem=html.escape(str(ticket.get("mensagem") or "-")),
+        resposta=resposta,
+    )
+    return _page("Chamado", "Suporte", top, body)
 
 
 def notify_owner(entry):
