@@ -72,7 +72,7 @@ try:
         ALLOWED_HOSTS.add(_render_host)
 except Exception:
     pass
-ALLOWED_HOSTS.update({"localhost", "127.0.0.1"})
+ALLOWED_HOSTS.update({"localhost", "127.0.0.1", "bapzx-bot-tibia.onrender.com"})
 GOOGLE_CLIENT_ID = load_env_key("GOOGLE_CLIENT_ID") or ""
 GOOGLE_CLIENT_SECRET = load_env_key("GOOGLE_CLIENT_SECRET") or ""
 ADMIN_EMAILS = set(
