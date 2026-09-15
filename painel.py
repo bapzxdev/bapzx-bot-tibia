@@ -13,7 +13,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.0.2"
+VERSION = "2.1.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -1923,6 +1923,29 @@ def api_itens():
         for it in itens
     ]
     response = jsonify({"ok": True, "itens": payload})
+    if origin and _cors_ok():
+        response.headers["Access-Control-Allow-Origin"] = origin
+    return response
+
+
+@bp.route("/api/servicos", methods=["GET"])
+def api_servicos():
+    if _rate_limited("api_servicos", _RATE_LIMIT_TRACK_PER_MIN):
+        return jsonify({"ok": False, "error": "rate limit"}), 429
+    origin = request.headers.get("Origin") or ""
+    servicos = _fetch_soft("servicos", select="*", query="ativo=eq.true", order="ordem.asc")
+    payload = [
+        {
+            "id": s.get("id"),
+            "nome": s.get("nome"),
+            "preco": s.get("preco"),
+            "descricao": s.get("descricao"),
+            "imagem": s.get("imagem"),
+            "categoria": s.get("categoria"),
+        }
+        for s in servicos
+    ]
+    response = jsonify({"ok": True, "servicos": payload})
     if origin and _cors_ok():
         response.headers["Access-Control-Allow-Origin"] = origin
     return response
