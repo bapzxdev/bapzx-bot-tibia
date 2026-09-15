@@ -5,15 +5,17 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
-- [ ] **Aplicar `supabase_migracao_v118.sql` (v2.0.0) — PENDENTE.** Colar o
-      conteúdo de `supabase_migracao_v118.sql` → Run. Cria a tabela `users`
-      (nome/cargo/permissoes jsonb/ativo) e a tabela `grupos` (seed Coroa/
-      Rubinot/Pokepixel/PokeIdle com links vazios) e o seed do produto
-      "Intermediação BAPZX" R$5 em `itens`. Enquanto não for aplicada, as
-      rotas novas mostram lista vazia (sem erro — `_fetch_soft` trata PGRST205).
-      Depois de aplicar: abrir `/admin/usuarios` e `/admin/grupos` e preencher
-      os links reais dos 4 grupos no `/admin/grupos` para os botões do site
-      começarem a funcionar.
+- [ ] **Aplicar `supabase_migracao_v119.sql` (v2.1.0) — PENDENTE.** Colar o
+      conteúdo de `supabase_migracao_v119.sql` → Run. Cria a tabela `servicos`
+      (Intermediação BAPZX R$5 sai da tabela `itens` de itens do jogo e vai
+      para `servicos`; itens de jogo e serviços ficam separados). A página
+      `itens.html` do site tem agora 2 seções: "Itens do jogo" (`/api/itens`)
+      e "Serviços" (`/api/servicos`). Enquanto não for aplicada: a
+      Intermediação ainda aparece na lista de itens e `/api/servicos` retorna
+      vazio.
+- [x] **Aplicar `supabase_migracao_v118.sql` (v2.0.0) — FEITO pelo dono.**
+      Tabelas `users` e `grupos` no ar (o `/api/grupos` retorna vazio porque
+      os 4 links ainda estão vazios — preencher no `/admin/grupos`).
 - [ ] **Publicar o app Google (OAuth)** — console.cloud.google.com/auth →
       Settings → Branding → Publishing status → **Publish app**.
       Hoje o app está em modo Teste: só o e-mail `lucascristianini1@gmail.com`
