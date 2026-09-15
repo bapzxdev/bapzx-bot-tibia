@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -1301,14 +1301,14 @@ th {{ color: #94a3b8; font-weight: normal; }}
 </style>
 </head>
 <body>
-<header><h1>BAPZX &middot; {brand}</h1>{top}</header>
+<header><h1>BAPZX · {brand}</h1>{top}</header>
 <main>{body}</main>
 <footer>
-  <span>&copy; 2026 BAPZX &middot; Vendas de RC no Tibia</span><br>
+  <span>© 2026 BAPZX · Vendas de RC no Tibia</span><br>
   <a href="/privacidade">Política de Privacidade</a>
   <a href="/termos">Termos de Uso</a>
   <a href="/reembolso">Política de Reembolso</a>
-  <a href="{whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
+  <a href="{whatsapp}" rel="noopener">WhatsApp</a>
 </footer>
 </body>
 </html>"""
@@ -1438,7 +1438,7 @@ def privacidade():
     top = (
         "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
         "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a> "
-        "<a href='https://wa.me/5519991813598' style='margin-left:8px' target='_blank' rel='noopener'>WhatsApp</a>"
+        "<a href='https://wa.me/5519991813598' style='margin-left:8px' rel='noopener'>WhatsApp</a>"
     )
     body, _ = legais._render_legal_page(
         "Política de Privacidade",
@@ -1447,7 +1447,7 @@ def privacidade():
         "15/09/2026",
         top,
     )
-    body += "<p class='size-note'>BAPZX &middot; WhatsApp " + legais.WHATSAPP_DISPLAY + "</p>"
+    body += "<p class='size-note'>BAPZX · WhatsApp " + legais.WHATSAPP_DISPLAY + "</p>"
     return _page("Política de Privacidade", "Legal", top, body)
 
 
@@ -1575,7 +1575,7 @@ def acesso():
             "<a href='/admin' style='display:block;background:linear-gradient(135deg,#312e81,#4c1d95);"
             "border:2px solid #7c3aed;border-radius:14px;padding:28px 32px;text-decoration:none;color:#e2e8f0;flex:1;min-width:200px'>"
             "<div style='font-size:28px;margin-bottom:8px'>&#9881;</div>"
-            "<div style='font-size:22px;font-weight:bold;margin-bottom:4px'>Administra&ccedil;&atilde;o</div>"
+            "<div style='font-size:22px;font-weight:bold;margin-bottom:4px'>Administração</div>"
             "<div style='font-size:13px;color:#c4b5fd'>Área restrita da equipe BAPZX</div>"
             "</a>"
         )
@@ -1592,7 +1592,7 @@ def acesso():
         f"{admin_btn}"
         "</div></section>"
     )
-    return _page("Entrar", "Escolha a &aacute;rea", top, body)
+    return _page("Entrar", "Escolha a área", top, body)
 
 
 @app.route("/cliente")
@@ -1806,7 +1806,7 @@ def cliente_suporte_detalhe(ticket_id):
             f"{html.escape(str(ticket.get('resposta') or ''))}</p>"
         )
     body = (
-        "<section><h2>Chamado #{id} &middot; {status}</h2>"
+        "<section><h2>Chamado #{id} · {status}</h2>"
         "<p style='color:#8ea0b8;font-size:13px'>Abertura: {criado}</p>"
         "<p><b>{assunto}</b></p>"
         "<p style='color:#e2e8f0'>{mensagem}</p>"

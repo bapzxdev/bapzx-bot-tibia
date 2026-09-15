@@ -13,7 +13,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -568,7 +568,7 @@ def _page(user, title, body, active=""):
                 + f"<span>{link_label}</span></a>"
             )
     side_foot = (
-        f"<a class='side-item' href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>"
+        f"<a class='side-item' href='{PORTFOLIO_URL}'>"
         + _icon("external")
         + "<span>Ver site</span></a>"
         "<a class='side-item' href='/acesso'>" + _icon("swap") + "<span>Trocar área</span></a>"
@@ -632,7 +632,7 @@ def _page(user, title, body, active=""):
         "<div class='menu' id='usermenu'>"
         f"<div class='menu-head'><b>{html.escape(name)}</b><span>{html.escape(email)}</span>"
         f"<span style='color:#60a5fa;font-size:12px'>{html.escape(rbac.cargo_label(role))}</span></div>"
-        f"<a href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>" + _icon("external") + "Ver site</a>"
+        f"<a href='{PORTFOLIO_URL}'>" + _icon("external") + "Ver site</a>"
         "<a href='/acesso'>" + _icon("swap") + "Trocar área</a>"
         "<a href='/logout' class='danger'>" + _icon("logout") + "Sair</a>"
         "</div></div></div></header>"
@@ -1253,9 +1253,9 @@ def admin_ticket_detalhe(ticket_id):
 
     top = (f"<a class='btn ghost' style='padding:6px 12px;font-size:12px' href='/admin/tickets'>Voltar</a>")
     body = (
-        "<section><h2>Ticket #{id} &middot; {status}</h2>"
+        "<section><h2>Ticket #{id} · {status}</h2>"
         "<p style='color:#8ea0b8;font-size:13px'>"
-        "De: <b>{email}</b> &middot; Abertura: {criado} &middot; "
+        "De: <b>{email}</b> · Abertura: {criado} · "
         "Assunto: <b>{assunto}</b></p>"
         "<p style='color:#e2e8f0'>{mensagem}</p>"
         "{resposta_html}"
@@ -1336,7 +1336,7 @@ def _item_card(item):
     return (
         f"<div class='card'>"
         f"{img}"
-        f"<div class='kicker'>{html.escape(item.get('categoria') or 'geral')} &middot; "
+        f"<div class='kicker'>{html.escape(item.get('categoria') or 'geral')} · "
         f"{'publicado' if ativo else 'rascunho'}</div>"
         f"<h3 style='margin:6px 0 2px'>{html.escape(item.get('nome') or '-')}</h3>"
         f"<div class='num' style='font-size:18px'>{preco}</div>"
@@ -1801,7 +1801,7 @@ def _grupos_rows(grupos):
         link = g.get("link") or ""
         ativo_lbl = "ativo" if g.get("ativo") else "inativo"
         ordem = g.get("ordem") or 0
-        link_lbl = f"<a href='{html.escape(link)}' target='_blank' rel='noopener'>{html.escape(link[:40])}</a>" if link else "<span style='color:#64748b'>—</span>"
+        link_lbl = f"<a href='{html.escape(link)}' rel='noopener'>{html.escape(link[:40])}</a>" if link else "<span style='color:#64748b'>—</span>"
         rows += (
             "<tr>"
             f"<td>{html.escape(str(gid))}</td>"
