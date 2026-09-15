@@ -17,8 +17,10 @@ from werkzeug.exceptions import HTTPException
 from storage import OrderStore
 from painel import bp as painel_bp
 from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
+import rbac as rbac
+import legais as legais
 
-VERSION = "1.16.2"
+VERSION = "2.0.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -82,6 +84,11 @@ ADMIN_EMAILS = set(
     for e in (load_env_key("ADMIN_EMAILS") or "").split(",")
     if e.strip()
 )
+MASTER_EMAILS = set(
+    e.strip().lower()
+    for e in (load_env_key("MASTER_EMAILS") or load_env_key("ADMIN_EMAILS") or "").split(",")
+    if e.strip()
+) or ADMIN_EMAILS
 AWAITING_EMAIL = {}
 AWAITING_CHAR = {}
 EMAIL_RE = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
@@ -1263,6 +1270,13 @@ header {{ background: #1e293b; padding: 18px 24px; display: flex; align-items: c
 header h1 {{ margin: 0; font-size: 18px; }}
 header a {{ color: #94a3b8; font-size: 13px; text-decoration: none; }}
 main {{ padding: 24px; max-width: 960px; margin: 0 auto; }}
+label {{ display: block; margin-top: 10px; color: #94a3b8; font-size: 13px; }}
+input, select, textarea {{ width: 100%; margin-top: 4px; padding: 9px 11px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; font-size: 14px; box-sizing: border-box; }}
+.btn {{ background: #4ade80; color: #052e16; border: 0; border-radius: 8px; padding: 10px 18px; font-weight: bold; cursor: pointer; font-size: 14px; }}
+.legal-note {{ font-size: 12px; color: #64748b; margin-top: 12px; }}
+footer {{ border-top: 1px solid #1e293b; margin-top: 34px; padding: 20px 24px; background: #0b1424; font-size: 12.5px; color: #64748b; text-align: center; }}
+footer a {{ color: #8ea0b8; text-decoration: none; margin: 0 8px; }}
+.size-note {{ font-size: 12px; color: #64748b; }}
 .cards {{ display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0; }}
 .card {{ background: #1e293b; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 150px; }}
 .card .num {{ font-size: 24px; font-weight: bold; color: #4ade80; }}
@@ -1289,6 +1303,13 @@ th {{ color: #94a3b8; font-weight: normal; }}
 <body>
 <header><h1>BAPZX &middot; {brand}</h1>{top}</header>
 <main>{body}</main>
+<footer>
+  <span>&copy; 2026 BAPZX &middot; Vendas de RC no Tibia</span><br>
+  <a href="/privacidade">Política de Privacidade</a>
+  <a href="/termos">Termos de Uso</a>
+  <a href="/reembolso">Política de Reembolso</a>
+  <a href="{whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
+</footer>
 </body>
 </html>"""
 
@@ -1300,6 +1321,7 @@ def _page(title, brand, top, body):
             brand=html.escape(brand),
             top=top,
             body=body,
+            whatsapp=SERVICE_WHATSAPP_LINK,
         ),
         200,
         {"Content-Type": "text/html; charset=utf-8"},
@@ -1310,12 +1332,53 @@ def current_user():
     email = session.get("email")
     if not email:
         return None
+    cargo = (session.get("cargo") or session.get("role") or "CLIENTE").upper()
+    perms = session.get("perms") or []
     return {
         "email": email,
         "name": session.get("name") or email,
-        "role": session.get("role") or "cliente",
+        "role": cargo,
+        "cargo": cargo,
+        "perms": set(perms or []),
         "sub": session.get("sub"),
     }
+
+
+def _fetch_user_row(email):
+    """Retorna a linha da tabela users (RBAC) para um e-mail, ou None."""
+    if not (STORE.remote and email):
+        return None
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/users?email=eq.{email}&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            rows = response.json() or []
+            if rows:
+                return rows[0]
+    except Exception as error:
+        print(f"[rbac] falha ao consultar users: {error}")
+    return None
+
+
+def resolve_cargo_perms(email):
+    """Decide cargo+permissões para um e-mail logado.
+
+    1) MASTER_EMAILS (env) => MASTER com tudo;
+    2) users.ativo com cargo => cargo + permissões individuais (se houver);
+    3) senão => CLIENTE.
+    """
+    if rbac.eh_master(email, MASTER_EMAILS):
+        return "MASTER", sorted(rbac.perms_efetivas("MASTER"))
+    row = _fetch_user_row(email)
+    if row and row.get("ativo"):
+        cargo = (row.get("cargo") or "CLIENTE").upper()
+        if rbac.cargo_valido(cargo) and cargo != "MASTER":
+            explicitas = row.get("permissoes") or []
+            return cargo, sorted(rbac.perms_efetivas(cargo, explicitas))
+    return "CLIENTE", []
 
 
 def save_profile(email, name, sub, role):
@@ -1370,6 +1433,74 @@ def _orders_rows(orders, with_actions=False):
     return rows
 
 
+@app.route("/privacidade")
+def privacidade():
+    top = (
+        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
+        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a> "
+        "<a href='https://wa.me/5519991813598' style='margin-left:8px' target='_blank' rel='noopener'>WhatsApp</a>"
+    )
+    body, _ = legais._render_legal_page(
+        "Política de Privacidade",
+        legais.privacidade_html(),
+        "Como tratamos seus dados pessoais em conformidade com a LGPD (Lei 13.709/2018).",
+        "15/09/2026",
+        top,
+    )
+    body += "<p class='size-note'>BAPZX &middot; WhatsApp " + legais.WHATSAPP_DISPLAY + "</p>"
+    return _page("Política de Privacidade", "Legal", top, body)
+
+
+@app.route("/termos")
+def termos():
+    top = (
+        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
+        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a>"
+    )
+    body, _ = legais._render_legal_page(
+        "Termos de Uso",
+        legais.termos_html(),
+        "Regras gerais para uso dos serviços BAPZX.",
+        "15/09/2026",
+        top,
+    )
+    return _page("Termos de Uso", "Legal", top, body)
+
+
+@app.route("/reembolso")
+def reembolso():
+    top = (
+        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
+        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a>"
+    )
+    body, _ = legais._render_legal_page(
+        "Política de Reembolso",
+        legais.reembolso_html(),
+        "Condições para solicitar reembolso de pedidos.",
+        "15/09/2026",
+        top,
+    )
+    return _page("Política de Reembolso", "Legal", top, body)
+
+
+@app.route("/privacidade/pdf")
+def privacidade_pdf():
+    try:
+        bytes_pdf = legais.privacidade_pdf_bytes()
+    except Exception as error:
+        print(f"[legal] falha ao gerar PDF: {error}")
+        return "Falha ao gerar o PDF. Tente novamente em instantes.", 500
+    return (
+        bytes_pdf,
+        200,
+        {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="politica-de-privacidade-bapzx.pdf"',
+            "Content-Length": str(len(bytes_pdf)),
+        },
+    )
+
+
 @app.route("/login")
 def login():
     if not _host_ok(request.host):
@@ -1402,7 +1533,12 @@ def oauth_callback():
         return "Conta Google sem e-mail verificado. Não é possível continuar.", 403
     name = info.get("name") or email.split("@")[0]
     sub = info.get("sub") or ""
-    role = "admin" if email in ADMIN_EMAILS else "cliente"
+    try:
+        cargo, perms = resolve_cargo_perms(email)
+    except Exception as error:
+        print(f"[rbac] falha ao resolver cargo: {error}")
+        cargo, perms = "CLIENTE", []
+    role = "admin" if cargo != "CLIENTE" else "cliente"
     try:
         save_profile(email, name, sub, role)
     except Exception as error:
@@ -1410,6 +1546,8 @@ def oauth_callback():
     session["email"] = email
     session["name"] = name
     session["role"] = role
+    session["cargo"] = cargo
+    session["perms"] = perms
     session["sub"] = sub
     session.permanent = True
     return redirect("/acesso")
@@ -1432,13 +1570,13 @@ def acesso():
         "<a href='/logout' style='margin-left:8px'>Sair</a>"
     )
     admin_btn = ""
-    if user.get("role") == "admin":
+    if user.get("cargo") != "CLIENTE" and user.get("perms"):
         admin_btn = (
             "<a href='/admin' style='display:block;background:linear-gradient(135deg,#312e81,#4c1d95);"
             "border:2px solid #7c3aed;border-radius:14px;padding:28px 32px;text-decoration:none;color:#e2e8f0;flex:1;min-width:200px'>"
             "<div style='font-size:28px;margin-bottom:8px'>&#9881;</div>"
             "<div style='font-size:22px;font-weight:bold;margin-bottom:4px'>Administra&ccedil;&atilde;o</div>"
-            "<div style='font-size:13px;color:#c4b5fd'>Pedidos, clientes, tickets, configura&ccedil;&otilde;es e itens</div>"
+            "<div style='font-size:13px;color:#c4b5fd'>Área restrita da equipe BAPZX</div>"
             "</a>"
         )
     body = (
@@ -1548,7 +1686,11 @@ def cliente_perfil():
         f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}' "
         "placeholder='Ex.: antica'>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar perfil</button></p>"
-        "</form></section>"
+        "</form>"
+        "<p class='legal-note'>Ao salvar seu perfil, seus dados (personagem e mundo) são usados "
+        "apenas para agilizar seus pedidos. Consulte nossa "
+        "<a href='/privacidade' style='color:#60a5fa'>Política de Privacidade</a> (LGPD) para saber mais.</p>"
+        "</section>"
     )
     return _page("Meu perfil", "Meu perfil", top, body)
 
@@ -1618,7 +1760,11 @@ def cliente_suporte():
         "<label>Assunto</label><input name='assunto' required placeholder='Resumo curto'>"
         "<label>Mensagem</label><textarea name='mensagem' rows='4' required></textarea>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Enviar chamado</button></p>"
-        "</form></section>"
+        "</form>"
+        "<p class='legal-note'>As mensagens enviadas aqui são tratadas em sigilo para atender seu "
+        "chamado. Consulte nossa <a href='/privacidade' style='color:#60a5fa'>Política de "
+        "Privacidade</a> (LGPD).</p>"
+        "</section>"
         "<section><h2>Meus chamados</h2><table>"
         "<tr><th>Id</th><th>Data</th><th>Assunto</th><th>Status</th><th></th></tr>"
         + rows

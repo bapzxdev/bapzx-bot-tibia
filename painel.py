@@ -8,11 +8,41 @@ from datetime import datetime, timedelta
 import requests
 from flask import Blueprint, jsonify, redirect, request, session
 
+import rbac
+
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "1.16.2"
+VERSION = "2.0.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
+
+
+def _env_master():
+    for source in (
+        os.environ,
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "gemini-cli", ".env"),
+    ):
+        lines = []
+        if isinstance(source, dict):
+            for var in ("MASTER_EMAILS", "ADMIN_EMAILS"):
+                if source.get(var):
+                    return source.get(var)
+            continue
+        try:
+            with open(source, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except Exception:
+            lines = []
+        for line in lines:
+            line = line.strip()
+            for var in ("MASTER_EMAILS", "ADMIN_EMAILS"):
+                if line.startswith(var + "=") and not line.startswith("#"):
+                    return line.split("=", 1)[1].strip()
+    return ""
+
+
+MASTER_EMAILS = {e.strip().lower() for e in _env_master().split(",") if e.strip()}
 
 
 def _env(var, default=""):
@@ -100,20 +130,39 @@ def _current_user():
     email = session.get("email")
     if not email:
         return None
+    cargo = (session.get("cargo") or session.get("role") or "CLIENTE").upper()
+    perms = session.get("perms") or []
     return {
         "email": email,
         "name": session.get("name") or email,
-        "role": session.get("role") or "cliente",
+        "role": cargo,
+        "cargo": cargo,
+        "perms": set(perms or []),
     }
 
 
-def _require_admin():
+def _require_perm(*requeridas):
     user = _current_user()
-    if not user or user["role"] != "admin":
+    if not user:
         return None
     if ADMIN_IP_ALLOWLIST and _client_ip() not in ADMIN_IP_ALLOWLIST:
         return None
-    return user
+    if rbac.tem_perm(user.get("cargo"), user.get("perms"), *requeridas):
+        user["perms"] = rbac.perms_efetivas(user.get("cargo"), user.get("perms"))
+        return user
+    return None
+
+
+def _require_any_perm(*opcoes):
+    user = _current_user()
+    if not user:
+        return None
+    if ADMIN_IP_ALLOWLIST and _client_ip() not in ADMIN_IP_ALLOWLIST:
+        return None
+    if rbac.tem_qualquer_perm(user.get("cargo"), user.get("perms"), *opcoes):
+        user["perms"] = rbac.perms_efetivas(user.get("cargo"), user.get("perms"))
+        return user
+    return None
 
 
 def _audit(user, acao, detalhes=""):
@@ -147,6 +196,18 @@ def _fetch(table, select="*", order="", query="", range_="0-999"):
     if response.status_code != 200:
         raise RuntimeError(f"Supabase {response.status_code}: {response.text[:200]}")
     return response.json()
+
+
+def _fetch_soft(table, select="*", order="", query="", range_="0-999"):
+    """Como _fetch, mas retorna lista vazia se a tabela ainda não existir
+    (PGRST205) para não derrubar o painel antes da migration ser rodada."""
+    try:
+        return _fetch(table, select=select, order=order, query=query, range_=range_)
+    except Exception as error:
+        if "PGRST205" in str(error):
+            print(f"[painel] tabela '{table}' ainda não existe (migration pendente)")
+            return []
+        raise
 
 
 def _count(table, query=""):
@@ -302,6 +363,9 @@ _ICONS = {
     "menu": "<line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='18' x2='21' y2='18'/>",
     "dollar": "<line x1='12' y1='1' x2='12' y2='23'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>",
     "checks": "<path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/>",
+    "shield": "<path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/>",
+    "brands": "<path d='M17 20h5v-2a3 3 0 0 0-5.36-1.86'/><path d='M3 20h5'/><path d='M16 15a3 3 0 1 0-2.12-5.12'/><path d='M8 4H3v5'/><circle cx='17' cy='4' r='2'/>",
+    "clipboard": "<path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1'/>",
 }
 
 
@@ -358,6 +422,7 @@ body { font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color
 .user-chip:hover { border-color:#3b4d6b; }
 .user-avatar { width:27px; height:27px; border-radius:7px; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; text-transform:uppercase; }
 .user-chip .u-name { font-size:13px; font-weight:600; }
+.user-chip .u-role { font-size:11px; color:#60a5fa; background:rgba(96,165,250,.12); border:1px solid rgba(96,165,250,.25); border-radius:999px; padding:1px 8px; }
 .user-chip svg { width:14px; height:14px; color:#5b6b82; }
 .dropdown { position:relative; }
 .menu { position:absolute; right:0; top:calc(100% + 8px); min-width:240px; background:#111a2e; border:1px solid #1e2c40; border-radius:12px; box-shadow:0 14px 34px rgba(0,0,0,.5); padding:6px; display:none; z-index:60; }
@@ -456,19 +521,42 @@ img.preview { max-width:120px; border-radius:8px; border:1px solid #1e2c40; marg
 
 
 def _page(user, title, body, active=""):
-    groups = [
-        ("Principal", [("/admin", "Dashboard", "dash", "grid")]),
-        ("Vendas", [
-            ("/admin/pedidos", "Pedidos", "pedidos", "cart"),
-            ("/admin/itens", "Itens", "itens", "package"),
-            ("/admin/pagamentos", "Pagamentos", "pagamentos", "wallet"),
-        ]),
-        ("Clientes", [
-            ("/admin/clientes", "Clientes", "clientes", "users"),
-            ("/admin/tickets", "Tickets", "tickets", "support"),
-        ]),
-        ("Sistema", [("/admin/config", "Configurações", "config", "gear")]),
-    ]
+    role = (user or {}).get("role") or ""
+    perms = set((user or {}).get("perms") or [])
+
+    def peut(*reqs):
+        return rbac.tem_perm(role, perms, *reqs)
+
+    groups = []
+    if peut("ver_dashboard"):
+        groups.append(("Principal", [("/admin", "Dashboard", "dash", "grid")]))
+    vendas = []
+    if peut("ver_pedidos"):
+        vendas.append(("/admin/pedidos", "Pedidos", "pedidos", "cart"))
+    if peut("ver_itens"):
+        vendas.append(("/admin/itens", "Itens", "itens", "package"))
+    if peut("ver_pagamentos"):
+        vendas.append(("/admin/pagamentos", "Pagamentos", "pagamentos", "wallet"))
+    if vendas:
+        groups.append(("Vendas", vendas))
+    clientes = []
+    if peut("ver_clientes"):
+        clientes.append(("/admin/clientes", "Clientes", "clientes", "users"))
+    if peut("ver_tickets"):
+        clientes.append(("/admin/tickets", "Tickets", "tickets", "support"))
+    if clientes:
+        groups.append(("Clientes", clientes))
+    sistema = []
+    if peut("ver_grupos"):
+        sistema.append(("/admin/grupos", "Grupos", "grupos", "brands"))
+    if peut("ver_usuarios"):
+        sistema.append(("/admin/usuarios", "Usuários", "usuarios", "shield"))
+    if peut("ver_audit"):
+        sistema.append(("/admin/audit", "Auditoria", "audit", "clipboard"))
+    if peut("ver_config"):
+        sistema.append(("/admin/config", "Configurações", "config", "gear"))
+    if sistema:
+        groups.append(("Sistema", sistema))
     side_links = ""
     for group_label, items in groups:
         side_links += f"<div class='side-group'>{group_label}</div>"
@@ -498,9 +586,9 @@ def _page(user, title, body, active=""):
     except Exception:
         pass
     notif_items = ""
-    if pendentes_badge:
+    if pendentes_badge and peut("ver_pagamentos"):
         notif_items += f"<a href='/admin/pagamentos'>{pendentes_badge} pedido(s) pendente(s)</a>"
-    if abertos_badge:
+    if abertos_badge and peut("ver_tickets"):
         notif_items += f"<a href='/admin/tickets'>{abertos_badge} ticket(s) aberto(s)</a>"
     if not notif_items:
         notif_items = "<div class='menu-empty'>Tudo em dia.</div>"
@@ -538,10 +626,12 @@ def _page(user, title, body, active=""):
         f"<button class='user-chip' data-dd='usermenu'>"
         f"<span class='user-avatar'>{initial}</span>"
         f"<span class='u-name'>{html.escape(name)}</span>"
+        f"<span class='u-role'>{html.escape(rbac.cargo_label(role))}</span>"
         + _icon("chevron")
         + "</button>"
         "<div class='menu' id='usermenu'>"
-        f"<div class='menu-head'><b>{html.escape(name)}</b><span>{html.escape(email)}</span></div>"
+        f"<div class='menu-head'><b>{html.escape(name)}</b><span>{html.escape(email)}</span>"
+        f"<span style='color:#60a5fa;font-size:12px'>{html.escape(rbac.cargo_label(role))}</span></div>"
         f"<a href='{PORTFOLIO_URL}' target='_blank' rel='noopener'>" + _icon("external") + "Ver site</a>"
         "<a href='/acesso'>" + _icon("swap") + "Trocar área</a>"
         "<a href='/logout' class='danger'>" + _icon("logout") + "Sair</a>"
@@ -642,7 +732,7 @@ def _metrics(orders):
 
 @bp.route("/admin", methods=["GET"])
 def admin_dashboard():
-    user = _require_admin()
+    user = _require_perm("ver_dashboard")
     if not user:
         return redirect("/login")
     if _rate_limited("admin_get", _RATE_LIMIT_ADMIN_PER_MIN):
@@ -693,17 +783,22 @@ def admin_dashboard():
 
     sub = "<p class='page-sub'>Visão geral do sistema e indicadores recentes.</p>"
 
+    pode_ver_finan = rbac.tem_perm(user["role"], user["perms"], "ver_pagamentos")
+    kpis = "<div class='kpis'>"
+    if pode_ver_finan:
+        kpis += (
+            "<div class='kpi'><div class='k-top'><span class='k-lbl'>Faturamento</span>"
+            "<span class='k-ico'>" + _icon("dollar") + "</span></div>"
+            f"<div class='k-num'>{_fmt_brl(faturado)}</div>"
+            "<div class='k-sub'>Total confirmado</div></div>"
+            "<div class='kpi'><div class='k-top'><span class='k-lbl'>Pagamentos</span>"
+            "<span class='k-ico'>" + _icon("checks") + "</span></div>"
+            f"<div class='k-num'>{pagos}</div>"
+            "<div class='k-sub'>Pedidos pagos</div></div>"
+        )
     kpis = (
-        "<div class='kpis'>"
-        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Faturamento</span>"
-        "<span class='k-ico'>" + _icon("dollar") + "</span></div>"
-        f"<div class='k-num'>{_fmt_brl(faturado)}</div>"
-        "<div class='k-sub'>Total confirmado</div></div>"
-        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Pagamentos</span>"
-        "<span class='k-ico'>" + _icon("checks") + "</span></div>"
-        f"<div class='k-num'>{pagos}</div>"
-        "<div class='k-sub'>Pedidos pagos</div></div>"
-        "<div class='kpi'><div class='k-top'><span class='k-lbl'>Pedidos</span>"
+        kpis
+        + "<div class='kpi'><div class='k-top'><span class='k-lbl'>Pedidos</span>"
         "<span class='k-ico'>" + _icon("cart") + "</span></div>"
         f"<div class='k-num'>{len(orders)}</div>"
         "<div class='k-sub'>Total registrado</div></div>"
@@ -747,17 +842,19 @@ def admin_dashboard():
     )
 
     body = sub + kpis + f"<div class='charts'>{chart}{pages}</div>"
-    body += (
-        "<section><h2>Últimas ações do admin</h2><table>"
-        "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th></tr>"
-        + audit_rows
-        + "</table></section>"
-    )
+    if rbac.tem_perm(user["role"], user["perms"], "ver_audit"):
+        body += (
+            "<section><h2>Últimas ações do admin</h2><table>"
+            "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th></tr>"
+            + audit_rows
+            + "</table></section>"
+        )
+    pode_marcar = rbac.tem_qualquer_perm(user["role"], user["perms"], "marcar_pagamento", "marcar_entrega")
     body += (
         "<section><h2>Últimos pedidos</h2><table>"
         "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
         "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
-        + _orders_rows(orders[:10], with_actions=True, csrf=_csrf_token())
+        + _orders_rows(orders[:10], with_actions=pode_marcar, csrf=_csrf_token())
         + "</table></section>"
     )
     return _admin_page(user, "Dashboard", body, "dash")
@@ -765,16 +862,17 @@ def admin_dashboard():
 
 @bp.route("/admin/pedidos", methods=["GET"])
 def admin_pedidos():
-    user = _require_admin()
+    user = _require_perm("ver_pedidos")
     if not user:
         return redirect("/login")
     orders = _fetch("pedidos", order="data.asc")
+    pode_marcar = rbac.tem_qualquer_perm(user["role"], user["perms"], "marcar_pagamento", "marcar_entrega")
     body = f"<div class='cards'><div class='card'><div class='num'>{len(orders)}</div><div class='lbl'>Pedidos</div></div></div>"
     body += (
         "<section><h2>Todos os pedidos</h2><table>"
         "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
         "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
-        + _orders_rows(orders, with_actions=True, csrf=_csrf_token())
+        + _orders_rows(orders, with_actions=pode_marcar, csrf=_csrf_token())
         + "</table></section>"
     )
     return _admin_page(user, "Pedidos", body, "pedidos")
@@ -818,7 +916,7 @@ def _clientes_rows(profiles, orders):
 
 @bp.route("/admin/clientes", methods=["GET"])
 def admin_clientes():
-    user = _require_admin()
+    user = _require_perm("ver_clientes")
     if not user:
         return redirect("/login")
     profiles = _fetch("profiles", order="email.asc")
@@ -835,7 +933,7 @@ def admin_clientes():
 
 @bp.route("/admin/clientes/<email>", methods=["GET"])
 def admin_cliente_detalhe(email):
-    user = _require_admin()
+    user = _require_perm("ver_clientes")
     if not user:
         return redirect("/login")
     email_decoded = (email or "").lower()
@@ -893,7 +991,7 @@ def admin_cliente_detalhe(email):
 
 @bp.route("/admin/clientes/<email>/editar", methods=["POST"])
 def admin_cliente_editar(email):
-    user = _require_admin()
+    user = _require_perm("gerenciar_clientes")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -921,7 +1019,7 @@ def admin_cliente_editar(email):
 
 @bp.route("/admin/pagamentos", methods=["GET"])
 def admin_pagamentos():
-    user = _require_admin()
+    user = _require_perm("ver_pagamentos")
     if not user:
         return redirect("/login")
     orders = _fetch("pedidos", order="data.desc", range_="0-999")
@@ -988,7 +1086,7 @@ def admin_pagamentos():
 
 @bp.route("/admin/clientes/<email>/bloquear", methods=["POST"])
 def admin_cliente_bloquear(email):
-    user = _require_admin()
+    user = _require_perm("gerenciar_clientes")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1012,7 +1110,7 @@ def admin_cliente_bloquear(email):
 
 @bp.route("/admin/marcar", methods=["POST"])
 def admin_marcar():
-    user = _require_admin()
+    user = _require_any_perm("marcar_pagamento", "marcar_entrega")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1023,6 +1121,10 @@ def admin_marcar():
     status = (request.form.get("status") or "").strip()
     if not order_id_text.isdigit() or status not in ("pago", "entregue"):
         return "Parâmetros inválidos.", 400
+    if status == "pago" and not rbac.tem_perm(user["cargo"], user["perms"], "marcar_pagamento"):
+        return "Acesso restrito.", 403
+    if status == "entregue" and not rbac.tem_perm(user["cargo"], user["perms"], "marcar_entrega"):
+        return "Acesso restrito.", 403
     now = datetime.utcnow().isoformat()
     ts_field = "pix_confirmado_em" if status == "pago" else "entregue_em"
     try:
@@ -1062,7 +1164,7 @@ def _tickets_rows(tickets, with_ak=False, csrf=""):
 
 @bp.route("/admin/tickets", methods=["GET"])
 def admin_tickets():
-    user = _require_admin()
+    user = _require_perm("ver_tickets")
     if not user:
         return redirect("/login")
     tickets = []
@@ -1091,7 +1193,7 @@ def admin_tickets():
 
 @bp.route("/admin/tickets/<int:ticket_id>", methods=["GET", "POST"])
 def admin_ticket_detalhe(ticket_id):
-    user = _require_admin()
+    user = _require_perm("ver_tickets")
     if not user:
         return redirect("/login")
     tickets = _fetch("tickets", query=f"id=eq.{ticket_id}")
@@ -1104,6 +1206,8 @@ def admin_ticket_detalhe(ticket_id):
             return "Requisição inválida (CSRF).", 403
         acao = (request.form.get("acao") or "").strip()
         if acao == "responder":
+            if not rbac.tem_perm(user["cargo"], user["perms"], "responder_tickets"):
+                return "Acesso restrito.", 403
             resposta = (request.form.get("resposta") or "").strip()[:3000]
             if resposta:
                 json_payload = {
@@ -1123,6 +1227,8 @@ def admin_ticket_detalhe(ticket_id):
                 except Exception as exc:
                     return f"Falha: {exc}", 500
         elif acao == "encerrar":
+            if not rbac.tem_perm(user["cargo"], user["perms"], "encerrar_tickets"):
+                return "Acesso restrito.", 403
             try:
                 requests.patch(
                     f"{SUPA_URL}/rest/v1/tickets?id=eq.{ticket_id}",
@@ -1153,28 +1259,8 @@ def admin_ticket_detalhe(ticket_id):
         "Assunto: <b>{assunto}</b></p>"
         "<p style='color:#e2e8f0'>{mensagem}</p>"
         "{resposta_html}"
-        "</section>"
-        "<section><h2>Responder</h2>"
-        "<form method='post'>"
-        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<input type='hidden' name='acao' value='responder'>"
-        "<textarea name='resposta' rows='4' placeholder='Escreva a resposta do suporte...'></textarea>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Enviar resposta</button></p>"
-        "</form></section>"
-        "<section><h2>Ações</h2>"
-        "<form method='post' action='' style='display:inline'>"
-        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<input type='hidden' name='acao' value='prioridade'>"
-        "<select name='prioridade'>"
-        f"<option value='normal' {'selected' if (ticket.get('prioridade') or '') in ('', 'normal') else ''}>normal</option>"
-        f"<option value='alta' {'selected' if ticket.get('prioridade') == 'alta' else ''}>alta</option>"
-        "<option value='urgente' >urgente</option>"
-        "</select>"
-        "<button class='btn ghost' type='submit'>Definir prioridade</button></form>"
-        "<form method='post' action='' style='display:inline'>"
-        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<input type='hidden' name='acao' value='encerrar'>"
-        "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer' type='submit'>Encerrar ticket</button></form>"
+        "{responder_html}"
+        "{acoes_html}"
         "</section>"
     ).format(
         id=ticket.get("id"),
@@ -1189,13 +1275,43 @@ def admin_ticket_detalhe(ticket_id):
             if ticket.get("resposta")
             else ""
         ),
+        responder_html=(
+            "<section><h2>Responder</h2>"
+            "<form method='post'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<input type='hidden' name='acao' value='responder'>"
+            "<textarea name='resposta' rows='4' placeholder='Escreva a resposta do suporte...'></textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Enviar resposta</button></p>"
+            "</form></section>"
+            if rbac.tem_perm(user["cargo"], user["perms"], "responder_tickets")
+            else ""
+        ),
+        acoes_html=(
+            "<section><h2>Ações</h2>"
+            "<form method='post' action='' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<input type='hidden' name='acao' value='prioridade'>"
+            "<select name='prioridade'>"
+            f"<option value='normal' {'selected' if (ticket.get('prioridade') or '') in ('', 'normal') else ''}>normal</option>"
+            f"<option value='alta' {'selected' if ticket.get('prioridade') == 'alta' else ''}>alta</option>"
+            "<option value='urgente' >urgente</option>"
+            "</select>"
+            "<button class='btn ghost' type='submit'>Definir prioridade</button></form>"
+            "<form method='post' action='' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<input type='hidden' name='acao' value='encerrar'>"
+            "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer' type='submit'>Encerrar ticket</button></form>"
+            "</section>"
+            if rbac.tem_perm(user["cargo"], user["perms"], "encerrar_tickets")
+            else ""
+        ),
     )
     return _admin_page(user, "Ticket", top + body, "tickets")
 
 
 @bp.route("/admin/tickets/<int:ticket_id>/excluir", methods=["POST"])
 def admin_ticket_excluir(ticket_id):
-    user = _require_admin()
+    user = _require_perm("excluir_tickets")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1240,7 +1356,7 @@ f"<p style='color:#8ea0b8;font-size:13px;margin:8px 0'>{html.escape(item.get('de
 
 @bp.route("/admin/itens", methods=["GET"])
 def admin_itens():
-    user = _require_admin()
+    user = _require_perm("ver_itens")
     if not user:
         return redirect("/login")
     itens = _fetch("itens", order="ativo.desc,ordem.asc")
@@ -1279,7 +1395,7 @@ def admin_itens():
 
 @bp.route("/admin/itens/novo", methods=["POST"])
 def admin_item_novo():
-    user = _require_admin()
+    user = _require_perm("gerenciar_itens")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1318,7 +1434,7 @@ def admin_item_novo():
 
 @bp.route("/admin/itens/<item_id>", methods=["GET", "POST"])
 def admin_item_editar(item_id):
-    user = _require_admin()
+    user = _require_perm("gerenciar_itens")
     if not user:
         return redirect("/login")
     itens = _fetch("itens", select="*", query=f"id=eq.{item_id}")
@@ -1383,7 +1499,7 @@ def admin_item_editar(item_id):
 
 @bp.route("/admin/itens/<item_id>/toggle", methods=["POST"])
 def admin_item_toggle(item_id):
-    user = _require_admin()
+    user = _require_perm("gerenciar_itens")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1408,7 +1524,7 @@ def admin_item_toggle(item_id):
 
 @bp.route("/admin/itens/<item_id>/excluir", methods=["POST"])
 def admin_item_excluir(item_id):
-    user = _require_admin()
+    user = _require_perm("gerenciar_itens")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1427,7 +1543,7 @@ timeout=15,
 
 @bp.route("/admin/config", methods=["GET"])
 def admin_config():
-    user = _require_admin()
+    user = _require_perm("ver_config")
     if not user:
         return redirect("/login")
     cfg = _config_all()
@@ -1465,7 +1581,7 @@ def admin_config():
 
 @bp.route("/admin/config/salvar", methods=["POST"])
 def admin_config_salvar():
-    user = _require_admin()
+    user = _require_perm("editar_config")
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
@@ -1497,6 +1613,296 @@ def admin_config_salvar():
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/config")
+
+
+# --------------------------------------------------------------------------
+# ROTAS DE USUÁRIOS (RBAC)
+# --------------------------------------------------------------------------
+def _usuarios_rows(usuarios):
+    rows = ""
+    for u in usuarios:
+        nome = html.escape(str(u.get("nome") or "-"))
+        cargo = html.escape(str(u.get("cargo") or "CLIENTE"))
+        email = html.escape(str(u.get("email") or ""))
+        ativo_lbl = "ativo" if u.get("ativo") else "inativo"
+        created = html.escape(str(u.get("criado_em") or ""))[:16]
+        rows += (
+            "<tr>"
+            f"<td>{email}</td><td>{nome}</td><td>{cargo}</td>"
+            f"<td><span class='status {ativo_lbl}'>{ativo_lbl}</span></td>"
+            f"<td>{created}</td>"
+            f"<td class='acts'><a class='btn ghost' style='padding:5px 10px;font-size:12px' "
+            f"href='/admin/usuarios/{email}'>Ver</a></td>"
+            "</tr>"
+        )
+    return rows or (
+        "<tr><td colspan='6' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum usuário.</td></tr>"
+    )
+
+
+@bp.route("/admin/usuarios", methods=["GET"])
+def admin_usuarios():
+    user = _require_perm("ver_usuarios")
+    if not user:
+        return redirect("/login")
+    usuarios = _fetch_soft("users", order="criado_em.desc", range_="0-999")
+    body = f"<div class='cards'><div class='card'><div class='num'>{len(usuarios)}</div><div class='lbl'>Usuários</div></div></div>"
+    body += (
+        "<section><h2>Usuários da equipe</h2><table>"
+        "<tr><th>E-mail</th><th>Nome</th><th>Cargo</th><th>Status</th><th>Criado</th><th>Ações</th></tr>"
+        + _usuarios_rows(usuarios)
+        + "</table></section>"
+    )
+    return _admin_page(user, "Usuários", body, "usuarios")
+
+
+@bp.route("/admin/usuarios/novo", methods=["GET", "POST"])
+def admin_usuario_novo():
+    user = _require_perm("gerenciar_usuarios")
+    if not user:
+        return redirect("/login")
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        email = (request.form.get("email") or "").strip().lower()
+        nome = (request.form.get("nome") or "").strip()[:100]
+        cargo = (request.form.get("cargo") or "CLIENTE").strip().upper()
+        if not email or "@" not in email:
+            return "E-mail inválido.", 400
+        if cargo == "MASTER":
+            return "Não é possível criar usuários MASTER.", 400
+        if not rbac.cargo_valido(cargo):
+            return "Cargo inválido.", 400
+        now = datetime.utcnow().isoformat()
+        payload = {"email": email, "nome": nome, "cargo": cargo, "ativo": True, "criado_em": now}
+        try:
+            requests.post(
+                f"{SUPA_URL}/rest/v1/users",
+                headers=_headers(),
+                json=payload,
+                timeout=15,
+            )
+            _audit(user, "usuario_criar", email)
+        except Exception as exc:
+            return f"Falha: {exc}", 500
+        return redirect("/admin/usuarios")
+    cargos = [(c, lbl) for c, lbl in rbac.CARGOS_LABEL.items() if c != "MASTER"]
+    cargo_opts = "".join(
+        f"<option value='{c}'>{html.escape(lbl)}</option>" for c, lbl in cargos
+    )
+    form = (
+        "<section><h2>Novo usuário</h2>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label>E-mail</label><input name='email' type='email' required placeholder='usuario@email.com'>"
+        "<label>Nome</label><input name='nome' type='text' placeholder='Nome completo'>"
+        "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Criar usuário</button></p>"
+        "</form></section>"
+    )
+    return _admin_page(user, "Novo usuário", form, "usuarios")
+
+
+@bp.route("/admin/usuarios/<path:email>", methods=["GET", "POST"])
+def admin_usuario_detalhe(email):
+    user = _require_perm("gerenciar_usuarios")
+    if not user:
+        return redirect("/login")
+    email = email.strip().lower()
+    usuarios = _fetch_soft("users", query=f"email=eq.{email}")
+    if not usuarios:
+        return "Usuário não encontrado.", 404
+    u = usuarios[0]
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        nome = (request.form.get("nome") or "").strip()[:100]
+        cargo = (request.form.get("cargo") or "CLIENTE").strip().upper()
+        ativo = request.form.get("ativo") == "on"
+        if cargo == "MASTER":
+            return "Cargo MASTER não permitido.", 400
+        if not rbac.cargo_valido(cargo):
+            return "Cargo inválido.", 400
+        now = datetime.utcnow().isoformat()
+        patch = {"nome": nome, "cargo": cargo, "ativo": ativo, "atualizado_em": now}
+        try:
+            requests.patch(
+                f"{SUPA_URL}/rest/v1/users?email=eq.{email}",
+                headers=_headers(),
+                json=patch,
+                timeout=15,
+            )
+            _audit(user, "usuario_editar", email)
+        except Exception as exc:
+            return f"Falha: {exc}", 500
+        return redirect(f"/admin/usuarios/{email}")
+    cargo_opts = ""
+    for c, lbl in rbac.CARGOS_LABEL.items():
+        if c == "MASTER":
+            continue
+        sel = "selected" if u.get("cargo") == c else ""
+        cargo_opts += f"<option value='{c}' {sel}>{html.escape(lbl)}</option>"
+    checked = "checked" if u.get("ativo") else ""
+    nome_val = html.escape(str(u.get("nome") or ""))
+    form = (
+        "<section><h2>Editar usuário</h2>"
+        f"<p style='color:#8ea0b8;font-size:13px'>E-mail: <b>{html.escape(email)}</b></p>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\">"
+        "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
+        f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='ativo' {checked}> Ativo</label>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
+        "</form></section>"
+    )
+    return _admin_page(user, "Editar usuário", form, "usuarios")
+
+
+# --------------------------------------------------------------------------
+# ROTAS DE AUDITORIA
+# --------------------------------------------------------------------------
+@bp.route("/admin/audit", methods=["GET"])
+def admin_audit():
+    user = _require_perm("ver_audit")
+    if not user:
+        return redirect("/login")
+    logs = _fetch("audit_log", order="criado_em.desc", range_="0-499")
+    rows = ""
+    for a in logs:
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(str(a.get('criado_em') or ''))[:19]}</td>"
+            f"<td>{html.escape(str(a.get('email') or '-'))}</td>"
+            f"<td>{html.escape(str(a.get('acao') or '-'))}</td>"
+            f"<td>{html.escape(str(a.get('detalhes') or '-'))}</td>"
+            f"<td>{html.escape(str(a.get('ip') or '-'))}</td>"
+            "</tr>"
+        )
+    rows = rows or (
+        "<tr><td colspan='5' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum log encontrado.</td></tr>"
+    )
+    body = (
+        "<section><h2>Log de auditoria</h2><table>"
+        "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th><th>IP</th></tr>"
+        + rows
+        + "</table></section>"
+    )
+    return _admin_page(user, "Auditoria", body, "audit")
+
+
+# --------------------------------------------------------------------------
+# ROTAS DE GRUPOS (WhatsApp)
+# --------------------------------------------------------------------------
+def _grupos_rows(grupos):
+    rows = ""
+    for g in grupos:
+        gid = g.get("id")
+        nome = html.escape(str(g.get("nome") or ""))
+        link = g.get("link") or ""
+        ativo_lbl = "ativo" if g.get("ativo") else "inativo"
+        ordem = g.get("ordem") or 0
+        link_lbl = f"<a href='{html.escape(link)}' target='_blank' rel='noopener'>{html.escape(link[:40])}</a>" if link else "<span style='color:#64748b'>—</span>"
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(str(gid))}</td>"
+            f"<td>{nome}</td>"
+            f"<td>{link_lbl}</td>"
+            f"<td>{ordem}</td>"
+            f"<td><span class='status {ativo_lbl}'>{ativo_lbl}</span></td>"
+            f"<td class='acts'><a class='btn ghost' style='padding:5px 10px;font-size:12px' "
+            f"href='/admin/grupos/{gid}'>Editar</a></td>"
+            "</tr>"
+        )
+    return rows or (
+        "<tr><td colspan='6' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum grupo.</td></tr>"
+    )
+
+
+@bp.route("/admin/grupos", methods=["GET"])
+def admin_grupos():
+    user = _require_perm("ver_grupos")
+    if not user:
+        return redirect("/login")
+    grupos = _fetch_soft("grupos", order="ordem.asc")
+    body = f"<div class='cards'><div class='card'><div class='num'>{len(grupos)}</div><div class='lbl'>Grupos</div></div></div>"
+    body += (
+        "<section><h2>Grupos do WhatsApp</h2><table>"
+        "<tr><th>ID</th><th>Nome</th><th>Link</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>"
+        + _grupos_rows(grupos)
+        + "</table></section>"
+    )
+    return _admin_page(user, "Grupos", body, "grupos")
+
+
+@bp.route("/admin/grupos/<int:gid>", methods=["GET", "POST"])
+def admin_grupo_detalhe(gid):
+    user = _require_perm("gerenciar_grupos")
+    if not user:
+        return redirect("/login")
+    grupos = _fetch_soft("grupos", query=f"id=eq.{gid}")
+    if not grupos:
+        return "Grupo não encontrado.", 404
+    g = grupos[0]
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        nome = (request.form.get("nome") or "").strip()[:100]
+        link = (request.form.get("link") or "").strip()
+        ativo = request.form.get("ativo") == "on"
+        ordem = int((request.form.get("ordem") or "0").strip() or "0")
+        now = datetime.utcnow().isoformat()
+        patch = {"nome": nome, "link": link, "ativo": ativo, "ordem": ordem, "atualizado_em": now}
+        try:
+            requests.patch(
+                f"{SUPA_URL}/rest/v1/grupos?id=eq.{gid}",
+                headers=_headers(),
+                json=patch,
+                timeout=15,
+            )
+            _audit(user, "grupo_editar", f"{gid} ({nome})")
+        except Exception as exc:
+            return f"Falha: {exc}", 500
+        return redirect("/admin/grupos")
+    checked = "checked" if g.get("ativo") else ""
+    nome_val = html.escape(str(g.get("nome") or ""))
+    link_val = html.escape(str(g.get("link") or ""))
+    ordem_val = g.get("ordem") or 0
+    form = (
+        "<section><h2>Editar grupo</h2>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\" required>"
+        "<label>Link (WhatsApp /wa.me/...)</label><input name='link' type='url' value=\"" + link_val + "\" placeholder='https://chat.whatsapp.com/...'>"
+        "<label>Ordem</label><input name='ordem' type='number' value='" + str(ordem_val) + "'>"
+        f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='ativo' {checked}> Ativo</label>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
+        "</form></section>"
+    )
+    return _admin_page(user, "Editar grupo", form, "grupos")
+
+
+@bp.route("/api/grupos", methods=["GET"])
+def api_grupos():
+    if _rate_limited("api_grupos", _RATE_LIMIT_TRACK_PER_MIN):
+        return jsonify({"ok": False, "error": "rate limit"}), 429
+    origin = request.headers.get("Origin") or ""
+    grupos = _fetch_soft("grupos", query="ativo=eq.true", order="ordem.asc")
+    payload = [
+        {
+            "id": g.get("id"),
+            "nome": g.get("nome") or "",
+            "link": g.get("link") or "",
+            "ativo": bool(g.get("ativo")),
+            "ordem": g.get("ordem") or 0,
+        }
+        for g in grupos
+        if (g.get("link") or "").strip()
+    ]
+    resp = jsonify({"ok": True, "grupos": payload})
+    if origin:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+    resp.headers["Vary"] = "Origin"
+    return resp
 
 
 @bp.route("/api/itens", methods=["GET"])
