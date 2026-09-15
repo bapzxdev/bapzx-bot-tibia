@@ -5,13 +5,10 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
-- [ ] **Aplicar `supabase_migracao_v119.sql` (v2.1.0) — PENDENTE.** Colar o
-      conteúdo de `supabase_migracao_v119.sql` → Run. Cria a tabela `servicos`
-      (Intermediação BAPZX R$5 sai da tabela `itens` de itens do jogo e vai
-      para `servicos`; itens de jogo e serviços ficam separados). A página
-      `itens.html` do site tem agora 2 seções: "Itens do jogo" (`/api/itens`)
-      e "Serviços" (`/api/servicos`). Enquanto não for aplicada: a
-      Intermediação ainda aparece na lista de itens e `/api/servicos` retorna
+- [x] **Aplicar `supabase_migracao_v119.sql` (v2.1.0) — FEITO pelo dono.**
+      Tabela `servicos` criada; Intermediação BAPZX R$5 saiu da tabela
+      `itens` (itens do jogo) e agora só aparece em `/api/servicos`.
+      Validado em produção: `/api/servicos` → Intermediação; `/api/itens` →
       vazio.
 - [x] **Aplicar `supabase_migracao_v118.sql` (v2.0.0) — FEITO pelo dono.**
       Tabelas `users` e `grupos` no ar (o `/api/grupos` retorna vazio porque
