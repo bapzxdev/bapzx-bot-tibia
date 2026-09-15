@@ -53,6 +53,18 @@ Atualizar sempre que algo mudar de estado.
       mantém o aviso ao dono. Alertas Medium do ZAP (anti-clickjacking/CSP/CORS*/SRI)
       são do PORTFÓLIO no GitHub Pages (o ZAP seguiu o 302 da `/`), não do bot —
       sem ação no código do bot; opcional: adicionar CSP no portfólio depois.
+- [x] **Pentest OWASP ZAP (15/09, v2.0.2) — CONCLUÍDO.** Scan na nova atualização
+      (RBAC + legal + grupos). Bot: **35/35 checagens OK** (`pentest_v202.py`:
+      RBAC bypass, CSRF, XSS, info disclosure, rotas legais, APIs, error
+      handlers). Corrigidos em `security_headers` (`bot.py:~727`): **HSTS** e
+      **CSP** (antes ausentes). Confirmado em produção: 6/6 headers em
+      `/health`, `/privacidade`, `/termos`, `/reembolso`, `/api/grupos`,
+      `/api/itens`, `/robots.txt`. Alertas ZAP remanescentes (CORS `*`,
+      anti-clickjacking, SRI, X-Content-Type-Options aparente) são do
+      **portfólio GitHub Pages** (o ZAP segue o 302 da `/`); o scan direto de
+      `/privacidade` em v2.0.2 não gerou alerta. `Application Error Disclosure`
+      = 500 transitório do cold start em `/robots.txt` (hoje 404 limpo).
+      Relatórios: `%TEMP%\zap-reports\bapzx-v201.html` e `bapzx-v202.html`.
 - [ ] **Loop do formato compacto RESOLVIDO (12/09, v1.14.13)** — dono digitou
       "inmortals - 1250 - pix" e o bot nao reconhecia (caia na IA, que respondia
       a saudacao fixa para "sim"). Parser tolerante implementado (fallback de
