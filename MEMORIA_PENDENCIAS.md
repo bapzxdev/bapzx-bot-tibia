@@ -5,24 +5,29 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
-- [x] **Aplicar `supabase_migracao_v116.sql` (v1.16.0) — APLICADO pelo dono.**
-      Colar o conteúdo de `supabase_migracao_v116.sql` → Run. Criou a tabela
-      `tickets`, a tabela `config` (com o seed de preços) e as colunas
-      `personagem`/`mundo`/`bloqueado` em `profiles`. Verificado via REST em
-      14/09: `tickets` responde (0 registros), `config` traz `precos` +
-      `notificar_pedido`, `profiles` lista as colunas novas. Fazer agora:
-      abrir `/admin/tickets` e `/admin/config` no painel para confirmar ao
-      vivo; testar um ticket de ponta a ponta (cliente abre `/cliente/suporte`
-      → admin responde → cliente vê a resposta).
-- [ ] **Publish do app Google (OAuth)** — console.cloud.google.com/auth →
+- [ ] **Aplicar `supabase_migracao_v118.sql` (v2.0.0) — PENDENTE.** Colar o
+      conteúdo de `supabase_migracao_v118.sql` → Run. Cria a tabela `users`
+      (nome/cargo/permissoes jsonb/ativo) e a tabela `grupos` (seed Coroa/
+      Rubinot/Pokepixel/PokeIdle com links vazios) e o seed do produto
+      "Intermediação BAPZX" R$5 em `itens`. Enquanto não for aplicada, as
+      rotas novas mostram lista vazia (sem erro — `_fetch_soft` trata PGRST205).
+      Depois de aplicar: abrir `/admin/usuarios` e `/admin/grupos` e preencher
+      os links reais dos 4 grupos no `/admin/grupos` para os botões do site
+      começarem a funcionar.
+- [ ] **Publicar o app Google (OAuth)** — console.cloud.google.com/auth →
       Settings → Branding → Publishing status → **Publish app**.
       Hoje o app está em modo Teste: só o e-mail `lucascristianini1@gmail.com`
       consegue logar na área do cliente/admin. Publicar libera o login para
       **qualquer conta Google** (grátis; não precisa de verificação, pois só
       usa nome e e-mail do perfil).
-- [ ] **Portfólio `itens.html`** — trocar os "Item Exemplo A/B/C..." e os
-      preços `R$ --` pelos itens reais. O dono vai ajustar quando definir
-      como vai vender itens.
+- [ ] **(Opcional) Criar env `MASTER_EMAILS` no Render** com o e-mail do dono.
+      Sem ela, o RBAC usa `ADMIN_EMAILS` como lista de MASTER (mínimo:
+      `lucascristianini1@gmail.com`). Vale para quando criar outros usuários
+      com cargo no `/admin/usuarios`.
+- [ ] **Portfólio `itens.html`** — os "Item Exemplo A/B/C..." foram
+      substituídos automaticamente pelos itens reais do `/api/itens` (inclui
+      o seed "Intermediação BAPZX" R$5 depois da migração v118). O dono ajusta
+      categoria/descrição/valores quando definir como vender itens.
 - [ ] **Fase C (divulgação) e 1ª venda real** — VETADA pelo dono até tudo
       ajustado. Quando liberar:
       - ficha de divulgação (o que falar, onde postar);
