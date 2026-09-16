@@ -5,6 +5,14 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
+- [ ] **Preencher `/admin/config` (v2.4.0, item 11 — FEITO no código).** A
+      aba Configurações está no ar (Site/Conta/Pagamentos/Notificações) mas
+      os campos estão vazios. Preencher: **Site** (logo, nome, banner, slogan,
+      textos topo/rodapé, links portfólio/WhatsApp/Telegram/Instagram/YouTube/
+      Discord/TikTok), **Pagamentos** (pix_chave — o bot usa como preferido
+      com fallback na env PIX_KEY —, beneficiário, conferir Gateway MP e
+      preços), **Notificações** (toggles pedido/pix/erro). Depois conferir
+      `/api/site` e (futuro) ligar no portfólio (roadmap itens 8/9/14).
 - [ ] **Aplicar `supabase_migracao_v120.sql` (v2.3.0, cupons).** Tabela
       `public.cupons`: codigo (unique), tipo percentual|fixo, valor numeric,
       validade date, limite_usos (0=ilimitado), usos (contador),
