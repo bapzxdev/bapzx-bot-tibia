@@ -13,7 +13,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.1.2"
+VERSION = "2.2.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -1810,6 +1810,7 @@ def admin_audit():
 # --------------------------------------------------------------------------
 def _grupos_rows(grupos):
     rows = ""
+    csrf = html.escape(_csrf_token())
     for g in grupos:
         gid = g.get("id")
         nome = html.escape(str(g.get("nome") or ""))
@@ -1824,8 +1825,21 @@ def _grupos_rows(grupos):
             f"<td>{link_lbl}</td>"
             f"<td>{ordem}</td>"
             f"<td><span class='status {ativo_lbl}'>{ativo_lbl}</span></td>"
-            f"<td class='acts'><a class='btn ghost' style='padding:5px 10px;font-size:12px' "
-            f"href='/admin/grupos/{gid}'>Editar</a></td>"
+            "<td class='acts' style='white-space:nowrap'>"
+            f"<form method='post' action='/admin/grupos/{gid}/mover' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{csrf}'>"
+            f"<input type='hidden' name='direcao' value='cima'>"
+            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px' title='Subir'>↑</button></form>"
+            f"<form method='post' action='/admin/grupos/{gid}/mover' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{csrf}'>"
+            f"<input type='hidden' name='direcao' value='baixo'>"
+            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;margin-left:4px' title='Descer'>↓</button></form> "
+            f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' href='/admin/grupos/{gid}'>Editar</a>"
+            f"<form method='post' action='/admin/grupos/{gid}/excluir' style='display:inline' "
+            f"onsubmit=\"return confirm('Excluir o grupo \\'" + nome + "\\'?')\">"
+            f"<input type='hidden' name='_csrf' value='{csrf}'>"
+            f"<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;margin-left:4px'>Excluir</button></form>"
+            "</td>"
             "</tr>"
         )
     return rows or (
@@ -1894,6 +1908,62 @@ def admin_grupo_detalhe(gid):
         "</form></section>"
     )
     return _admin_page(user, "Editar grupo", form, "grupos")
+
+
+@bp.route("/admin/grupos/<int:gid>/mover", methods=["POST"])
+def admin_grupo_mover(gid):
+    user = _require_perm("gerenciar_grupos")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    direcao = request.form.get("direcao")
+    if direcao not in ("cima", "baixo"):
+        return "Direção inválida.", 400
+    grupos = _fetch_soft("grupos", order="ordem.asc,id.asc")
+    ids = [g.get("id") for g in grupos]
+    if gid not in ids:
+        return "Grupo não encontrado.", 404
+    i = ids.index(gid)
+    j = i - 1 if direcao == "cima" else i + 1
+    if j < 0 or j >= len(ids):
+        return redirect("/admin/grupos")
+    novo = list(ids)
+    novo[i], novo[j] = novo[j], novo[i]
+    now = datetime.utcnow().isoformat()
+    try:
+        for idx, gid_ord in enumerate(novo):
+            requests.patch(
+                f"{SUPA_URL}/rest/v1/grupos?id=eq.{gid_ord}",
+                headers=_headers(),
+                json={"ordem": idx + 1, "atualizado_em": now},
+                timeout=15,
+            )
+        _audit(user, "grupo_ordenar", f"{gid} {'para cima' if direcao == 'cima' else 'para baixo'}")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/grupos")
+
+
+@bp.route("/admin/grupos/<int:gid>/excluir", methods=["POST"])
+def admin_grupo_excluir(gid):
+    user = _require_perm("gerenciar_grupos")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    grupos = _fetch_soft("grupos", query=f"id=eq.{gid}")
+    nome = grupos[0].get("nome") if grupos else str(gid)
+    try:
+        requests.delete(
+            f"{SUPA_URL}/rest/v1/grupos?id=eq.{gid}",
+            headers=_headers(),
+            timeout=15,
+        )
+        _audit(user, "grupo_excluir", f"{gid} ({nome})")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/grupos")
 
 
 @bp.route("/api/grupos", methods=["GET"])
