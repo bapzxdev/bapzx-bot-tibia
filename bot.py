@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.4.0"
+VERSION = "2.5.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -349,6 +349,10 @@ def _finalizar_confirmacao_char(chat_id, confirmado):
         return
     entry = pending.get("entry") or {}
     entry = save_order(entry)
+    audit_log(
+        "pedido_criado",
+        f"pedido {entry.get('id')} | {entry.get('tc')} RC | {entry.get('preco')} | {entry.get('mundo') or '-'}",
+    )
     notify_owner(entry)
     push_to_sheet(entry)
     if MP_ACCESS_TOKEN and entry.get("id"):
@@ -687,6 +691,10 @@ def apply_status(order_id, status, ts_field=None):
     STORE.set_status(order_id, status, ts_field, now_iso)
     updated = STORE.find(order_id) or order
     push_to_sheet(updated)
+    audit_log(
+        f"pedido_{status}",
+        f"pedido {order_id} | {updated.get('tc')} RC | {updated.get('preco')}",
+    )
     return "ok", order
 
 
@@ -828,6 +836,18 @@ app.register_blueprint(painel_bp)
 
 print(f"[start] v{VERSION} | STORE.remote={bool(STORE.remote)}")
 print(f"[start] TELEGRAM_OWNER_CHAT_ID={load_env_key('TELEGRAM_OWNER_CHAT_ID')!r}")
+
+
+def audit_log(acao, detalhes=""):
+    try:
+        requests.post(
+            f"{STORE.url}/rest/v1/audit_log",
+            headers=STORE._headers(),
+            json={"email": "sistema@bapzx", "acao": acao, "detalhes": detalhes[:500], "ip": "sistema"},
+            timeout=10,
+        )
+    except Exception as error:
+        print(f"[audit] falhou: {error}")
 
 
 @app.route("/", methods=["GET"])
@@ -1050,6 +1070,10 @@ def webhook():
                 score = int(m.group(1))
             try:
                 STORE.update(order_id, {"feedback": fb_text, "feedback_score": score})
+                audit_log(
+                    "feedback_recebido",
+                    f"pedido {order_id} | nota {score} | {fb_text[:120]}",
+                )
             except Exception as error:
                 print(f"[feedback] falha ao gravar feedback do pedido {order_id}: {error}")
             owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
@@ -1897,6 +1921,10 @@ def notify_owner(entry):
 
 
 def notify_owner_pix(charge, entry):
+    audit_log(
+        "pix_gerado",
+        f"pedido {entry.get('id')} | {entry.get('tc')} RC | {entry.get('preco')} | MP {charge.get('id')}",
+    )
     owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
     if not owner_chat:
         return

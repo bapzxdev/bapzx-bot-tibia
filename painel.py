@@ -4,16 +4,17 @@ import os
 import secrets
 import time
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 import requests
-from flask import Blueprint, jsonify, redirect, request, session
+from flask import Blueprint, Response, jsonify, redirect, request, session
 
 import rbac
 
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.4.0"
+VERSION = "2.5.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -597,6 +598,12 @@ tbody tr:hover { background:rgba(52,211,153,.04); }
 .acts button:hover { filter:brightness(1.15); }
 .acts button.pago { background:#064e3b; color:#4ade80; }
 .acts button.entregue { background:#1e3a5f; color:#60a5fa; }
+.audit-bar { margin-bottom:12px; }
+.audit-bar form { gap:8px; }
+.pager { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; }
+.pager a { color:#34d399; text-decoration:none; font-size:13px; }
+.pager a:hover { text-decoration:underline; }
+.pager .page-info { color:#8ea0b8; font-size:13px; }
 .btn { display:inline-block; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; text-decoration:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; border:0; cursor:pointer; }
 .btn:hover { filter:brightness(1.12); }
 .btn.ghost { background:transparent; border:1px solid #1e2c40; color:#e2e8f0; }
@@ -2000,19 +2007,104 @@ def admin_usuario_detalhe(email):
 # --------------------------------------------------------------------------
 # ROTAS DE AUDITORIA
 # --------------------------------------------------------------------------
+_ACOES_AUDIT = {
+    "pedido_criado": ("Novo pedido", "#064e3b", "#4ade80"),
+    "pix_gerado": ("Pix gerado", "#0f2a22", "#34d399"),
+    "pedido_pago": ("Pedido pago", "#064e3b", "#4ade80"),
+    "pedido_entregue": ("Pedido entregue", "#1e3a5f", "#60a5fa"),
+    "feedback_recebido": ("Feedback do cliente", "#3b0764", "#c084fc"),
+    "marcar_pedido_pago": ("Marcou pedido pago", "#064e3b", "#4ade80"),
+    "marcar_pedido_entregue": ("Marcou pedido entregue", "#1e3a5f", "#60a5fa"),
+    "cliente_editar": ("Cliente editado", "#1e293b", "#94a3b8"),
+    "cliente_bloquear": ("Cliente bloqueado", "#7f1d1d", "#f87171"),
+    "cliente_desbloquear": ("Cliente desbloqueado", "#064e3b", "#4ade80"),
+    "ticket_responder": ("Ticket respondido", "#1e293b", "#94a3b8"),
+    "ticket_excluir": ("Ticket excluído", "#7f1d1d", "#f87171"),
+    "item_criar": ("Item adicionado", "#1e293b", "#94a3b8"),
+    "item_editar": ("Item editado", "#1e293b", "#94a3b8"),
+    "item_toggle": ("Item publicado/oculto", "#1e293b", "#94a3b8"),
+    "item_excluir": ("Item excluído", "#7f1d1d", "#f87171"),
+    "config_salvar": ("Configuração salva", "#164e63", "#22d3ee"),
+    "config_conta_nome": ("Nome da conta alterado", "#164e63", "#22d3ee"),
+    "usuario_criar": ("Usuário adicionado", "#1e293b", "#94a3b8"),
+    "usuario_editar": ("Usuário editado", "#1e293b", "#94a3b8"),
+    "grupo_editar": ("Grupo editado", "#14532d", "#4ade80"),
+    "grupo_ordenar": ("Grupo reordenado", "#14532d", "#4ade80"),
+    "grupo_excluir": ("Grupo excluído", "#7f1d1d", "#f87171"),
+    "cupom_criar": ("Cupom criado", "#78350f", "#fbbf24"),
+    "cupom_editar": ("Cupom editado", "#78350f", "#fbbf24"),
+    "cupom_ativar": ("Cupom ativado/inativo", "#78350f", "#fbbf24"),
+    "cupom_excluir": ("Cupom excluído", "#7f1d1d", "#f87171"),
+}
+
+
 @bp.route("/admin/audit", methods=["GET"])
 def admin_audit():
     user = _require_perm("ver_audit")
     if not user:
         return redirect("/login")
-    logs = _fetch("audit_log", order="criado_em.desc", range_="0-499")
+    q = (request.args.get("q") or "").strip()
+    quem = (request.args.get("quem") or "").strip()
+    ata = (request.args.get("ata") or "").strip()
+    try:
+        page = max(1, int(request.args.get("p") or 1))
+    except ValueError:
+        page = 1
+    filters = []
+    if quem:
+        filters.append(f"email=ilike.*{quote(quem)}*")
+    if ata:
+        filters.append(f"acao=eq.{quote(ata)}")
+    if q:
+        filters.append(f"or=(acao.ilike.*{quote(q)}*,detalhes.ilike.*{quote(q)}*)")
+    query = "&".join(filters)
+    per = 50
+    start = (page - 1) * per
+    logs = _fetch_soft(
+        "audit_log", order="criado_em.desc", query=query, range_=f"{start}-{start + per - 1}"
+    )
+
+    if request.args.get("csv") == "1":
+        total_csv = _fetch_soft(
+            "audit_log", order="criado_em.desc", query=query, range_="0-1999"
+        )
+
+        def _csv(v):
+            s = str(v or "")
+            return f'"{s.replace(chr(34), chr(34) + chr(34))}"'
+
+        lines = ["criado_em;email;acao;detalhes;ip"]
+        for a in total_csv:
+            lines.append(
+                ";".join(
+                    _csv(a.get(k)) for k in ("criado_em", "email", "acao", "detalhes", "ip")
+                )
+            )
+        resp = Response("\n".join(lines), mimetype="text/csv; charset=utf-8")
+        resp.headers["Content-Disposition"] = "attachment; filename=auditoria.csv"
+        return resp
+
+    total = 0
+    try:
+        cr = requests.get(
+            f"{SUPA_URL}/rest/v1/audit_log?select=id&{query}",
+            headers={**_headers(), "Range": "0-0", "Prefer": "count=exact"},
+            timeout=15,
+        ).headers.get("Content-Range", "/0")
+        total = int(cr.split("/")[-1]) if "/" in cr else 0
+    except Exception:
+        pass
+    total_paginas = max(1, -(-total // per))
+
     rows = ""
     for a in logs:
+        acao = str(a.get("acao") or "-")
+        rotulo, fundo, cor = _ACOES_AUDIT.get(acao, (acao, "#1e293b", "#94a3b8"))
         rows += (
             "<tr>"
-            f"<td>{html.escape(str(a.get('criado_em') or ''))[:19]}</td>"
+            f"<td style='white-space:nowrap'>{html.escape(str(a.get('criado_em') or ''))[:19]}</td>"
             f"<td>{html.escape(str(a.get('email') or '-'))}</td>"
-            f"<td>{html.escape(str(a.get('acao') or '-'))}</td>"
+            f"<td><span class='status' style='background:{fundo};color:{cor}'>{html.escape(rotulo)}</span></td>"
             f"<td>{html.escape(str(a.get('detalhes') or '-'))}</td>"
             f"<td>{html.escape(str(a.get('ip') or '-'))}</td>"
             "</tr>"
@@ -2020,11 +2112,41 @@ def admin_audit():
     rows = rows or (
         "<tr><td colspan='5' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum log encontrado.</td></tr>"
     )
+
+    opcoes = "".join(
+        f"<option value='{acao}'{' selected' if acao == ata else ''}>{html.escape(rotulo)}</option>"
+        for acao, (rotulo, _f, _c) in sorted(_ACOES_AUDIT.items(), key=lambda kv: kv[1][0].lower())
+    )
+    params = [(k, v) for k, v in (("q", q), ("quem", quem), ("ata", ata)) if v]
+    base = "?" + "&".join(f"{k}={quote(v)}" for k, v in params) if params else ""
+    csv_href = (base + "&csv=1") if base else "/admin/audit?csv=1"
+
+    pager = ""
+    if total_paginas > 1:
+        ant = f"<a href='{base}&p={max(1, page - 1)}'>← anterior</a>" if page > 1 else ""
+        prox = f"<a href='{base}&p={min(total_paginas, page + 1)}'>próxima →</a>" if page < total_paginas else ""
+        pager = (
+            "<div class='pager'>"
+            f"{ant}<span class='page-info'>Página {page} de {total_paginas} ({total} registros)</span>{prox}"
+            "</div>"
+        )
+
     body = (
-        "<section><h2>Log de auditoria</h2><table>"
+        "<section><h2>Log de auditoria</h2>"
+        "<div class='audit-bar'>"
+        "<form method='get' style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%'>"
+        f"<input name='q' type='search' value='{html.escape(q)}' placeholder='Buscar ação ou detalhe...' style='width:200px'>"
+        f"<select name='ata' style='width:auto'><option value=''>Todas as ações</option>{opcoes}</select>"
+        f"<input name='quem' value='{html.escape(quem)}' placeholder='Filtrar por e-mail' style='width:210px'>"
+        "<button class='btn' type='submit'>Filtrar</button>"
+        f"<a class='btn ghost' href='{csv_href}' title='Exportar até 2000 registros filtrados'>Exportar CSV</a>"
+        "</form></div>"
+        "<table>"
         "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th><th>IP</th></tr>"
         + rows
-        + "</table></section>"
+        + "</table>"
+        + pager
+        + "</section>"
     )
     return _admin_page(user, "Auditoria", body, "audit")
 
