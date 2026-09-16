@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.1.1"
+VERSION = "2.1.2"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -1276,12 +1276,17 @@ AUTH_LAYOUT = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
+<title>BAPZX · {title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 body {{ font-family: Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }}
 header {{ background: #1e293b; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }}
 header h1 {{ margin: 0; font-size: 18px; }}
 header a {{ color: #94a3b8; font-size: 13px; text-decoration: none; }}
+.brand {{ font-family: 'Sora', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 2px; color: #fff; }}
+.brand span {{ background: linear-gradient(135deg,#34d399 0%,#4ade80 35%,#60a5fa 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }}
 main {{ padding: 24px; max-width: 960px; margin: 0 auto; }}
 label {{ display: block; margin-top: 10px; color: #94a3b8; font-size: 13px; }}
 input, select, textarea {{ width: 100%; margin-top: 4px; padding: 9px 11px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; font-size: 14px; box-sizing: border-box; }}
@@ -1314,7 +1319,7 @@ th {{ color: #94a3b8; font-weight: normal; }}
 </style>
 </head>
 <body>
-<header><h1>BAPZX · {brand}</h1>{top}</header>
+<header><h1><span class="brand">BAP<span>ZX</span></span> · {brand}</h1>{top}</header>
 <main>{body}</main>
 <footer>
   <span>© 2026 BAPZX · Vendas de RC no Tibia</span><br>
@@ -1578,6 +1583,8 @@ def acesso():
     if not user:
         return redirect("/login")
     top = (
+        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
+        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a> "
         "<span style='color:#94a3b8;font-size:12px'>"
         f"Bem-vindo, {html.escape(user['name'])}</span> "
         "<a href='/logout' style='margin-left:8px'>Sair</a>"
@@ -1605,7 +1612,7 @@ def acesso():
         f"{admin_btn}"
         "</div></section>"
     )
-    return _page("Entrar", "Escolha a área", top, body)
+    return _page("Escolha a área", "Escolha a área", top, body)
 
 
 @app.route("/cliente")
