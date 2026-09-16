@@ -5,6 +5,12 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
+- [ ] **Testar `/admin/audit` ao vivo (v2.5.0, item 14 — FEITO no código).**
+      Página com busca `q`, dropdown de ação, filtro por e-mail, paginação
+      50/pág e Exportar CSV; eventos do bot (pedido_criado, pix_gerado,
+      pedido_pago/entregue, feedback_recebido — email sistema@bapzx, ip
+      sistema) já gravam no `audit_log`. Conferir quando preencher
+      config/cupons e fizer pedidos de teste.
 - [ ] **Preencher `/admin/config` (v2.4.0, item 11 — FEITO no código).** A
       aba Configurações está no ar (Site/Conta/Pagamentos/Notificações) mas
       os campos estão vazios. Preencher: **Site** (logo, nome, banner, slogan,
