@@ -10,6 +10,11 @@ Atualizar sempre que algo mudar de estado.
       `itens` (itens do jogo) e agora só aparece em `/api/servicos`.
       Validado em produção: `/api/servicos` → Intermediação; `/api/itens` →
       vazio.
+- [x] **Quedas momentâneas do Supabase → endpoints públicos (v2.1.1) — FEITO.**
+      Avisos "ERRO 500" no Telegram eram falha real de conexão com o Supabase
+      (não testes). `_fetch_public` criado: `/api/itens`, `/api/grupos` e
+      `/api/servicos` agora retornam lista vazia (200) em conexão/timeout/5xx
+      do Supabase em vez de 500; 401/403/PGRST30x continuam subindo.
 - [x] **Aplicar `supabase_migracao_v118.sql` (v2.0.0) — FEITO pelo dono.**
       Tabelas `users` e `grupos` no ar (o `/api/grupos` retorna vazio porque
       os 4 links ainda estão vazios — preencher no `/admin/grupos`).
