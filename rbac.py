@@ -53,6 +53,8 @@ PERMISSOES_LABEL = {
     "editar_config": "Editar configurações",
     "ver_grupos": "Ver grupos",
     "gerenciar_grupos": "Gerenciar grupos",
+    "ver_cupons": "Ver cupons",
+    "gerenciar_cupons": "Criar/editar/ativar/excluir cupons",
     "ver_usuarios": "Ver usuários",
     "gerenciar_usuarios": "Gerenciar usuários",
     "ver_audit": "Ver auditoria",
@@ -76,6 +78,8 @@ PERM_TRACK = {
     "editar_config": "config",
     "ver_grupos": "grupos",
     "gerenciar_grupos": "grupos",
+    "ver_cupons": "cupons",
+    "gerenciar_cupons": "cupons",
     "ver_usuarios": "usuarios",
     "gerenciar_usuarios": "usuarios",
     "ver_audit": "audit",
@@ -89,6 +93,7 @@ _PADRAO = {
         "ver_itens", "gerenciar_itens",
         "ver_tickets", "responder_tickets", "encerrar_tickets", "excluir_tickets",
         "ver_config", "ver_grupos", "gerenciar_grupos", "ver_usuarios", "ver_audit",
+        "ver_cupons", "gerenciar_cupons",
     ],
     "MANAGER": [
         "ver_dashboard", "ver_pedidos", "marcar_pagamento", "marcar_entrega",
@@ -96,6 +101,7 @@ _PADRAO = {
         "ver_itens", "gerenciar_itens",
         "ver_tickets", "responder_tickets", "encerrar_tickets",
         "ver_grupos", "gerenciar_grupos",
+        "ver_cupons", "gerenciar_cupons",
     ],
     "FINANCEIRO": [
         "ver_dashboard", "ver_pedidos", "ver_pagamentos", "marcar_pagamento",

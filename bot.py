@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"

@@ -13,7 +13,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -381,6 +381,7 @@ _ICONS = {
     "shield": "<path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/>",
     "brands": "<path d='M17 20h5v-2a3 3 0 0 0-5.36-1.86'/><path d='M3 20h5'/><path d='M16 15a3 3 0 1 0-2.12-5.12'/><path d='M8 4H3v5'/><circle cx='17' cy='4' r='2'/>",
     "clipboard": "<path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1'/>",
+    "ticket": "<rect x='3' y='4' width='18' height='16' rx='3'/><path d='M7 4v1.5a1.5 1.5 0 0 0 0 3v7a1.5 1.5 0 0 0 0 3V20'/><path d='M17 4v1.5a1.5 1.5 0 0 1 0 3v7a1.5 1.5 0 0 1 0 3V20'/>",
 }
 
 
@@ -550,6 +551,8 @@ def _page(user, title, body, active=""):
         vendas.append(("/admin/pedidos", "Pedidos", "pedidos", "cart"))
     if peut("ver_itens"):
         vendas.append(("/admin/itens", "Itens", "itens", "package"))
+    if peut("ver_cupons"):
+        vendas.append(("/admin/cupons", "Cupons", "cupons", "ticket"))
     if peut("ver_pagamentos"):
         vendas.append(("/admin/pagamentos", "Pagamentos", "pagamentos", "wallet"))
     if vendas:
@@ -2061,3 +2064,340 @@ def api_track():
     if _cors_ok():
         response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin") or "*"
     return response
+
+
+# --------------------------------------------------------------------------
+# ROTAS DE CUPONS
+# --------------------------------------------------------------------------
+def _cupom_desconto_texto(c):
+    tipo = c.get("tipo") or "percentual"
+    try:
+        valor = float(c.get("valor") or 0)
+    except (TypeError, ValueError):
+        valor = 0.0
+    if tipo == "fixo":
+        return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{valor:g}% de desconto"
+
+
+def _cupom_validade_texto(c):
+    validade = c.get("validade")
+    if not validade:
+        return "Sem prazo"
+    return html.escape(str(validade))
+
+
+def _cupons_lista_referencias():
+    itens = _fetch_soft("itens", select="id,nome", order="nome.asc")
+    servicos = _fetch_soft("servicos", select="id,nome", order="nome.asc")
+    grupos = _fetch_soft("grupos", select="id,nome", order="ordem.asc")
+    return itens, servicos, grupos
+
+
+def _cupom_escopo(c, itens, servicos, grupos):
+    partes = []
+    pid = c.get("produto_id")
+    sid = c.get("servico_id")
+    gid = c.get("grupo_id")
+    if pid:
+        partes.append("Item: " + html.escape(str(next((i.get("nome") for i in itens if str(i.get("id")) == str(pid)), pid))))
+    if sid:
+        partes.append("Serviço: " + html.escape(str(next((s.get("nome") for s in servicos if str(s.get("id")) == str(sid)), sid))))
+    if gid:
+        partes.append("Grupo: " + html.escape(str(next((g.get("nome") for g in grupos if str(g.get("id")) == str(gid)), gid))))
+    return "; ".join(partes) or "Todos"
+
+
+def _cupons_rows(cupons, itens, servicos, grupos):
+    rows = ""
+    csrf = html.escape(_csrf_token())
+    for c in cupons:
+        cid = c.get("id")
+        codigo = html.escape(str(c.get("codigo") or ""))
+        ativo_lbl = "ativo" if c.get("ativo") else "inativo"
+        desconto = _cupom_desconto_texto(c)
+        validade = _cupom_validade_texto(c)
+        limite = c.get("limite_usos")
+        usos = c.get("usos") or 0
+        limite_lbl = str(limite) if limite else "∞"
+        ultimos = html.escape(_cupom_escopo(c, itens, servicos, grupos))
+        rows += (
+            "<tr>"
+            f"<td>{cid}</td>"
+            f"<td><b style='color:#34d399'>{codigo}</b></td>"
+            f"<td>{html.escape(desconto)}</td>"
+            f"<td>{validade}</td>"
+            f"<td>{usos} / {limite_lbl}</td>"
+            f"<td style='max-width:220px'>{ultimos}</td>"
+            f"<td><span class='status {ativo_lbl}'>{ativo_lbl}</span></td>"
+            "<td class='acts' style='white-space:nowrap'>"
+            f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' href='/admin/cupons/{cid}'>Editar</a>"
+            f"<form method='post' action='/admin/cupons/{cid}/ativar' style='display:inline'>"
+            f"<input type='hidden' name='_csrf' value='{csrf}'>"
+            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;margin-left:4px'>"
+            f"{'Desativar' if c.get('ativo') else 'Ativar'}</button></form>"
+            f"<form method='post' action='/admin/cupons/{cid}/excluir' style='display:inline' "
+            f"onsubmit=\"return confirm('Excluir o cupom \\'" + codigo + "\\'?')\">"
+            f"<input type='hidden' name='_csrf' value='{csrf}'>"
+            f"<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;margin-left:4px'>Excluir</button></form>"
+            "</td>"
+            "</tr>"
+        )
+    return rows or (
+        "<tr><td colspan='8' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum cupom.</td></tr>"
+    )
+
+
+def _cupon_payload_form():
+    codigo = (request.form.get("codigo") or "").strip().upper()[:40]
+    tipo = (request.form.get("tipo") or "percentual").strip().lower()
+    if tipo not in ("percentual", "fixo"):
+        tipo = "percentual"
+    try:
+        valor = float((request.form.get("valor") or "0").replace(",", "."))
+    except (TypeError, ValueError):
+        valor = 0.0
+    if valor < 0:
+        valor = 0.0
+    if tipo == "percentual":
+        valor = min(valor, 100.0)
+    validade = (request.form.get("validade") or "").strip()
+    if validade and len(validade) > 10:
+        validade = ""
+    try:
+        limite_usos = int((request.form.get("limite_usos") or "0").strip() or "0")
+    except (TypeError, ValueError):
+        limite_usos = 0
+    if limite_usos < 0:
+        limite_usos = 0
+    produto_id = (request.form.get("produto_id") or "").strip() or None
+    servico_id = (request.form.get("servico_id") or "").strip() or None
+    grupo_id = (request.form.get("grupo_id") or "").strip() or None
+    ativo = request.form.get("ativo") == "on"
+    if not codigo:
+        return None, "Código do cupom é obrigatório."
+    if valor <= 0:
+        return None, "Valor do desconto deve ser maior que zero."
+    return {
+        "codigo": codigo,
+        "tipo": tipo,
+        "valor": valor,
+        "validade": validade or None,
+        "limite_usos": limite_usos,
+        "produto_id": produto_id,
+        "servico_id": servico_id,
+        "grupo_id": grupo_id,
+        "ativo": ativo,
+    }, None
+
+
+def _cupons_select(opcoes, atual, label_vazio="Qualquer"):
+    select = f"<option value=''>{label_vazio}</option>"
+    for o in opcoes:
+        oid = o.get("id")
+        nome = html.escape(str(o.get("nome") or oid))
+        selected = " selected" if atual is not None and str(atual) == str(oid) else ""
+        select += f"<option value='{oid}'{selected}>{nome}</option>"
+    return select
+
+
+@bp.route("/admin/cupons", methods=["GET"])
+def admin_cupons():
+    user = _require_perm("ver_cupons")
+    if not user:
+        return redirect("/login")
+    cupons = _fetch_soft("cupons", order="criado_em.desc")
+    itens, servicos, grupos = _cupons_lista_referencias()
+    cards = (
+        f"<div class='cards'><div class='card'><div class='num'>{len(cupons)}</div>"
+        "<div class='lbl'>Cupons</div></div></div>"
+    )
+    body = cards
+    body += (
+        "<section><h2>Cupons de desconto</h2><table>"
+        "<tr><th>ID</th><th>Código</th><th>Desconto</th><th>Validade</th>"
+        "<th>Usos/Limite</th><th>Escopo</th><th>Status</th><th>Ações</th></tr>"
+        + _cupons_rows(cupons, itens, servicos, grupos)
+        + "</table></section>"
+    )
+    if user and _require_perm("gerenciar_cupons"):
+        form = (
+            "<section><h2>Novo cupom</h2>"
+            "<form method='post' action='/admin/cupons/novo'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<label>Código (fica automático em MAIÚSCULAS)</label>"
+            "<input name='codigo' required placeholder='BAPZVESPERIA'>"
+            "<div class='box'>"
+            "<div><label>Tipo</label><select name='tipo'>"
+            "<option value='percentual'>Percentual (%)</option>"
+            "<option value='fixo'>Fixo (R$)</option>"
+            "</select></div>"
+            "<div><label>Valor do desconto</label>"
+            "<input name='valor' type='number' step='0.01' min='0.01' max='100' required placeholder='10'>"
+            "</div></div>"
+            "<div class='box'>"
+            "<div><label>Validade (opcional)</label>"
+            "<input name='validade' type='date'></div>"
+            "<div><label>Limite de usos (0 = ilimitado)</label>"
+            "<input name='limite_usos' type='number' min='0' value='0'></div>"
+            "</div>"
+            f"<label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, None, 'Qualquer item')}</select>"
+            f"<label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, None, 'Qualquer serviço')}</select>"
+            f"<label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, None, 'Qualquer grupo')}</select>"
+            "<label style='display:flex;gap:8px;align-items:center;margin-top:8px'>"
+            "<input type='checkbox' name='ativo' checked> Ativo</label>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Criar cupom</button></p>"
+            "</form></section>"
+        )
+        body += form
+    return _admin_page(user, "Cupons", body, "cupons")
+
+
+@bp.route("/admin/cupons/novo", methods=["POST"])
+def admin_cupom_novo():
+    user = _require_perm("gerenciar_cupons")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    payload, error = _cupon_payload_form()
+    if error:
+        return error, 400
+    try:
+        response = requests.post(
+            f"{SUPA_URL}/rest/v1/cupons",
+            headers={**_headers(), "Prefer": "return=representation"},
+            json=payload,
+            timeout=15,
+        )
+        if response.status_code not in (200, 201):
+            if "duplicate" in (response.text or "").lower():
+                return f"Já existe um cupom com o código '{payload['codigo']}'.", 400
+            return f"Falha ao criar ({response.status_code}): {response.text[:200]}", 400
+        _audit(user, "cupom_criar", f"{payload['codigo']} ({payload['tipo']} {payload['valor']})")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/cupons")
+
+
+@bp.route("/admin/cupons/<cupom_id>", methods=["GET", "POST"])
+def admin_cupom_detalhe(cupom_id):
+    user = _require_perm("gerenciar_cupons")
+    if not user:
+        return redirect("/login")
+    cupons = _fetch_soft("cupons", query=f"id=eq.{cupom_id}")
+    if not cupons:
+        return "Cupom não encontrado.", 404
+    c = cupons[0]
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        payload, error = _cupon_payload_form()
+        if error:
+            return error, 400
+        payload["atualizado_em"] = datetime.utcnow().isoformat()
+        try:
+            response = requests.patch(
+                f"{SUPA_URL}/rest/v1/cupons?id=eq.{cupom_id}",
+                headers=_headers(),
+                json=payload,
+                timeout=15,
+            )
+            if response.status_code not in (200, 204):
+                if "duplicate" in (response.text or "").lower():
+                    return f"Já existe um cupom com o código '{payload['codigo']}'.", 400
+                return f"Falha ao atualizar ({response.status_code}): {response.text[:200]}", 400
+            _audit(user, "cupom_editar", f"{payload['codigo']} ({payload['tipo']} {payload['valor']})")
+        except Exception as exc:
+            return f"Falha: {exc}", 500
+        return redirect("/admin/cupons")
+
+    itens, servicos, grupos = _cupons_lista_referencias()
+    codigo = html.escape(str(c.get("codigo") or ""))
+    tipo = c.get("tipo") or "percentual"
+    try:
+        valor = float(c.get("valor") or 0)
+    except (TypeError, ValueError):
+        valor = 0.0
+    valor_lbl = f"{valor:g}"
+    validade = html.escape(str(c.get("validade") or ""))
+    limite = c.get("limite_usos") or 0
+    checked = "checked" if c.get("ativo") else ""
+    tipo_percentual = " selected" if tipo == "percentual" else ""
+    tipo_fixo = " selected" if tipo == "fixo" else ""
+    form = (
+        "<section><h2>Editar cupom</h2>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label>Código (fica automático em MAIÚSCULAS)</label>"
+        f"<input name='codigo' required value='{codigo}'>"
+        "<div class='box'>"
+        "<div><label>Tipo</label><select name='tipo'>"
+        f"<option value='percentual'{tipo_percentual}>Percentual (%)</option>"
+        f"<option value='fixo'{tipo_fixo}>Fixo (R$)</option>"
+        "</select></div>"
+        "<div><label>Valor do desconto</label>"
+        f"<input name='valor' type='number' step='0.01' min='0.01' max='100' required value='{valor_lbl}'>"
+        "</div></div>"
+        "<div class='box'>"
+        "<div><label>Validade (opcional)</label>"
+        f"<input name='validade' type='date' value='{validade}'></div>"
+        "<div><label>Limite de usos (0 = ilimitado)</label>"
+        f"<input name='limite_usos' type='number' min='0' value='{limite}'></div>"
+        "</div>"
+        f"<label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, c.get('produto_id'), 'Qualquer item')}</select>"
+        f"<label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, c.get('servico_id'), 'Qualquer serviço')}</select>"
+        f"<label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, c.get('grupo_id'), 'Qualquer grupo')}</select>"
+        f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'>"
+        f"<input type='checkbox' name='ativo' {checked}> Ativo</label>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
+        "<a class='btn ghost' href='/admin/cupons'>Voltar</a></p>"
+        "</form></section>"
+    )
+    return _admin_page(user, "Editar cupom", form, "cupons")
+
+
+@bp.route("/admin/cupons/<cupom_id>/ativar", methods=["POST"])
+def admin_cupom_ativar(cupom_id):
+    user = _require_perm("gerenciar_cupons")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    cupons = _fetch_soft("cupons", query=f"id=eq.{cupom_id}")
+    if not cupons:
+        return "Cupom não encontrado.", 404
+    c = cupons[0]
+    novo_estado = not bool(c.get("ativo"))
+    try:
+        requests.patch(
+            f"{SUPA_URL}/rest/v1/cupons?id=eq.{cupom_id}",
+            headers=_headers(),
+            json={"ativo": novo_estado, "atualizado_em": datetime.utcnow().isoformat()},
+            timeout=15,
+        )
+        _audit(user, "cupom_ativar", f"{c.get('codigo')} -> {'ativo' if novo_estado else 'inativo'}")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/cupons")
+
+
+@bp.route("/admin/cupons/<cupom_id>/excluir", methods=["POST"])
+def admin_cupom_excluir(cupom_id):
+    user = _require_perm("gerenciar_cupons")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    cupons = _fetch_soft("cupons", query=f"id=eq.{cupom_id}")
+    codigo = cupons[0].get("codigo") if cupons else str(cupom_id)
+    try:
+        requests.delete(
+            f"{SUPA_URL}/rest/v1/cupons?id=eq.{cupom_id}",
+            headers=_headers(),
+            timeout=15,
+        )
+        _audit(user, "cupom_excluir", f"{cupom_id} ({codigo})")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/cupons")
