@@ -13,7 +13,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -208,6 +208,21 @@ def _fetch_soft(table, select="*", order="", query="", range_="0-999"):
             print(f"[painel] tabela '{table}' ainda não existe (migration pendente)")
             return []
         raise
+
+
+def _fetch_public(table, select="*", order="", query="", range_="0-999"):
+    """Variante para endpoints PÚBLICOS (/api/* do portfólio): nunca derruba
+    em instabilidade momentânea do Supabase (conexão, timeout, 5xx) — loga e
+    devolve lista vazia. Erros de autenticação/permissão (401/403) continuam
+    subindo para o log do erro 500."""
+    try:
+        return _fetch(table, select=select, order=order, query=query, range_=range_)
+    except Exception as error:
+        msg = str(error)
+        if "401" in msg or "403" in msg or "PGRST301" in msg or "PGRST302" in msg:
+            raise
+        print(f"[painel] /api/{table} indisponível (Supabase instável), retornando vazio: {msg[:200]}")
+        return []
 
 
 def _count(table, query=""):
@@ -1886,7 +1901,7 @@ def api_grupos():
     if _rate_limited("api_grupos", _RATE_LIMIT_TRACK_PER_MIN):
         return jsonify({"ok": False, "error": "rate limit"}), 429
     origin = request.headers.get("Origin") or ""
-    grupos = _fetch_soft("grupos", query="ativo=eq.true", order="ordem.asc")
+    grupos = _fetch_public("grupos", query="ativo=eq.true", order="ordem.asc")
     payload = [
         {
             "id": g.get("id"),
@@ -1910,7 +1925,7 @@ def api_itens():
     if _rate_limited("api_itens", _RATE_LIMIT_TRACK_PER_MIN):
         return jsonify({"ok": False, "error": "rate limit"}), 429
     origin = request.headers.get("Origin") or ""
-    itens = _fetch("itens", select="*", query="ativo=eq.true", order="ordem.asc")
+    itens = _fetch_public("itens", select="*", query="ativo=eq.true", order="ordem.asc")
     payload = [
         {
             "id": it.get("id"),
@@ -1933,7 +1948,7 @@ def api_servicos():
     if _rate_limited("api_servicos", _RATE_LIMIT_TRACK_PER_MIN):
         return jsonify({"ok": False, "error": "rate limit"}), 429
     origin = request.headers.get("Origin") or ""
-    servicos = _fetch_soft("servicos", select="*", query="ativo=eq.true", order="ordem.asc")
+    servicos = _fetch_public("servicos", select="*", query="ativo=eq.true", order="ordem.asc")
     payload = [
         {
             "id": s.get("id"),
