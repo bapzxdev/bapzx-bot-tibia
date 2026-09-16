@@ -5,6 +5,12 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
+- [ ] **Aplicar `supabase_migracao_v120.sql` (v2.3.0, cupons).** Tabela
+      `public.cupons`: codigo (unique), tipo percentual|fixo, valor numeric,
+      validade date, limite_usos (0=ilimitado), usos (contador),
+      produto_id/servico_id/grupo_id opcionais, ativo + índices. Rodar no
+      Supabase SQL Editor para o `/admin/cupons` começar a listar/criar
+      cupons (até lá abre "Nenhum cupom" via `_fetch_soft` sem erro).
 - [x] **Aplicar `supabase_migracao_v119.sql` (v2.1.0) — FEITO pelo dono.**
       Tabela `servicos` criada; Intermediação BAPZX R$5 saiu da tabela
       `itens` (itens do jogo) e agora só aparece em `/api/servicos`.
