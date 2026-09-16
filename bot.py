@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.3.0"
+VERSION = "2.4.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -478,6 +478,31 @@ def calc_price(tc):
     return f"R${value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+_CONFIG_CACHE = {"ts": 0.0, "dados": {}}
+
+
+def _config_map():
+    """Configurações gerais (item 11) da tabela `config`, com cache de 2 min.
+    Nunca derruba: em falha devolve {} (comportamento padrão dos avisos)."""
+    if time.time() - _CONFIG_CACHE["ts"] < 120:
+        return _CONFIG_CACHE["dados"]
+    dados = {}
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/config?select=chave,valor",
+                headers=STORE._headers(),
+                timeout=10,
+            )
+            if response.status_code == 200:
+                dados = {r.get("chave"): r.get("valor", "") for r in (response.json() or [])}
+        except Exception:
+            dados = {}
+    _CONFIG_CACHE["ts"] = time.time()
+    _CONFIG_CACHE["dados"] = dados
+    return dados
+
+
 def clean_char(raw):
     partes = []
     for word in raw.split():
@@ -534,9 +559,10 @@ def payment_text(entry):
     if entry.get("char"):
         linhas.append(f"  Char: {entry['char']}")
     linhas.append("")
-    if PIX_KEY:
+    pix_chave = _config_map().get("pix_chave") or PIX_KEY
+    if pix_chave:
         linhas.append(f"Para pagar via Pix, envie {entry.get('preco') or 'o valor'} para a chave Pix:")
-        linhas.append(f"  {PIX_KEY}")
+        linhas.append(f"  {pix_chave}")
     else:
         linhas.append('Para pagar via Pix, peça a chave Pix ao atendente com /vendedor.')
     linhas.append("")
@@ -763,14 +789,15 @@ def _error500(error):
 
     ext = tb.format_exc()
     print("ERRO 500:", request.path, ext)
-    try:
-        dono = load_env_key("TELEGRAM_OWNER_CHAT_ID")
-        if dono:
-            linhas = ext.splitlines()
-            resumo = linhas[-2] if linhas else ""
-            send_message(dono, f"⚠️ ERRO 500 em {request.path}\n{resumo[:400]}")
-    except Exception:
-        pass
+    if _config_map().get("notificar_erro") != "0":
+        try:
+            dono = load_env_key("TELEGRAM_OWNER_CHAT_ID")
+            if dono:
+                linhas = ext.splitlines()
+                resumo = linhas[-2] if linhas else ""
+                send_message(dono, f"⚠️ ERRO 500 em {request.path}\n{resumo[:400]}")
+        except Exception:
+            pass
     return "erro", 500
 
 GOOGLE_OAUTH_READY = False
@@ -1848,6 +1875,8 @@ def notify_owner(entry):
     owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
     if not owner_chat:
         return
+    if _config_map().get("notificar_pedido") == "0":
+        return
     lines = ["🛒 NOVO PEDIDO"]
     lines.append(f"Usuário: {entry['usuario']}")
     lines.append(f"ID: {entry['chat_id']}")
@@ -1870,6 +1899,8 @@ def notify_owner(entry):
 def notify_owner_pix(charge, entry):
     owner_chat = load_env_key("TELEGRAM_OWNER_CHAT_ID")
     if not owner_chat:
+        return
+    if _config_map().get("notificar_pix") == "0":
         return
     linhas = ["🧾 PIX GERADO PARA O PEDIDO"]
     linhas.append(f"Pedido: {entry.get('id')}")

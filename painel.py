@@ -13,7 +13,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.3.0"
+VERSION = "2.4.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -284,6 +284,104 @@ def _precos_atual():
 
 def _precos_texto():
     return "\n".join(f"{k}={v}" for k, v in sorted(_precos_atual().items(), key=lambda kv: int(kv[0])))
+
+
+# ---------------------------------------------------------------------------
+# Configurações (item 11) — abas Site / Conta / Pagamentos / Notificações
+# ---------------------------------------------------------------------------
+_CONFIG_PUBLICAS = (
+    "site_nome", "site_logo", "site_banner", "site_slogan",
+    "site_texto_topo", "site_texto_rodape",
+    "link_portfolio", "link_whatsapp", "link_telegram",
+    "link_instagram", "link_youtube", "link_discord", "link_tiktok",
+)
+
+_CONT_NOTA = "Ainda não configurado. Depois de salvar, aparece aqui e no site."
+
+# tipo: texto | url | texto_livre | bool
+_CONFIG_CAMPOS = {
+    "site_nome": ("texto", 60, ""),
+    "site_logo": ("url", 500, ""),
+    "site_banner": ("url", 500, ""),
+    "site_slogan": ("texto", 160, ""),
+    "site_texto_topo": ("texto_livre", 3000, ""),
+    "site_texto_rodape": ("texto", 500, ""),
+    "link_portfolio": ("url", 500, ""),
+    "link_whatsapp": ("url", 500, ""),
+    "link_telegram": ("url", 500, ""),
+    "link_instagram": ("url", 500, ""),
+    "link_youtube": ("url", 500, ""),
+    "link_discord": ("url", 500, ""),
+    "link_tiktok": ("url", 500, ""),
+    "pix_chave": ("texto", 200, ""),
+    "pix_beneficiario": ("texto", 200, ""),
+    "notificar_pedido": ("bool", 1, "1"),
+    "notificar_pix": ("bool", 1, "1"),
+    "notificar_erro": ("bool", 1, "1"),
+}
+_CONFIG_SECOES = {
+    "site": (
+        "site_nome", "site_logo", "site_banner", "site_slogan",
+        "site_texto_topo", "site_texto_rodape",
+        "link_portfolio", "link_whatsapp", "link_telegram",
+        "link_instagram", "link_youtube", "link_discord", "link_tiktok",
+    ),
+    "pagamentos": ("pix_chave", "pix_beneficiario"),
+    "notificacoes": ("notificar_pedido", "notificar_pix", "notificar_erro"),
+}
+
+
+def _config_field(label, chave, valor, help_="", tipo="text", placeholder="", maxlen=None):
+    maxattr = f" maxlength='{maxlen}'" if maxlen else ""
+    v = html.escape(valor or "")
+    h = f"<p style='color:#5b6b82;font-size:12px;margin:4px 0 0'>{html.escape(help_)}</p>" if help_ else ""
+    return (
+        f"<label>{html.escape(label)}</label>"
+        f"<input type='{tipo}' name='{chave}' value='{v}' placeholder='{html.escape(placeholder)}'{maxattr}>{h}"
+    )
+
+
+def _config_textarea(label, chave, valor, help_="", rows=3):
+    v = html.escape(valor or "")
+    h = f"<p style='color:#5b6b82;font-size:12px;margin:4px 0 0'>{html.escape(help_)}</p>" if help_ else ""
+    return (
+        f"<label>{html.escape(label)}</label>"
+        f"<textarea name='{chave}' rows='{rows}'>{v}</textarea>{h}"
+    )
+
+
+def _config_bool(label, chave, valor, help_=""):
+    on = " selected" if (valor or "") != "0" else ""
+    h = f"<p style='color:#5b6b82;font-size:12px;margin:4px 0 0'>{html.escape(help_)}</p>" if help_ else ""
+    return (
+        f"<label>{html.escape(label)}</label>"
+        f"<select name='{chave}'><option value='1'{on}>Sim</option>"
+        f"<option value='0'>Não</option></select>{h}"
+    )
+
+
+def _config_tabs(aba):
+    opcoes = (
+        ("site", "Site"),
+        ("conta", "Conta"),
+        ("pagamentos", "Pagamentos"),
+        ("notificacoes", "Notificações"),
+    )
+    tabs = "".join(
+        f"<a class='tab{' active' if key == aba else ''}' href='/admin/config?aba={key}'>{html.escape(lbl)}</a>"
+        for key, lbl in opcoes
+    )
+    return (
+        "<style>"
+        ".tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 4px}"
+        ".tab{background:#0b1120;border:1px solid #1e2c40;color:#8ea0b8;text-decoration:none;"
+        "font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px}"
+        ".tab:hover{color:#fff;border-color:#3b4d6b}"
+        ".tab.active{color:#04111b;background:linear-gradient(135deg,#34d399,#60a5fa);border-color:transparent}"
+        ".two-col{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}"
+        "</style>"
+        f"<div class='tabs'>{tabs}</div>"
+    )
 
 
 def _parse_brl(value):
@@ -1564,37 +1662,117 @@ def admin_config():
     user = _require_perm("ver_config")
     if not user:
         return redirect("/login")
+    aba = request.args.get("aba") or "site"
+    if aba not in _CONFIG_SECOES and aba != "conta":
+        aba = "site"
     cfg = _config_all()
-    precos_texto = cfg.get("precos") or _precos_texto()
-    form = (
-        "<section><h2>Preços por pacote (RC → R$)</h2>"
-        "<p style='color:#8ea0b8;font-size:13px'>Uma linha por pacote no formato "
-        "<b>quantia=preço</b>, separados por quebra de linha. Ex.: <code>100=R$ 9,00</code>. "
-        "Esse valor é usado na resposta do bot e no cálculo do Pix.</p>"
-        "<form method='post' action='/admin/config/salvar'>"
-        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<input type='hidden' name='chave' value='precos'>"
-        f"<textarea name='valor' rows='6'>{html.escape(precos_texto)}</textarea>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar preços</button></p>"
-        "</form></section>"
+    csrf = html.escape(_csrf_token())
+    tabs = _config_tabs(aba)
+
+    if aba == "site":
+        form = (
+            _config_grupo_html("Identidade do site", csrf, "site",
+                _config_field("Nome do site", "site_nome", cfg.get("site_nome"), "Ex.: BAPZX", maxlen=60) +
+                _config_field("Logo (URL da imagem)", "site_logo", cfg.get("site_logo"), "Endereço da imagem do logo (http/https).", placeholder="https://") +
+                _config_field("Banner (URL da imagem)", "site_banner", cfg.get("site_banner"), "Imagem de destaque do topo.", placeholder="https://") +
+                _config_field("Slogan / chamada", "site_slogan", cfg.get("site_slogan"), "Frase curta de apresentação.")
+            ) +
+            _config_grupo_html("Textos", csrf, "site",
+                _config_textarea("Texto do topo", "site_texto_topo", cfg.get("site_texto_topo"), "Mensagem principal exibida no site.", rows=4) +
+                _config_field("Texto do rodapé", "site_texto_rodape", cfg.get("site_texto_rodape"), "Ex.: © 2026 BAPZX · Vendas de RC no Tibia.", maxlen=500)
+            ) +
+            _config_grupo_html("Links e redes sociais", csrf, "site",
+                _config_field("Link do portfólio/site", "link_portfolio", cfg.get("link_portfolio"), placeholder="https://") +
+                _config_field("Link do WhatsApp", "link_whatsapp", cfg.get("link_whatsapp"), placeholder="https://wa.me/") +
+                _config_field("Link do Telegram", "link_telegram", cfg.get("link_telegram"), placeholder="https://t.me/") +
+                "<div class='two-col'>"
+                + _config_field("Instagram", "link_instagram", cfg.get("link_instagram"), placeholder="https://instagram.com/")
+                + _config_field("YouTube", "link_youtube", cfg.get("link_youtube"), placeholder="https://youtube.com/")
+                + _config_field("Discord", "link_discord", cfg.get("link_discord"), placeholder="https://discord.gg/")
+                + _config_field("TikTok", "link_tiktok", cfg.get("link_tiktok"), placeholder="https://tiktok.com/")
+                + "</div>"
+            )
+        )
+    elif aba == "conta":
+        email = html.escape(user["email"])
+        nome = html.escape(user.get("name") or "")
+        form = (
+            _config_grupo_html("Conta", "", "conta",
+                "<p style='color:#8ea0b8;font-size:13px'>Seu perfil de acesso ao painel. "
+                "O login é feito com sua conta do Google.</p>"
+                "<label>E-mail (login Google)</label>"
+                f"<input type='text' value='{email}' disabled>"
+            )
+            + (
+                "<section><h2>Dados do perfil</h2>"
+                "<form method='post' action='/admin/config/conta'>"
+                f"<input type='hidden' name='_csrf' value='{csrf}'>"
+                "<label>Nome exibido</label>"
+                f"<input name='nome' value='{nome}' maxlength='100' required>"
+                "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar nome</button></p>"
+                "</form></section>"
+            )
+            + (
+                "<section><h2>Senha e 2FA</h2>"
+                "<p style='color:#8ea0b8;font-size:13px'>Não existe senha separada: o acesso usa "
+                "<b>Login do Google</b>. A autenticação em dois fatores (2FA) é a da própria conta "
+                "Google — ative-a em <i>myaccount.google.com/security</i>.</p>"
+                "</section>"
+            )
+        )
+    elif aba == "pagamentos":
+        mp_ok = bool(_env("MP_ACCESS_TOKEN"))
+        mp_status = (
+            "<span class='status pago'>Ativo (Mercado Pago)</span>"
+            if mp_ok else
+            "<span class='status cancelado'>Não configurado</span>"
+        )
+        form = (
+            _config_grupo_html("Pix", csrf, "pagamentos",
+                _config_field("Chave Pix", "pix_chave", cfg.get("pix_chave"), "Chave alternativa mostrada no pagamento (se vazia, usa a env PIX_KEY do Render).", maxlen=200) +
+                _config_field("Beneficiário", "pix_beneficiario", cfg.get("pix_beneficiario"), "Nome que aparece no recebimento.", maxlen=200)
+            )
+            + (
+                "<section><h2>Gateway (Mercado Pago)</h2>"
+                f"<label>Status do gateway</label><p>{mp_status}</p>"
+                "<p style='color:#5b6b82;font-size:12px'>O token de acesso é gerenciado na env "
+                "<code>MP_ACCESS_TOKEN</code> do Render (não fica salvo no painel por segurança). "
+                "</p></section>"
+            )
+            + _config_grupo_html("Preços por pacote (RC → R$)", csrf, "precos",
+                "<p style='color:#8ea0b8;font-size:13px'>Uma linha por pacote no formato "
+                "<b>quantia=preço</b>. Ex.: <code>100=R$ 9,00</code>. Usado no cálculo do Pix.</p>"
+                f"<textarea name='valor' rows='6'>{html.escape(cfg.get('precos') or _precos_texto())}</textarea>"
+            )
+        )
+    else:  # notificacoes
+        form = _config_grupo_html("Notificações", csrf, "notificacoes",
+            "<p style='color:#8ea0b8;font-size:13px'>Onde o bot avisa você (no Telegram do dono).</p>" +
+            _config_bool("Avisar novo pedido", "notificar_pedido", cfg.get("notificar_pedido"), "Mensagem \"🛒 NOVO PEDIDO\" quando o cliente fecha um pedido.") +
+            _config_bool("Avisar quando o Pix é gerado", "notificar_pix", cfg.get("notificar_pix"), "Mensagem \"🧾 PIX GERADO\" após criar a cobrança.") +
+            _config_bool("Avisar erros do bot", "notificar_erro", cfg.get("notificar_erro"), "Mensagem \"⚠️ ERRO 500\" quando o bot falhar.")
+        )
+
+    return _admin_page(user, "Configurações", tabs + form, "config")
+
+
+def _config_grupo_html(titulo, csrf, secao, campos):
+    csrf_input = ""
+    if csrf:
+        csrf_input = f"<input type='hidden' name='_csrf' value='{csrf}'>"
+    if secao == "conta":
+        return f"<section><h2>{html.escape(titulo)}</h2>{campos}</section>"
+    secao_extra = ""
+    if secao == "precos":
+        secao_extra = "<input type='hidden' name='chave' value='precos'>"
+    return (
+        f"<section><h2>{html.escape(titulo)}</h2>"
+        f"<form method='post' action='/admin/config/salvar'>{csrf_input}"
+        f"<input type='hidden' name='secao' value='{html.escape(secao)}'>{secao_extra}"
+        f"{campos}"
+        f"<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
+        f"</form></section>"
     )
-    notif_atual = cfg.get("notificar_pedido")
-    notif_block = (
-        "<section><h2>Notificações</h2>"
-        "<p style='color:#8ea0b8;font-size:13px'>Receber aviso no Telegram quando um "
-        "novo pedido chegar no bot.</p>"
-        "<form method='post' action='/admin/config/salvar'>"
-        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<input type='hidden' name='chave' value='notificar_pedido'>"
-        "<label>Notificar dono</label>"
-        f"<select name='valor'>"
-        f"<option value='1' {'selected' if notif_atual in (None, '', '1') else ''}>Sim</option>"
-        f"<option value='0' {'selected' if notif_atual == '0' else ''}>Não</option>"
-        "</select>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
-        "</form></section>"
-    )
-    return _admin_page(user, "Configurações", form + notif_block, "config")
 
 
 @bp.route("/admin/config/salvar", methods=["POST"])
@@ -1604,11 +1782,11 @@ def admin_config_salvar():
         return "Acesso restrito.", 403
     if not _csrf_ok():
         return "Requisição inválida (CSRF).", 403
-    chave = (request.form.get("chave") or "").strip()[:50]
-    valor = (request.form.get("valor") or "").strip()
-    if not chave:
-        return "Chave obrigatória.", 400
-    if chave == "precos":
+    secao = request.form.get("secao")
+
+    if secao == "precos":
+        chave = "precos"
+        valor = (request.form.get("valor") or "").strip()
         try:
             novo = {}
             for linha in valor.splitlines():
@@ -1625,12 +1803,55 @@ def admin_config_salvar():
             valor = json.dumps(novo, ensure_ascii=False)
         except Exception as exc:
             return f"Falha ao interpretar: {exc}", 400
+        try:
+            _config_set(chave, valor)
+            _audit(user, "config_salvar", chave)
+        except Exception as exc:
+            return f"Falha: {exc}", 500
+        return redirect("/admin/config?aba=pagamentos")
+
+    if not secao or secao not in _CONFIG_SECOES:
+        return "Seção inválida.", 400
     try:
-        _config_set(chave, valor)
-        _audit(user, "config_salvar", chave)
+        presentes = [k for k in _CONFIG_SECOES[secao] if k in request.form]
+        for chave in presentes:
+            tipo, limite, _padrao = _CONFIG_CAMPOS.get(chave, ("texto", 200, ""))
+            valor = (request.form.get(chave) or "").strip()
+            if tipo == "url" and valor and not valor.startswith(("http://", "https://")):
+                return f"Campo {html.escape(chave)}: informe uma URL começando com http(s).", 400
+            if tipo == "bool":
+                valor = "1" if valor == "1" else "0"
+            _config_set(chave, (valor[:limite] if limite else valor))
+        _audit(user, "config_salvar", secao)
     except Exception as exc:
         return f"Falha: {exc}", 500
-    return redirect("/admin/config")
+    return redirect(f"/admin/config?aba={secao}")
+
+
+@bp.route("/admin/config/conta", methods=["POST"])
+def admin_config_conta():
+    user = _require_perm("ver_config")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    nome = (request.form.get("nome") or "").strip()[:100]
+    if not nome:
+        return "Nome obrigatório.", 400
+    email = (user.get("email") or "").lower()
+    try:
+        requests.patch(
+            f"{SUPA_URL}/rest/v1/users",
+            headers=_headers(),
+            params={"email": f"eq.{email}"},
+            json={"nome": nome},
+            timeout=15,
+        )
+        session["name"] = nome
+        _audit(user, "config_conta_nome", email)
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/config?aba=conta")
 
 
 # --------------------------------------------------------------------------
@@ -2036,6 +2257,25 @@ def api_servicos():
     response = jsonify({"ok": True, "servicos": payload})
     if origin and _cors_ok():
         response.headers["Access-Control-Allow-Origin"] = origin
+    return response
+
+
+@bp.route("/api/site", methods=["GET"])
+def api_site():
+    if _rate_limited("api_site", _RATE_LIMIT_TRACK_PER_MIN):
+        return jsonify({"ok": False, "error": "rate limit"}), 429
+    origin = request.headers.get("Origin") or ""
+    try:
+        cfg = _config_all()
+    except Exception:
+        cfg = {}
+    payload = {"brand": "BAPZX"}
+    for chave in _CONFIG_PUBLICAS:
+        payload[chave] = cfg.get(chave) or ""
+    response = jsonify({"ok": True, "site": payload})
+    if origin and _cors_ok():
+        response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Vary"] = "Origin"
     return response
 
 
