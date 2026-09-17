@@ -5,20 +5,22 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
-- [ ] **Aplicar `supabase_migracao_v121.sql` (v2.7.0 — Service + Segurança).**
-      Cria `public.servicos_manuais` (diário de serviços do dono: data, hora,
-      servico, nome_cliente, whatsapp, valor numeric(12,2),
-      forma_pagamento pix|coins, horas, observacao, status pendente|concluido
-      + índices), `public.sessoes` (sid, email, ip, user_agent, criado_em,
-      ultimo_acesso, encerrado_em, ativo + índices) e a coluna `whatsapp` em
-      `profiles`. Sem isso `/admin/services` e `/admin/seguranca` abrem vazios
-      (via `_fetch_soft`) e o WhatsApp do cliente não persiste.
-- [ ] **Testar `/admin/services` e `/admin/seguranca` ao vivo (v2.7.0).**
-      Service: criar um serviço, conferir os KPIs de totais (Pix/Coins/Horas),
-      editar, concluir/reabrir, excluir. Segurança: ver as sessões do seu
-      login (IP/dispositivo), usar "Encerrar" na própria sessão para confirmar
-      que desloga e na de outro dispositivo. Também conferir que /admin/audit
-      registra login/logout (sistema@bapzx) e as ações servico_*.
+- [ ] **Aplicar `supabase_migracao_v122.sql` (v2.7.1 — valor cobrado automático).**
+      Adiciona `valor_hora` e `desconto` em `public.servicos_manuais` (com
+      backfill do valor/hora dos registros antigos). Sem isso o form de
+      Service/editar não salva o novo cálculo (valor = valor_hora × horas −
+      desconto) — mas o painel segue funcionando (só recalcula sem persistir).
+- [x] **Aplicar `supabase_migracao_v121.sql` (v2.7.0 — Service + Segurança) — FEITO pelo dono**
+      (criou `public.servicos_manuais` e `public.sessoes`; a área Service foi testada ao vivo).
+- [ ] **Testar `/admin/services` ao vivo (v2.7.1 — cálculo automático).**
+      Criar um serviço: valor/hora (ex. 20), horas (ex. 1,5) e desconto (ex. 0)
+      → o valor cobrado calculado aparece ao vivo no form (R$ 30,00). Conferir
+      também que o total antigo do detalhe/edição não estoura mais (bug do
+      `_parse_brl` com ponto decimal corrigido).
+- [ ] **Testar `/admin/seguranca` ao vivo (v2.7.0).**
+      Ver as sessões do seu login (IP/dispositivo), usar "Encerrar" na própria sessão
+      para confirmar que desloga e na de outro dispositivo. Também conferir que
+      /admin/audit registra login/logout (sistema@bapzx) e as ações servico_*.
 - [ ] **Testar `/admin/audit` ao vivo (v2.5.0, item 14 — FEITO no código).**
       Página com busca `q`, dropdown de ação, filtro por e-mail, paginação
       50/pág e Exportar CSV; eventos do bot (pedido_criado, pix_gerado,

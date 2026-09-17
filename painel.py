@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.0"
+VERSION = "2.7.1"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -516,11 +516,16 @@ def _config_tabs(aba):
 
 
 def _parse_brl(value):
-    if not value:
+    if value is None:
         return 0.0
     text = str(value).replace("R$", "").replace(" ", "")
+    if "," in text:
+        try:
+            return float(text.replace(".", "").replace(",", "."))
+        except Exception:
+            return 0.0
     try:
-        return float(text.replace(".", "").replace(",", "."))
+        return float(text)
     except Exception:
         return 0.0
 
@@ -3140,14 +3145,32 @@ def admin_services():
             "<div><label>WhatsApp do cliente</label><input name='whatsapp' placeholder='(11) 99999-9999'></div>"
             "</div>"
             "<div class='box'>"
-            "<div><label>Valor cobrado</label><input name='valor' type='number' step='0.01' min='0' value='0' required></div>"
+            "<div><label>Valor por hora (R$)</label><input name='valor_hora' type='number' step='0.01' min='0' value='20' required></div>"
+            "<div><label>Horas (quantas)</label><input name='horas' type='number' step='0.5' min='0' value='0'></div>"
+            "<div><label>Desconto (R$)</label><input name='desconto' type='number' step='0.01' min='0' value='0'></div>"
+            "</div>"
+            "<div class='box'>"
             "<div><label>Forma de pagamento</label><select name='forma_pagamento'>"
             "<option value='pix'>Pix</option><option value='coins'>Coins</option></select></div>"
-            "<div><label>Horas (quantas)</label><input name='horas' type='number' step='0.5' min='0' value='0'></div>"
+            "<div><label>Valor cobrado (calculado)</label>"
+            "<span id='sv_total' style='font-weight:700;font-size:18px'>R$ 0,00</span></div>"
             "</div>"
             "<label>Observação</label><textarea name='observacao' rows='2' placeholder='Detalhes do que foi feito...'></textarea>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Lançar serviço</button></p>"
-            "</form></section>"
+            "</form>"
+            "<script>"
+            "function svRecalc(){"
+            "var v=parseFloat(document.querySelector('[name=valor_hora]').value)||0;"
+            "var h=parseFloat(document.querySelector('[name=horas]').value)||0;"
+            "var d=parseFloat(document.querySelector('[name=desconto]').value)||0;"
+            "var t=Math.max(0,v*h-d);"
+            "var el=document.getElementById('sv_total');"
+            "if(el)el.textContent='R$ '+t.toFixed(2).replace('.',',');"
+            "}"
+            "var asd=document.querySelectorAll('[name=valor_hora],[name=horas],[name=desconto]');"
+            "for(var i=0;i<asd.length;i++)asd[i].addEventListener('input',svRecalc);"
+            "svRecalc();"
+            "</script></section>"
         )
         body += form
     rows = ""
@@ -3197,10 +3220,12 @@ def admin_service_novo():
     if not _csrf_ok():
         return "Requisição inválida (CSRF).", 403
     try:
-        valor = float(request.form.get("valor") or 0)
+        valor_hora = float(request.form.get("valor_hora") or 0)
         horas = float(request.form.get("horas") or 0)
+        desconto = float(request.form.get("desconto") or 0)
     except (TypeError, ValueError):
-        valor, horas = 0.0, 0.0
+        valor_hora, horas, desconto = 0.0, 0.0, 0.0
+    valor = max(0.0, round(valor_hora * horas - desconto, 2))
     payload = {
         "email": user["email"],
         "data": (request.form.get("data") or "")[:10],
@@ -3209,6 +3234,8 @@ def admin_service_novo():
         "nome_cliente": (request.form.get("nome_cliente") or "").strip()[:120],
         "whatsapp": (request.form.get("whatsapp") or "").strip()[:30],
         "valor": valor,
+        "valor_hora": valor_hora,
+        "desconto": desconto,
         "forma_pagamento": (request.form.get("forma_pagamento") or "pix")[:10],
         "horas": horas,
         "observacao": (request.form.get("observacao") or "").strip()[:500],
@@ -3242,10 +3269,12 @@ def admin_service_detalhe(sid):
         if not _csrf_ok():
             return "Requisição inválida (CSRF).", 403
         try:
-            valor = float(request.form.get("valor") or 0)
+            valor_hora = float(request.form.get("valor_hora") or 0)
             horas = float(request.form.get("horas") or 0)
+            desconto = float(request.form.get("desconto") or 0)
         except (TypeError, ValueError):
-            valor, horas = 0.0, 0.0
+            valor_hora, horas, desconto = 0.0, 0.0, 0.0
+        valor = max(0.0, round(valor_hora * horas - desconto, 2))
         payload = {
             "data": (request.form.get("data") or "")[:10],
             "hora": (request.form.get("hora") or "")[:5],
@@ -3253,6 +3282,8 @@ def admin_service_detalhe(sid):
             "nome_cliente": (request.form.get("nome_cliente") or "").strip()[:120],
             "whatsapp": (request.form.get("whatsapp") or "").strip()[:30],
             "valor": valor,
+            "valor_hora": valor_hora,
+            "desconto": desconto,
             "forma_pagamento": (request.form.get("forma_pagamento") or "pix")[:10],
             "horas": horas,
             "observacao": (request.form.get("observacao") or "").strip()[:500],
@@ -3284,16 +3315,33 @@ def admin_service_detalhe(sid):
         f"<div><label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(s.get('whatsapp') or ''))}'></div>"
         "</div>"
         "<div class='box'>"
-        f"<div><label>Valor cobrado</label><input name='valor' type='number' step='0.01' min='0' value='{html.escape(str(s.get('valor') or 0))}' required></div>"
+        f"<div><label>Valor por hora (R$)</label><input name='valor_hora' type='number' step='0.01' min='0' value='{html.escape(str(s.get('valor_hora') or 20))}' required></div>"
+        "<div><label>Horas</label><input name='horas' type='number' step='0.5' min='0' value='{html.escape(str(s.get('horas') or 0))}'></div>"
+        f"<div><label>Desconto (R$)</label><input name='desconto' type='number' step='0.01' min='0' value='{html.escape(str(s.get('desconto') or 0))}'></div>"
+        "</div>"
+        "<div class='box'>"
         "<div><label>Forma de pagamento</label><select name='forma_pagamento'>"
         f"<option value='pix' {'selected' if (s.get('forma_pagamento') or 'pix') == 'pix' else ''}>Pix</option>"
         f"<option value='coins' {'selected' if (s.get('forma_pagamento') or '') == 'coins' else ''}>Coins</option></select></div>"
-        f"<div><label>Horas</label><input name='horas' type='number' step='0.5' min='0' value='{html.escape(str(s.get('horas') or 0))}'></div>"
+        f"<div><label>Valor cobrado (calculado)</label><span id='sv_total' style='font-weight:700;font-size:18px'>{_fmt_brl(_parse_brl(s.get('valor')))}</span></div>"
         "</div>"
         f"<label>Observação</label><textarea name='observacao' rows='2'>{html.escape(str(s.get('observacao') or ''))}</textarea>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
         "<a class='btn ghost' href='/admin/services'>Voltar</a></p>"
-        "</form></section>"
+        "</form>"
+        "<script>"
+        "function svRecalc(){"
+        "var v=parseFloat(document.querySelector('[name=valor_hora]').value)||0;"
+        "var h=parseFloat(document.querySelector('[name=horas]').value)||0;"
+        "var d=parseFloat(document.querySelector('[name=desconto]').value)||0;"
+        "var t=Math.max(0,v*h-d);"
+        "var el=document.getElementById('sv_total');"
+        "if(el)el.textContent='R$ '+t.toFixed(2).replace('.',',');"
+        "}"
+        "var asd=document.querySelectorAll('[name=valor_hora],[name=horas],[name=desconto]');"
+        "for(var i=0;i<asd.length;i++)asd[i].addEventListener('input',svRecalc);"
+        "svRecalc();"
+        "</script></section>"
     )
     status_badge = "<span class='status pago'>concluido</span>" if status == "concluido" else "<span class='status pendente'>pendente</span>"
     body = (
