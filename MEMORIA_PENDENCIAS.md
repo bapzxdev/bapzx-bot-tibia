@@ -5,18 +5,15 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
-- [ ] **Aplicar `supabase_migracao_v122.sql` (v2.7.1 — valor cobrado automático).**
-      Adiciona `valor_hora` e `desconto` em `public.servicos_manuais` (com
-      backfill do valor/hora dos registros antigos). Sem isso o form de
-      Service/editar não salva o novo cálculo (valor = valor_hora × horas −
-      desconto) — mas o painel segue funcionando (só recalcula sem persistir).
+- [x] **Aplicar `supabase_migracao_v122.sql` (v2.7.1 — valor cobrado automático) — FEITO (17/09)**
+      verificado no Supabase: colunas `valor_hora`/`desconto` presentes em
+      `servicos_manuais` (registro-id 1 já com valor_hora 20).
+      Deploy v2.7.1 confirmado: `/health` "bot ok v2.7.1".
 - [x] **Aplicar `supabase_migracao_v121.sql` (v2.7.0 — Service + Segurança) — FEITO pelo dono**
       (criou `public.servicos_manuais` e `public.sessoes`; a área Service foi testada ao vivo).
-- [ ] **Testar `/admin/services` ao vivo (v2.7.1 — cálculo automático).**
-      Criar um serviço: valor/hora (ex. 20), horas (ex. 1,5) e desconto (ex. 0)
-      → o valor cobrado calculado aparece ao vivo no form (R$ 30,00). Conferir
-      também que o total antigo do detalhe/edição não estoura mais (bug do
-      `_parse_brl` com ponto decimal corrigido).
+- [ ] **Validar `/admin/services` ao vivo com o cálculo novo (v2.7.1)**.
+      Já testado com valor_hora 20 (registro id 1 gravado; deploy v2.7.1 no ar).
+      Conferir um caso com horas fracionadas (1,5h → R$ 30) e um com desconto.
 - [ ] **Testar `/admin/seguranca` ao vivo (v2.7.0).**
       Ver as sessões do seu login (IP/dispositivo), usar "Encerrar" na própria sessão
       para confirmar que desloga e na de outro dispositivo. Também conferir que
