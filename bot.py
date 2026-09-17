@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.5.0"
+VERSION = "2.6.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -362,6 +362,10 @@ def _finalizar_confirmacao_char(chat_id, confirmado):
             notify_owner_pix(result, entry)
         else:
             send_message(chat_id, 'Não consegui gerar o Pix agora. ' + result)
+            audit_log(
+                "erro_pagamento",
+                f"pedido {entry.get('id')} | falha ao gerar pix: {result}",
+            )
             notify_payment(entry)
         return
     notify_payment(entry)
@@ -1159,9 +1163,14 @@ def webhook_mp():
     if response.status_code != 200:
         return "ok", 200
     payment = response.json()
-    if payment.get("status") != "approved":
-        return "ok", 200
     reference = payment.get("external_reference") or ""
+    if payment.get("status") != "approved":
+        if reference.isdigit():
+            audit_log(
+                "erro_pagamento",
+                f"pedido {reference} | mp status {payment.get('status') or '-'}",
+            )
+        return "ok", 200
     if not reference.isdigit():
         return "ok", 200
     order_id = int(reference)

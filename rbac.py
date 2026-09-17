@@ -1,5 +1,13 @@
-# BAPZX ACCESS / BAPZX RBAC v2.0.0
+# BAPZX ACCESS / BAPZX RBAC v2.6.0
 # Controle de acesso baseado em cargos (níveis) + permissões individuais.
+#
+# Modelo de cargos (item 13 do roadmap, alinhado ao pedido do dono):
+#   MASTER        -> dono (só por e-mails fixos, imutável pela interface)
+#   ADMINISTRADOR -> acesso total
+#   MODERADOR     -> clientes + pedidos
+#   ATENDENTE     -> serviços + clientes
+#   FINANCEIRO    -> pagamentos + relatórios
+#   CLIENTE       -> área do cliente
 #
 # Regras:
 #   - MASTER é atribuído SOMENTE por e-mails fixos (MASTER_EMAILS). Ninguém
@@ -14,24 +22,29 @@
 
 CARGOS = {
     "MASTER": 100,
-    "ADMIN": 80,
-    "MANAGER": 70,
-    "FINANCEIRO": 60,
-    "OPERADOR": 50,
-    "MODERADOR": 40,
-    "SUPORTE": 30,
+    "ADMINISTRADOR": 80,
+    "MODERADOR": 60,
+    "ATENDENTE": 50,
+    "FINANCEIRO": 40,
     "CLIENTE": 10,
 }
 
 CARGOS_LABEL = {
-    "MASTER": "Master",
-    "ADMIN": "Admin",
-    "MANAGER": "Manager",
-    "FINANCEIRO": "Financeiro",
-    "OPERADOR": "Operador",
+    "MASTER": "Master (dono)",
+    "ADMINISTRADOR": "Administrador",
     "MODERADOR": "Moderador",
-    "SUPORTE": "Suporte",
+    "ATENDENTE": "Atendente",
+    "FINANCEIRO": "Financeiro",
     "CLIENTE": "Cliente",
+}
+
+# Descrição curta de cada cargo (usada como dica na tela de usuários)
+CARGOS_DESC = {
+    "ADMINISTRADOR": "Acesso total ao painel",
+    "MODERADOR": "Clientes + pedidos",
+    "ATENDENTE": "Serviços + clientes",
+    "FINANCEIRO": "Pagamentos + relatórios",
+    "CLIENTE": "Apenas a área do cliente",
 }
 
 # Permissões disponíveis (rótulos usados no painel de usuários)
@@ -85,65 +98,73 @@ PERM_TRACK = {
     "ver_audit": "audit",
 }
 
+_PADRAO_ADMINISTRADOR = "ALL"
+
 # Permissões padrão por cargo
 _PADRAO = {
-    "ADMIN": [
-        "ver_dashboard", "ver_pedidos", "marcar_pagamento", "marcar_entrega",
-        "ver_clientes", "gerenciar_clientes", "ver_pagamentos",
-        "ver_itens", "gerenciar_itens",
-        "ver_tickets", "responder_tickets", "encerrar_tickets", "excluir_tickets",
-        "ver_config", "ver_grupos", "gerenciar_grupos", "ver_usuarios", "ver_audit",
-        "ver_cupons", "gerenciar_cupons",
-    ],
-    "MANAGER": [
+    "ADMINISTRADOR": _PADRAO_ADMINISTRADOR,
+    "MODERADOR": [
         "ver_dashboard", "ver_pedidos", "marcar_pagamento", "marcar_entrega",
         "ver_clientes", "gerenciar_clientes",
-        "ver_itens", "gerenciar_itens",
         "ver_tickets", "responder_tickets", "encerrar_tickets",
-        "ver_grupos", "gerenciar_grupos",
-        "ver_cupons", "gerenciar_cupons",
+    ],
+    "ATENDENTE": [
+        "ver_dashboard", "ver_pedidos",
+        "ver_itens", "gerenciar_itens",
+        "ver_clientes", "gerenciar_clientes",
+        "ver_tickets", "responder_tickets", "encerrar_tickets",
     ],
     "FINANCEIRO": [
         "ver_dashboard", "ver_pedidos", "ver_pagamentos", "marcar_pagamento",
-    ],
-    "OPERADOR": [
-        "ver_pedidos", "marcar_entrega", "ver_clientes",
-        "ver_tickets", "responder_tickets",
-    ],
-    "MODERADOR": [
-        "ver_pedidos", "ver_clientes", "gerenciar_clientes",
-        "ver_tickets", "responder_tickets",
-    ],
-    "SUPORTE": [
-        "ver_pedidos", "ver_tickets", "responder_tickets",
     ],
     "CLIENTE": [],
 }
 
 ALL_PERMISSOES = frozenset(PERMISSOES_LABEL.keys())
 
+# Compatibilidade: cargos antigos (v2.0.0) mapeados para o modelo atual.
+LEGADO = {
+    "ADMIN": "ADMINISTRADOR",
+    "MANAGER": "MODERADOR",
+    "OPERADOR": "ATENDENTE",
+    "SUPORTE": "ATENDENTE",
+}
+
+
+def normalizar(cargo):
+    """Converte cargos legados para o modelo atual (v2.6.0)."""
+    c = (cargo or "").upper()
+    return LEGADO.get(c, c)
+
 
 def nivel(cargo):
-    return CARGOS.get((cargo or "").upper(), 0)
+    return CARGOS.get(normalizar(cargo), 0)
 
 
 def cargo_valido(cargo):
-    return (cargo or "").upper() in CARGOS
+    return normalizar(cargo) in CARGOS
 
 
 def cargo_label(cargo):
-    return CARGOS_LABEL.get((cargo or "").upper(), (cargo or "").title())
+    c = normalizar(cargo)
+    return CARGOS_LABEL.get(c, (cargo or "").title())
+
+
+def cargo_desc(cargo):
+    return CARGOS_DESC.get(normalizar(cargo), "")
 
 
 def perms_padrao(cargo):
-    cargo = (cargo or "").upper()
+    cargo = normalizar(cargo)
+    if _PADRAO.get(cargo) == _PADRAO_ADMINISTRADOR:
+        return ALL_PERMISSOES
     return frozenset(_PADRAO.get(cargo, []))
 
 
 def perms_efetivas(cargo, explicitas=None):
     """Permissões efetivas: lista individual (se não vazia) ou padrão do cargo."""
-    cargo = (cargo or "").upper()
-    if cargo == "MASTER":
+    cargo = normalizar(cargo)
+    if cargo == "MASTER" or _PADRAO.get(cargo) == _PADRAO_ADMINISTRADOR:
         return ALL_PERMISSOES
     if explicitas:
         validadas = {p for p in explicitas if p in ALL_PERMISSOES}
@@ -158,8 +179,8 @@ def eh_master(email, master_emails):
 
 def tem_perm(cargo, perms, *requeridas):
     """True se cargo/permissões atendem TODAS as requeridas. MASTER sempre True."""
-    cargo = (cargo or "").upper()
-    if cargo == "MASTER":
+    cargo = normalizar(cargo)
+    if cargo == "MASTER" or _PADRAO.get(cargo) == _PADRAO_ADMINISTRADOR:
         return True
     perms = set(perms or [])
     return all(p in perms for p in requeridas)
@@ -167,8 +188,8 @@ def tem_perm(cargo, perms, *requeridas):
 
 def tem_qualquer_perm(cargo, perms, *opcoes):
     """True se MASTER ou se tem ao menos UMA das permissões listadas."""
-    cargo = (cargo or "").upper()
-    if cargo == "MASTER":
+    cargo = normalizar(cargo)
+    if cargo == "MASTER" or _PADRAO.get(cargo) == _PADRAO_ADMINISTRADOR:
         return True
     perms = set(perms or [])
     return any(p in perms for p in opcoes)

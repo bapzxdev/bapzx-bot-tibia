@@ -19,12 +19,20 @@ Atualizar sempre que algo mudar de estado.
       com fallback na env PIX_KEY —, beneficiário, conferir Gateway MP e
       preços), **Notificações** (toggles pedido/pix/erro). Depois conferir
       `/api/site` e (futuro) ligar no portfólio (roadmap itens 8/9/14).
-- [ ] **Aplicar `supabase_migracao_v120.sql` (v2.3.0, cupons).** Tabela
-      `public.cupons`: codigo (unique), tipo percentual|fixo, valor numeric,
-      validade date, limite_usos (0=ilimitado), usos (contador),
-      produto_id/servico_id/grupo_id opcionais, ativo + índices. Rodar no
-      Supabase SQL Editor para o `/admin/cupons` começar a listar/criar
-      cupons (até lá abre "Nenhum cupom" via `_fetch_soft` sem erro).
+- [x] **Aplicar `supabase_migracao_v120.sql` (v2.3.0, cupons) — FEITO pelo dono
+      (16/09).** Tabela `public.cupons`: codigo (unique), tipo percentual|fixo,
+      valor numeric, validade date, limite_usos (0=ilimitado), usos (contador),
+      produto_id/servico_id/grupo_id opcionais, ativo + índices. Agora
+      `/admin/cupons` lista/cria com a tabela real. Falta o dono criar o cupom
+      de exemplo `BAPZVESPERIA` (10%) e testar ativar/desativar/excluir.
+- [ ] **Validar cargos e notificações ao vivo (v2.6.0, itens 13 e 9 — FEITOS no
+      código).** (a) `/admin/usuarios`: revisar cargos dos usuários cadastrados
+      (cargos antigos ADMIN/MANAGER/OPERADOR/SUPORTE são normalizados
+      automaticamente, mas o ideal é re-salvar) e conferir as descrições de
+      cargo nos formulários; (b) `/admin/notificacoes`: conferir os contadores
+      (novas vendas 24h, serviços 7d, pendentes, pagamentos 24h, novos clientes
+      7d, erros de pagamento 7d) e os Alertas administrativos (config vazia /
+      tabela cupons). Sino do dashboard soma o feed por permissão.
 - [x] **Aplicar `supabase_migracao_v119.sql` (v2.1.0) — FEITO pelo dono.**
       Tabela `servicos` criada; Intermediação BAPZX R$5 saiu da tabela
       `itens` (itens do jogo) e agora só aparece em `/api/servicos`.

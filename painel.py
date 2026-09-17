@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.5.0"
+VERSION = "2.6.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -246,6 +246,107 @@ def _count_since(table, iso_dt):
     return int(total) if total.isdigit() else 0
 
 
+_NOTIFICACOES_CACHE = {}
+
+
+def _count_servicos_recentes(iso_dt):
+    try:
+        rows = _fetch("pedidos", select="tc", query=f"criado_em=gte.{iso_dt}", range_="0-399")
+        return sum(1 for r in rows if not str(r.get("tc") or "").strip())
+    except Exception:
+        return 0
+
+
+def _count_novos_clientes(iso_dt):
+    try:
+        rows = _fetch("pedidos", select="email,criado_em", order="criado_em.asc", range_="0-999")
+    except Exception:
+        return 0
+    vistos = set()
+    novos = 0
+    limite = iso_dt[:19]
+    for r in rows:
+        email = (r.get("email") or "").strip().lower()
+        if not email or email in vistos:
+            continue
+        vistos.add(email)
+        if str(r.get("criado_em") or "")[:19] >= limite:
+            novos += 1
+    return novos
+
+
+def _notificacoes(user):
+    chave = (user or {}).get("email") or ""
+    cache = _NOTIFICACOES_CACHE.get(chave)
+    if cache and time.time() - cache[0] < 20:
+        return cache[1]
+    role = (user or {}).get("role") or ""
+    perms = set((user or {}).get("perms") or [])
+
+    def peut(*reqs):
+        return rbac.tem_perm(role, perms, *reqs)
+
+    agora = datetime.utcnow()
+    h24 = (agora - timedelta(hours=24)).isoformat()
+    d7 = (agora - timedelta(days=7)).isoformat()
+    feed = []
+
+    def add(tipo, label, icone, qtd, link):
+        feed.append((tipo, label, icone, qtd, link))
+
+    try:
+        if peut("ver_pedidos"):
+            qtd_vendas = _count("pedidos", f"&criado_em=gte.{h24}")
+            if qtd_vendas:
+                add("venda", "Novas vendas (24h)", "cart", qtd_vendas, "/admin/pedidos")
+            qtd_servicos = _count_servicos_recentes(d7)
+            if qtd_servicos:
+                add("servico", "Serviços solicitados (7d)", "package", qtd_servicos, "/admin/pedidos")
+    except Exception:
+        pass
+    try:
+        if peut("ver_pagamentos"):
+            qtd_pendentes = _count("pedidos", "&status=eq.pendente")
+            if qtd_pendentes:
+                add("pendente", "Pedidos pendentes", "clipboard", qtd_pendentes, "/admin/pagamentos")
+            qtd_pagos = _count("pedidos", f"&pix_confirmado_em=gte.{h24}")
+            if qtd_pagos:
+                add("pagamento", "Pagamentos confirmados (24h)", "wallet", qtd_pagos, "/admin/pagamentos")
+    except Exception:
+        pass
+    try:
+        if peut("ver_clientes"):
+            qtd_clientes = _count_novos_clientes(d7)
+            if qtd_clientes:
+                add("cliente", "Novos clientes (7d)", "users", qtd_clientes, "/admin/clientes")
+    except Exception:
+        pass
+    try:
+        if peut("ver_audit"):
+            qtd_erros = _count("audit_log", f"&acao=eq.erro_pagamento&criado_em=gte.{d7}")
+            if qtd_erros:
+                add("erro", "Erros de pagamento (7d)", "dollar", qtd_erros,
+                    "/admin/audit?ata=erro_pagamento")
+    except Exception:
+        pass
+    sistema = []
+    try:
+        if peut("ver_config"):
+            cfg = _config_all()
+            if not (cfg.get("site_nome") or "").strip():
+                sistema.append(("Preencha as configurações do site", "/admin/config"))
+            try:
+                _count("cupons")
+            except Exception:
+                sistema.append(("Aplicar migration de cupons (v120)", "/admin/cupons"))
+    except Exception:
+        pass
+    total = sum(i[3] for i in feed)
+    result = (feed, sistema, total)
+    _NOTIFICACOES_CACHE[chave] = (time.time(), result)
+    return result
+
+
 def _config_all():
     try:
         rows = _fetch("config", select="chave,valor")
@@ -473,6 +574,7 @@ _ICONS = {
     "logout": "<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16 17 21 12 16 7'/><line x1='21' y1='12' x2='9' y2='12'/>",
     "search": "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/>",
     "bell": "<path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/>",
+    "alert": "<path d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/>",
     "chevron": "<polyline points='6 9 12 15 18 9'/>",
     "menu": "<line x1='3' y1='12' x2='21' y2='12'/><line x1='3' y1='6' x2='21' y2='6'/><line x1='3' y1='18' x2='21' y2='18'/>",
     "dollar": "<line x1='12' y1='1' x2='12' y2='23'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>",
@@ -551,6 +653,22 @@ body { font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color
 .menu a.danger { color:#f87171; }
 .menu a.danger:hover { background:rgba(127,29,29,.4); color:#fca5a5; }
 .menu-empty { padding:10px 12px; color:#5b6b82; font-size:13px; }
+.menu .n-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; color:#8ea0b8; text-decoration:none; font-size:13px; }
+.menu .n-item:hover { color:#fff; background:rgba(52,211,153,.1); }
+.menu .n-item svg { width:15px; height:15px; flex:none; }
+.menu .n-item .n-qtd { margin-left:auto; flex:none; min-width:20px; text-align:center; background:#1e3a5f; color:#60a5fa; border-radius:999px; padding:1px 7px; font-size:11px; font-weight:700; }
+.menu .n-item.err .n-qtd { background:#7f1d1d; color:#f87171; }
+.menu .n-item.warn .n-qtd { background:#78350f; color:#fbbf24; }
+.menu .n-item:hover svg { color:#34d399; }
+.menu .n-item.n-all { border-top:1px solid #1e2c40; margin-top:4px; font-weight:600; color:#60a5fa; }
+.n-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:13px; margin-top:6px; }
+.n-card { background:#16203a; border:1px solid #1e2c40; border-radius:12px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start; }
+.n-card .n-ico { width:34px; height:34px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center; background:rgba(52,211,153,.12); color:#34d399; }
+.n-card .n-ico svg { width:16px; height:16px; }
+.n-card .n-qtd { font-size:15px; font-weight:800; font-family:'Sora',sans-serif; }
+.n-desc { font-size:12px; color:#5b6b82; margin-top:3px; }
+.n-desc a { color:#60a5fa; text-decoration:none; }
+.n-desc a:hover { text-decoration:underline; }
 .content { flex:1; width:100%; max-width:1200px; margin:0 auto; padding:24px 24px 64px; box-sizing:border-box; }
 .scrim { position:fixed; inset:0; background:rgba(2,6,17,.62); z-index:45; display:none; }
 .scrim.show { display:block; }
@@ -650,7 +768,9 @@ def _page(user, title, body, active=""):
 
     groups = []
     if peut("ver_dashboard"):
-        groups.append(("Principal", [("/admin", "Dashboard", "dash", "grid")]))
+        principal = [("/admin", "Dashboard", "dash", "grid")]
+        principal.append(("/admin/notificacoes", "Notificações", "notificacoes", "bell"))
+        groups.append(("Principal", principal))
     vendas = []
     if peut("ver_pedidos"):
         vendas.append(("/admin/pedidos", "Pedidos", "pedidos", "cart"))
@@ -698,24 +818,26 @@ def _page(user, title, body, active=""):
         "<a class='side-item' href='/logout'>" + _icon("logout") + "<span>Sair</span></a>"
     )
 
-    pendentes_badge = 0
-    abertos_badge = 0
-    try:
-        pendentes_badge = _count("pedidos", "&status=eq.pendente")
-    except Exception:
-        pass
-    try:
-        abertos_badge = _count("tickets", "&status=eq.aberto")
-    except Exception:
-        pass
+    feed, sistema, total_badge = _notificacoes(user)
     notif_items = ""
-    if pendentes_badge and peut("ver_pagamentos"):
-        notif_items += f"<a href='/admin/pagamentos'>{pendentes_badge} pedido(s) pendente(s)</a>"
-    if abertos_badge and peut("ver_tickets"):
-        notif_items += f"<a href='/admin/tickets'>{abertos_badge} ticket(s) aberto(s)</a>"
+    for tipo, label, notif_icon, qtd, link in feed:
+        cls = " err" if tipo == "erro" else (" warn" if tipo == "pendente" else "")
+        notif_items += (
+            f"<a class='n-item{cls}' href='{link}'>" + _icon(notif_icon)
+            + f"<span>{html.escape(label)}</span><span class='n-qtd'>{qtd}</span></a>"
+        )
+    for label, link in sistema:
+        notif_items += (
+            "<a class='n-item warn' href='" + link + "'>" + _icon("alert")
+            + f"<span>{html.escape(label)}</span><span class='n-qtd'>!</span></a>"
+        )
     if not notif_items:
         notif_items = "<div class='menu-empty'>Tudo em dia.</div>"
-    total_badge = pendentes_badge + abertos_badge
+    else:
+        notif_items += (
+            "<a class='n-item n-all' href='/admin/notificacoes'>"
+            + _icon("bell") + "<span>Ver todas</span></a>"
+        )
 
     name = (user or {}).get("name") or (user or {}).get("email") or "Admin"
     email = (user or {}).get("email") or ""
@@ -1902,6 +2024,13 @@ def admin_usuarios():
     return _admin_page(user, "Usuários", body, "usuarios")
 
 
+def _cargos_desc_html():
+    itens = [(c, l) for c, l in rbac.CARGOS_LABEL.items() if c != "MASTER"]
+    return " &middot; ".join(
+        f"<b>{html.escape(l)}</b>: {html.escape(rbac.cargo_desc(c))}" for c, l in itens
+    )
+
+
 @bp.route("/admin/usuarios/novo", methods=["GET", "POST"])
 def admin_usuario_novo():
     user = _require_perm("gerenciar_usuarios")
@@ -1943,6 +2072,7 @@ def admin_usuario_novo():
         "<label>E-mail</label><input name='email' type='email' required placeholder='usuario@email.com'>"
         "<label>Nome</label><input name='nome' type='text' placeholder='Nome completo'>"
         "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
+        "<p style='color:#8ea0b8;font-size:12px;margin-top:6px'>" + _cargos_desc_html() + "</p>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Criar usuário</button></p>"
         "</form></section>"
     )
@@ -1997,6 +2127,7 @@ def admin_usuario_detalhe(email):
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         "<label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\">"
         "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
+        "<p style='color:#8ea0b8;font-size:12px;margin-top:6px'>" + _cargos_desc_html() + "</p>"
         f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='ativo' {checked}> Ativo</label>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
         "</form></section>"
@@ -2035,6 +2166,7 @@ _ACOES_AUDIT = {
     "cupom_editar": ("Cupom editado", "#78350f", "#fbbf24"),
     "cupom_ativar": ("Cupom ativado/inativo", "#78350f", "#fbbf24"),
     "cupom_excluir": ("Cupom excluído", "#7f1d1d", "#f87171"),
+    "erro_pagamento": ("Erro de pagamento", "#7f1d1d", "#f87171"),
 }
 
 
@@ -2763,3 +2895,56 @@ def admin_cupom_excluir(cupom_id):
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/cupons")
+
+
+@bp.route("/admin/notificacoes", methods=["GET"])
+def admin_notificacoes():
+    user = _require_any_perm("ver_dashboard", "ver_pedidos")
+    if not user:
+        return redirect("/login")
+    feed, sistema, total = _notificacoes(user)
+    cor_tipo = {"venda": "#34d399", "servico": "#60a5fa", "pendente": "#fbbf24",
+                "pagamento": "#34d399", "cliente": "#60a5fa", "erro": "#f87171"}
+    cards = ""
+    for tipo, label, icone, qtd, link in feed:
+        cor = cor_tipo.get(tipo, "#34d399")
+        cards += (
+            "<div class='n-card'>"
+            f"<div class='n-ico'>{_icon(icone)}</div>"
+            "<div style='flex:1;min-width:0'>"
+            "<div style='display:flex;align-items:center;justify-content:space-between;gap:10px'>"
+            f"<b style='font-size:13px'>{html.escape(label)}</b>"
+            f"<span class='n-qtd' style='color:{cor}'>{qtd}</span></div>"
+            f"<div class='n-desc'>Veja em <a href='{link}'>{html.escape(link)}</a></div>"
+            "</div></div>"
+        )
+    if not cards:
+        cards = "<div class='menu-empty'>Nenhuma ocorrência por enquanto. Tudo em dia.</div>"
+    alerts = ""
+    for label, link in sistema:
+        alerts += (
+            "<div class='n-card'>"
+            "<div class='n-ico' style='background:rgba(251,191,36,.12);color:#fbbf24'>"
+            + _icon("alert") + "</div>"
+            "<div style='flex:1;min-width:0'>"
+            f"<b style='font-size:13px;color:#fbbf24'>{html.escape(label)}</b>"
+            f"<div class='n-desc'><a href='{link}'>{html.escape(link)}</a></div>"
+            "</div></div>"
+        )
+    if not alerts:
+        alerts = "<div class='menu-empty'>Sem alertas administrativos.</div>"
+    resumo = (
+        f"<b>{total}</b> notificação(ões) em aberto no momento"
+        if total else "Nada em aberto no momento"
+    )
+    body = (
+        "<div class='page-sub'>Acompanhe vendas, pagamentos, clientes e avisos de sistema.</div>"
+        "<div class='notice'>" + resumo + "</div>"
+        "<h2 style='font-size:15px;margin:18px 0 10px'>Ocorrências</h2>"
+        f"<div class='n-grid'>{cards}</div>"
+        "<h2 style='font-size:15px;margin:22px 0 10px'>Alertas administrativos</h2>"
+        f"<div class='n-grid'>{alerts}</div>"
+        "<p class='page-sub'>Contadores de vendas, serviços, pagamentos e clientes "
+        "atualizam sozinhos durante a sessão.</p>"
+    )
+    return _page(user, "Notificações", body, active="notificacoes")
