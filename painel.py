@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.6.0"
+VERSION = "2.7.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -142,9 +142,35 @@ def _current_user():
     }
 
 
+_SID_CACHE = {}
+
+
+def _sessao_ativa(sid):
+    """Confere se a sessão atual não foi encerrada (área Segurança).
+    Sessões antigas, sem registro, continuam válidas. Cache de 60s."""
+    if not sid:
+        return True
+    now = time.time()
+    cached = _SID_CACHE.get(sid)
+    if cached and now - cached[0] < 60:
+        return cached[1]
+    ativo = True
+    try:
+        rows = _fetch_soft("sessoes", select="ativo", query=f"sid=eq.{sid}", range_="0-0")
+        if rows:
+            ativo = bool(rows[0].get("ativo"))
+    except Exception:
+        ativo = True
+    _SID_CACHE[sid] = (now, ativo)
+    return ativo
+
+
 def _require_perm(*requeridas):
     user = _current_user()
     if not user:
+        return None
+    if not _sessao_ativa(session.get("sid")):
+        session.clear()
         return None
     if ADMIN_IP_ALLOWLIST and _client_ip() not in ADMIN_IP_ALLOWLIST:
         return None
@@ -157,6 +183,9 @@ def _require_perm(*requeridas):
 def _require_any_perm(*opcoes):
     user = _current_user()
     if not user:
+        return None
+    if not _sessao_ativa(session.get("sid")):
+        session.clear()
         return None
     if ADMIN_IP_ALLOWLIST and _client_ip() not in ADMIN_IP_ALLOWLIST:
         return None
@@ -505,6 +534,56 @@ def _iso_days_ago(days):
     return moment.isoformat() + "Z"
 
 
+def _num(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _fmt_dt(value, tamanho=19):
+    text = str(value or "").strip()
+    if not text:
+        return "-"
+    return text.replace("T", " ")[:tamanho]
+
+
+def _fmt_data(value):
+    text = str(value or "").strip()
+    if not text:
+        return "-"
+    return text.replace("T", " ")[:10]
+
+
+def _ua_resumo(ua):
+    ua = (ua or "").lower()
+    if not ua:
+        return "-"
+    if "android" in ua:
+        so = "Android"
+    elif "iphone" in ua or "ipad" in ua:
+        so = "iOS"
+    elif "windows" in ua:
+        so = "Windows"
+    elif "mac os" in ua or "macintosh" in ua:
+        so = "macOS"
+    elif "linux" in ua:
+        so = "Linux"
+    else:
+        so = "?"
+    if "edg" in ua:
+        nav = "Edge"
+    elif "chrome" in ua:
+        nav = "Chrome"
+    elif "firefox" in ua:
+        nav = "Firefox"
+    elif "safari" in ua:
+        nav = "Safari"
+    else:
+        nav = "Navegador"
+    return f"{nav} · {so}"
+
+
 def _storage_upload(file_storage, folder="itens"):
     blob = file_storage.read()
     if not blob:
@@ -583,6 +662,11 @@ _ICONS = {
     "brands": "<path d='M17 20h5v-2a3 3 0 0 0-5.36-1.86'/><path d='M3 20h5'/><path d='M16 15a3 3 0 1 0-2.12-5.12'/><path d='M8 4H3v5'/><circle cx='17' cy='4' r='2'/>",
     "clipboard": "<path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1'/>",
     "ticket": "<rect x='3' y='4' width='18' height='16' rx='3'/><path d='M7 4v1.5a1.5 1.5 0 0 0 0 3v7a1.5 1.5 0 0 0 0 3V20'/><path d='M17 4v1.5a1.5 1.5 0 0 1 0 3v7a1.5 1.5 0 0 1 0 3V20'/>",
+    "clock": "<circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/>",
+    "lock": "<rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/>",
+    "key": "<path d='m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4'/>",
+    "monitor": "<rect x='2' y='3' width='20' height='14' rx='2'/><line x1='8' y1='21' x2='16' y2='21'/><line x1='12' y1='17' x2='12' y2='21'/>",
+    "phone": "<path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'/>",
 }
 
 
@@ -767,9 +851,14 @@ def _page(user, title, body, active=""):
         return rbac.tem_perm(role, perms, *reqs)
 
     groups = []
+    principal = []
     if peut("ver_dashboard"):
-        principal = [("/admin", "Dashboard", "dash", "grid")]
+        principal.append(("/admin", "Dashboard", "dash", "grid"))
+    if peut("ver_servicos_manuais"):
+        principal.append(("/admin/services", "Service", "services", "dollar"))
+    if peut("ver_dashboard"):
         principal.append(("/admin/notificacoes", "Notificações", "notificacoes", "bell"))
+    if principal:
         groups.append(("Principal", principal))
     vendas = []
     if peut("ver_pedidos"):
@@ -794,6 +883,8 @@ def _page(user, title, body, active=""):
         sistema.append(("/admin/grupos", "Grupos", "grupos", "brands"))
     if peut("ver_usuarios"):
         sistema.append(("/admin/usuarios", "Usuários", "usuarios", "shield"))
+    if peut("ver_seguranca"):
+        sistema.append(("/admin/seguranca", "Segurança", "seguranca", "lock"))
     if peut("ver_audit"):
         sistema.append(("/admin/audit", "Auditoria", "audit", "clipboard"))
     if peut("ver_config"):
@@ -1123,7 +1214,22 @@ def admin_pedidos():
     return _admin_page(user, "Pedidos", body, "pedidos")
 
 
-def _clientes_rows(profiles, orders):
+def _ultimos_acessos():
+    """Mapa e-mail -> data do último login conhecido (tabela sessoes)."""
+    acessos = {}
+    try:
+        rows = _fetch_soft("sessoes", select="email,criado_em", order="criado_em.desc", range_="0-499")
+    except Exception:
+        return acessos
+    for row in rows:
+        email = (row.get("email") or "").strip().lower()
+        if email and email not in acessos:
+            acessos[email] = row.get("criado_em") or ""
+    return acessos
+
+
+def _clientes_rows(profiles, orders, acessos=None, pode_gerenciar=False):
+    acessos = acessos or {}
     pedidos_por_email = {}
     for order in orders:
         email = (order.get("email") or "").strip().lower()
@@ -1139,23 +1245,41 @@ def _clientes_rows(profiles, orders):
     for email in emails:
         profile = por_email.get(email) or {}
         stats = pedidos_por_email.get(email, {})
-        bloqueado = "<span class='status cancelado'>bloqueado</span>" if profile.get("bloqueado") else ""
+        bloqueado = "<span class='status cancelado'>bloqueado</span>" if profile.get("bloqueado") else "<span class='status pago'>ativo</span>"
         role = html.escape(str(profile.get("role") or "cliente"))
         nome = html.escape(str(profile.get("name") or email))
+        whatsapp = html.escape(str(profile.get("whatsapp") or "-"))
+        cadastro = html.escape(_fmt_data(profile.get("created_at")))
+        ultimo = html.escape(_fmt_dt(acessos.get(email), 16))
+        acoes = (
+            f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' "
+            f"href='/admin/clientes/{html.escape(email)}'>Ver perfil</a>"
+        )
+        if pode_gerenciar:
+            rotulo = "Desbloquear" if profile.get("bloqueado") else "Bloquear"
+            cor = "#065f46" if profile.get("bloqueado") else "#7f1d1d"
+            texto = "#4ade80" if profile.get("bloqueado") else "#fca5a5"
+            acoes += (
+                f"<form method='post' action='/admin/clientes/{html.escape(email)}/bloquear' style='display:inline'>"
+                f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                f"<button style='background:{cor};border:0;color:{texto};border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;margin-left:4px'>{rotulo}</button></form>"
+            )
         rows += (
             "<tr>"
             f"<td>{html.escape(email)}</td>"
             f"<td>{nome}</td>"
+            f"<td>{whatsapp}</td>"
+            f"<td>{cadastro}</td>"
             f"<td>{role}</td>"
             f"<td>{stats.get('pedidos', 0)}</td>"
             f"<td>{_fmt_brl(stats.get('gasto', 0))}</td>"
+            f"<td>{ultimo}</td>"
             f"<td>{bloqueado}</td>"
-            f"<td class='acts'><a class='btn ghost' style='padding:5px 10px;font-size:12px' "
-            f"href='/admin/clientes/{html.escape(email)}'>Ver</a></td>"
+            f"<td class='acts'>{acoes}</td>"
             "</tr>"
         )
     if not rows:
-        rows = "<tr><td colspan='7' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum cliente encontrado.</td></tr>"
+        rows = "<tr><td colspan='10' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum cliente encontrado.</td></tr>"
     return rows
 
 
@@ -1166,11 +1290,21 @@ def admin_clientes():
         return redirect("/login")
     profiles = _fetch("profiles", order="email.asc")
     orders = _fetch("pedidos", order="data.asc")
-    body = f"<div class='cards'><div class='card'><div class='num'>{len(profiles)}</div><div class='lbl'>Perfis</div></div></div>"
+    acessos = _ultimos_acessos()
+    pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_clientes")
+    bloqueados = sum(1 for p in profiles if p.get("bloqueado"))
+    body = (
+        "<div class='cards'>"
+        f"<div class='card'><div class='num'>{len(profiles)}</div><div class='lbl'>Perfis</div></div>"
+        f"<div class='card'><div class='num'>{len(profiles) - bloqueados}</div><div class='lbl'>Ativos</div></div>"
+        f"<div class='card'><div class='num'>{bloqueados}</div><div class='lbl'>Bloqueados</div></div>"
+        "</div>"
+    )
     body += (
         "<section><h2>Clientes</h2><table>"
-        "<tr><th>E-mail</th><th>Nome</th><th>Papel</th><th>Pedidos</th><th>Gasto total</th><th>Status</th><th></th></tr>"
-        + _clientes_rows(profiles, orders)
+        "<tr><th>E-mail</th><th>Nome</th><th>WhatsApp</th><th>Cadastro</th><th>Papel</th>"
+        "<th>Pedidos</th><th>Gasto total</th><th>Último acesso</th><th>Status</th><th>Ações</th></tr>"
+        + _clientes_rows(profiles, orders, acessos, pode_gerenciar)
         + "</table></section>"
     )
     return _admin_page(user, "Clientes", body, "clientes")
@@ -1198,6 +1332,7 @@ def admin_cliente_detalhe(email):
         f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/editar'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         f"<label>Nome</label><input name='name' value='{html.escape(str(profile.get('name') or ''))}'>"
+        f"<label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(profile.get('whatsapp') or ''))}' placeholder='(11) 99999-9999'>"
         f"<label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}'>"
         f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}'>"
         "<label>Papel</label>"
@@ -1245,6 +1380,7 @@ def admin_cliente_editar(email):
     email_decoded = unquote(email).lower()
     payload = {
         "name": (request.form.get("name") or "").strip()[:200],
+        "whatsapp": (request.form.get("whatsapp") or "").strip()[:30],
         "personagem": (request.form.get("personagem") or "").strip()[:100],
         "mundo": (request.form.get("mundo") or "").strip()[:100],
         "role": (request.form.get("role") or "cliente")[:20],
@@ -2167,6 +2303,14 @@ _ACOES_AUDIT = {
     "cupom_ativar": ("Cupom ativado/inativo", "#78350f", "#fbbf24"),
     "cupom_excluir": ("Cupom excluído", "#7f1d1d", "#f87171"),
     "erro_pagamento": ("Erro de pagamento", "#7f1d1d", "#f87171"),
+    "login": ("Login realizado", "#164e63", "#22d3ee"),
+    "logout": ("Logout", "#1e293b", "#94a3b8"),
+    "sessao_encerrar": ("Sessão encerrada", "#7f1d1d", "#f87171"),
+    "servico_criar": ("Serviço lançado", "#064e3b", "#4ade80"),
+    "servico_editar": ("Serviço editado", "#1e293b", "#94a3b8"),
+    "servico_concluir": ("Serviço concluído", "#064e3b", "#4ade80"),
+    "servico_reabrir": ("Serviço reaberto", "#78350f", "#fbbf24"),
+    "servico_excluir": ("Serviço excluído", "#7f1d1d", "#f87171"),
 }
 
 
@@ -2948,3 +3092,340 @@ def admin_notificacoes():
         "atualizam sozinhos durante a sessão.</p>"
     )
     return _page(user, "Notificações", body, active="notificacoes")
+
+
+@bp.route("/admin/services", methods=["GET"])
+def admin_services():
+    user = _require_perm("ver_servicos_manuais")
+    if not user:
+        return redirect("/login")
+    servicos = _fetch_soft("servicos_manuais", order="data.desc")
+    pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_servicos_manuais")
+    total = len(servicos)
+    concluidos = sum(1 for s in servicos if (s.get("status") or "") == "concluido")
+    soma = {"pix": 0.0, "coins": 0.0}
+    horas = 0.0
+    for s in servicos:
+        forma = (s.get("forma_pagamento") or "pix").lower()
+        if forma == "pix":
+            soma["pix"] += _parse_brl(s.get("valor"))
+        else:
+            soma["coins"] += _parse_brl(s.get("valor"))
+        try:
+            horas += float(s.get("horas") or 0)
+        except (TypeError, ValueError):
+            pass
+    cards = (
+        "<div class='cards'>"
+        f"<div class='card'><div class='num'>{total}</div><div class='lbl'>Serviços</div></div>"
+        f"<div class='card'><div class='num'>{concluidos}</div><div class='lbl'>Concluídos</div></div>"
+        f"<div class='card'><div class='num'>R$ {_fmt_brl(soma['pix'])}</div><div class='lbl'>Total Pix</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(soma['coins'])}</div><div class='lbl'>Total Coins</div></div>"
+        f"<div class='card'><div class='num'>{horas:g}h</div><div class='lbl'>Horas</div></div>"
+        "</div>"
+    )
+    body = cards
+    if pode_gerenciar:
+        form = (
+            "<section><h2>Novo serviço</h2>"
+            "<form method='post' action='/admin/services/novo'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<div class='box'>"
+            "<div><label>Data</label><input name='data' type='date' required></div>"
+            "<div><label>Hora</label><input name='hora' type='time'></div>"
+            "</div>"
+            "<label>Serviço</label><input name='servico' required placeholder='Ex.: Farm de XP, Raid, Build...'>"
+            "<div class='box'>"
+            "<div><label>Nome do cliente</label><input name='nome_cliente' placeholder='Nick / nome'></div>"
+            "<div><label>WhatsApp do cliente</label><input name='whatsapp' placeholder='(11) 99999-9999'></div>"
+            "</div>"
+            "<div class='box'>"
+            "<div><label>Valor cobrado</label><input name='valor' type='number' step='0.01' min='0' value='0' required></div>"
+            "<div><label>Forma de pagamento</label><select name='forma_pagamento'>"
+            "<option value='pix'>Pix</option><option value='coins'>Coins</option></select></div>"
+            "<div><label>Horas (quantas)</label><input name='horas' type='number' step='0.5' min='0' value='0'></div>"
+            "</div>"
+            "<label>Observação</label><textarea name='observacao' rows='2' placeholder='Detalhes do que foi feito...'></textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Lançar serviço</button></p>"
+            "</form></section>"
+        )
+        body += form
+    rows = ""
+    for s in servicos:
+        sid = html.escape(str(s.get("id") or ""))
+        status = "concluido" if (s.get("status") or "") == "concluido" else "pendente"
+        acoes = ""
+        if pode_gerenciar:
+            acoes = (
+                f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' href='/admin/services/{sid}'>Editar</a> "
+                f"<form method='post' action='/admin/services/{sid}/toggle' style='display:inline'>"
+                f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                f"<button class='btn ghost' style='padding:5px 10px;font-size:12px' type='submit'>"
+                f"{'Reabrir' if status == 'concluido' else 'Concluir'}</button></form> "
+                f"<form method='post' action='/admin/services/{sid}/excluir' style='display:inline'>"
+                f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 10px;cursor:pointer'>Excluir</button></form>"
+            )
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(str(s.get('data') or ''))} {html.escape(str(s.get('hora') or ''))}</td>"
+            f"<td>{html.escape(str(s.get('servico') or ''))}</td>"
+            f"<td>{html.escape(str(s.get('nome_cliente') or '-'))}</td>"
+            f"<td>{html.escape(str(s.get('whatsapp') or '-'))}</td>"
+            f"<td>{_fmt_brl(_parse_brl(s.get('valor')))}</td>"
+            f"<td>{html.escape(str((s.get('forma_pagamento') or 'pix').upper()))}</td>"
+            f"<td>{html.escape(str(s.get('horas') or 0))}</td>"
+            f"<td><span class='status {status}'>{status}</span></td>"
+            f"<td style='text-align:right;white-space:nowrap'>{acoes}</td>"
+            "</tr>"
+        )
+    body += (
+        "<section><h2>Todos os serviços</h2><table>"
+        "<tr><th>Quando</th><th>Serviço</th><th>Cliente</th><th>WhatsApp</th>"
+        "<th>Valor</th><th>Forma</th><th>Horas</th><th>Status</th><th>Ações</th></tr>"
+        + rows
+        + "</table></section>"
+    )
+    return _admin_page(user, "Service", body, "services")
+
+
+@bp.route("/admin/services/novo", methods=["POST"])
+def admin_service_novo():
+    user = _require_perm("gerenciar_servicos_manuais")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    try:
+        valor = float(request.form.get("valor") or 0)
+        horas = float(request.form.get("horas") or 0)
+    except (TypeError, ValueError):
+        valor, horas = 0.0, 0.0
+    payload = {
+        "email": user["email"],
+        "data": (request.form.get("data") or "")[:10],
+        "hora": (request.form.get("hora") or "")[:5],
+        "servico": (request.form.get("servico") or "").strip()[:200],
+        "nome_cliente": (request.form.get("nome_cliente") or "").strip()[:120],
+        "whatsapp": (request.form.get("whatsapp") or "").strip()[:30],
+        "valor": valor,
+        "forma_pagamento": (request.form.get("forma_pagamento") or "pix")[:10],
+        "horas": horas,
+        "observacao": (request.form.get("observacao") or "").strip()[:500],
+        "status": "pendente",
+    }
+    try:
+        response = requests.post(
+            f"{SUPA_URL}/rest/v1/servicos_manuais",
+            headers={**_headers(), "Prefer": "return=minimal"},
+            json=payload,
+            timeout=15,
+        )
+        if response.status_code not in (200, 201):
+            return f"Falha ao lançar ({response.status_code}): {response.text[:200]}", 400
+        _audit(user, "servico_criar", f"{payload['servico']} | {payload['nome_cliente']} | {payload['forma_pagamento']} {payload['valor']}")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/services")
+
+
+@bp.route("/admin/services/<sid>", methods=["GET", "POST"])
+def admin_service_detalhe(sid):
+    user = _require_perm("gerenciar_servicos_manuais")
+    if not user:
+        return redirect("/login")
+    rows = _fetch_soft("servicos_manuais", query=f"id=eq.{sid}")
+    if not rows:
+        return "Serviço não encontrado.", 404
+    s = rows[0]
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        try:
+            valor = float(request.form.get("valor") or 0)
+            horas = float(request.form.get("horas") or 0)
+        except (TypeError, ValueError):
+            valor, horas = 0.0, 0.0
+        payload = {
+            "data": (request.form.get("data") or "")[:10],
+            "hora": (request.form.get("hora") or "")[:5],
+            "servico": (request.form.get("servico") or "").strip()[:200],
+            "nome_cliente": (request.form.get("nome_cliente") or "").strip()[:120],
+            "whatsapp": (request.form.get("whatsapp") or "").strip()[:30],
+            "valor": valor,
+            "forma_pagamento": (request.form.get("forma_pagamento") or "pix")[:10],
+            "horas": horas,
+            "observacao": (request.form.get("observacao") or "").strip()[:500],
+            "atualizado_em": datetime.utcnow().isoformat(),
+        }
+        try:
+            requests.patch(
+                f"{SUPA_URL}/rest/v1/servicos_manuais?id=eq.{sid}",
+                headers=_headers(),
+                json=payload,
+                timeout=15,
+            )
+            _audit(user, "servico_editar", f"{payload['servico']} | {payload['nome_cliente']}")
+        except Exception as exc:
+            return f"Falha: {exc}", 500
+        return redirect("/admin/services")
+    status = "concluido" if (s.get("status") or "") == "concluido" else "pendente"
+    form = (
+        "<section><h2>Editar serviço</h2>"
+        f"<form method='post' action='/admin/services/{html.escape(sid)}'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<div class='box'>"
+        f"<div><label>Data</label><input name='data' type='date' value='{html.escape(str(s.get('data') or ''))}' required></div>"
+        f"<div><label>Hora</label><input name='hora' type='time' value='{html.escape(str(s.get('hora') or ''))}'></div>"
+        "</div>"
+        f"<label>Serviço</label><input name='servico' required value='{html.escape(str(s.get('servico') or ''))}'>"
+        "<div class='box'>"
+        f"<div><label>Nome do cliente</label><input name='nome_cliente' value='{html.escape(str(s.get('nome_cliente') or ''))}'></div>"
+        f"<div><label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(s.get('whatsapp') or ''))}'></div>"
+        "</div>"
+        "<div class='box'>"
+        f"<div><label>Valor cobrado</label><input name='valor' type='number' step='0.01' min='0' value='{html.escape(str(s.get('valor') or 0))}' required></div>"
+        "<div><label>Forma de pagamento</label><select name='forma_pagamento'>"
+        f"<option value='pix' {'selected' if (s.get('forma_pagamento') or 'pix') == 'pix' else ''}>Pix</option>"
+        f"<option value='coins' {'selected' if (s.get('forma_pagamento') or '') == 'coins' else ''}>Coins</option></select></div>"
+        f"<div><label>Horas</label><input name='horas' type='number' step='0.5' min='0' value='{html.escape(str(s.get('horas') or 0))}'></div>"
+        "</div>"
+        f"<label>Observação</label><textarea name='observacao' rows='2'>{html.escape(str(s.get('observacao') or ''))}</textarea>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
+        "<a class='btn ghost' href='/admin/services'>Voltar</a></p>"
+        "</form></section>"
+    )
+    status_badge = "<span class='status pago'>concluido</span>" if status == "concluido" else "<span class='status pendente'>pendente</span>"
+    body = (
+        "<div class='cards'>"
+        f"<div class='card'><div class='num'>{html.escape(str(s.get('servico') or '-'))}</div><div class='lbl'>Serviço</div></div>"
+        f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
+        + form
+    )
+    return _admin_page(user, "Serviço", body, "services")
+
+
+@bp.route("/admin/services/<sid>/toggle", methods=["POST"])
+def admin_service_toggle(sid):
+    user = _require_perm("gerenciar_servicos_manuais")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    rows = _fetch_soft("servicos_manuais", select="status", query=f"id=eq.{sid}")
+    novo = "pendente" if rows and (rows[0].get("status") or "") == "concluido" else "concluido"
+    try:
+        requests.patch(
+            f"{SUPA_URL}/rest/v1/servicos_manuais?id=eq.{sid}",
+            headers=_headers(),
+            json={"status": novo, "atualizado_em": datetime.utcnow().isoformat()},
+            timeout=15,
+        )
+        _audit(user, "servico_concluir" if novo == "concluido" else "servico_reabrir", f"serviço #{sid}")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/services")
+
+
+@bp.route("/admin/services/<sid>/excluir", methods=["POST"])
+def admin_service_excluir(sid):
+    user = _require_perm("gerenciar_servicos_manuais")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    try:
+        requests.delete(
+            f"{SUPA_URL}/rest/v1/servicos_manuais?id=eq.{sid}",
+            headers=_headers(),
+            timeout=15,
+        )
+        _audit(user, "servico_excluir", f"serviço #{sid}")
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/services")
+
+
+@bp.route("/admin/seguranca", methods=["GET"])
+def admin_seguranca():
+    user = _require_perm("ver_seguranca")
+    if not user:
+        return redirect("/login")
+    sessoes = _fetch_soft("sessoes", order="criado_em.desc", range_="0-499")
+    ativas = [s for s in sessoes if s.get("ativo")]
+    hoje = datetime.utcnow().date().isoformat()
+    logins_hoje = sum(1 for s in sessoes if str(s.get("criado_em") or "").startswith(hoje))
+    d30 = (datetime.utcnow() - timedelta(days=30)).isoformat()
+    logins_30d = sum(1 for s in sessoes if (s.get("criado_em") or "") >= d30)
+    pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_seguranca")
+    cards = (
+        "<div class='cards'>"
+        f"<div class='card'><div class='num'>{len(ativas)}</div><div class='lbl'>Sessões ativas</div></div>"
+        f"<div class='card'><div class='num'>{logins_hoje}</div><div class='lbl'>Logins hoje</div></div>"
+        f"<div class='card'><div class='num'>{logins_30d}</div><div class='lbl'>Logins em 30 dias</div></div>"
+        "</div>"
+    )
+    rows = ""
+    for s in sessoes:
+        sid = html.escape(str(s.get("sid") or ""))
+        email = html.escape(str(s.get("email") or "-"))
+        ip = html.escape(str(s.get("ip") or "-"))
+        ua = html.escape(str(s.get("user_agent") or "")[:60])
+        criado = html.escape(_fmt_dt(s.get("criado_em"), 16))
+        ultimo = html.escape(_fmt_dt(s.get("ultimo_acesso"), 16))
+        encerrado = html.escape(_fmt_dt(s.get("encerrado_em"), 16))
+        if s.get("ativo"):
+            status = "<span class='status pago'>ativa</span>"
+        else:
+            status = "<span class='status cancelado'>encerrada</span>"
+        acao = ""
+        if pode_gerenciar and s.get("ativo"):
+            acao = (
+                f"<form method='post' action='/admin/seguranca/sessoes/{sid}/encerrar' style='display:inline'>"
+                f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 10px;cursor:pointer'>Encerrar</button></form>"
+            )
+        rows += (
+            "<tr>"
+            f"<td>{criado}</td><td>{email}</td><td>{ip}</td><td style='font-size:12px'>{ua}</td>"
+            f"<td>{ultimo}</td><td>{encerrado if encerrado else '-'}</td><td>{status}</td>"
+            f"<td style='text-align:right'>{acao}</td>"
+            "</tr>"
+        )
+    body = cards + (
+        "<section><h2>Histórico de sessões e logins</h2><table>"
+        "<tr><th>Início</th><th>E-mail</th><th>IP</th><th>Dispositivo</th>"
+        "<th>Último acesso</th><th>Encerramento</th><th>Status</th><th>Ações</th></tr>"
+        + rows
+        + "</table></section>"
+    )
+    body += (
+        "<div class='notice'>Senha e verificação em dois fatores (2FA) são gerenciados "
+        "<a href='https://myaccount.google.com/security' target='_blank' rel='noopener'>pela conta Google</a>. "
+        "Use também a <a href='https://security.google.com/settings/security/activity' target='_blank' rel='noopener'>"
+        "Verificação de segurança</a> para revisar dispositivos. "
+        "Aqui você encerra sessões ativas a distância — ao encerrar, o acesso é perdido na próxima navegação."
+        "</div>"
+    )
+    return _admin_page(user, "Segurança", body, "seguranca")
+
+
+@bp.route("/admin/seguranca/sessoes/<sid>/encerrar", methods=["POST"])
+def admin_seguranca_encerrar(sid):
+    user = _require_perm("gerenciar_seguranca")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    sid_decoded = (sid or "").strip()
+    try:
+        requests.patch(
+            f"{SUPA_URL}/rest/v1/sessoes?sid=eq.{sid_decoded}",
+            headers=_headers(),
+            json={"ativo": False, "encerrado_em": datetime.utcnow().isoformat()},
+            timeout=15,
+        )
+        _audit(user, "sessao_encerrar", sid_decoded)
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/seguranca")

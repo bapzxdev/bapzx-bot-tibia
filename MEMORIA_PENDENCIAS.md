@@ -5,6 +5,20 @@ Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
 
+- [ ] **Aplicar `supabase_migracao_v121.sql` (v2.7.0 — Service + Segurança).**
+      Cria `public.servicos_manuais` (diário de serviços do dono: data, hora,
+      servico, nome_cliente, whatsapp, valor numeric(12,2),
+      forma_pagamento pix|coins, horas, observacao, status pendente|concluido
+      + índices), `public.sessoes` (sid, email, ip, user_agent, criado_em,
+      ultimo_acesso, encerrado_em, ativo + índices) e a coluna `whatsapp` em
+      `profiles`. Sem isso `/admin/services` e `/admin/seguranca` abrem vazios
+      (via `_fetch_soft`) e o WhatsApp do cliente não persiste.
+- [ ] **Testar `/admin/services` e `/admin/seguranca` ao vivo (v2.7.0).**
+      Service: criar um serviço, conferir os KPIs de totais (Pix/Coins/Horas),
+      editar, concluir/reabrir, excluir. Segurança: ver as sessões do seu
+      login (IP/dispositivo), usar "Encerrar" na própria sessão para confirmar
+      que desloga e na de outro dispositivo. Também conferir que /admin/audit
+      registra login/logout (sistema@bapzx) e as ações servico_*.
 - [ ] **Testar `/admin/audit` ao vivo (v2.5.0, item 14 — FEITO no código).**
       Página com busca `q`, dropdown de ação, filtro por e-mail, paginação
       50/pág e Exportar CSV; eventos do bot (pedido_criado, pix_gerado,

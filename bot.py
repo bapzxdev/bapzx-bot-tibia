@@ -20,7 +20,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.6.0"
+VERSION = "2.7.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -854,6 +854,52 @@ def audit_log(acao, detalhes=""):
         print(f"[audit] falhou: {error}")
 
 
+def _client_ip_bot():
+    try:
+        return (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    except Exception:
+        return ""
+
+
+def _registrar_sessao(email):
+    """Grava a sessão de login na tabela sessoes (área Segurança)."""
+    sid = session.get("sid")
+    if not sid or not email:
+        return sid
+    try:
+        requests.post(
+            f"{STORE.url}/rest/v1/sessoes",
+            headers={**STORE._headers(), "Prefer": "return=minimal"},
+            json={
+                "sid": sid,
+                "email": email,
+                "ip": _client_ip_bot()[:45],
+                "user_agent": (request.headers.get("User-Agent") or "")[:250],
+                "criado_em": datetime.utcnow().isoformat() + "Z",
+                "ativo": True,
+            },
+            timeout=10,
+        )
+    except Exception as error:
+        print(f"[auth] falha ao registrar sessão: {error}")
+    return sid
+
+
+def _encerrar_sessao(sid):
+    """Marca a sessão como encerrada (logout)."""
+    if not sid:
+        return
+    try:
+        requests.patch(
+            f"{STORE.url}/rest/v1/sessoes?sid=eq.{sid}",
+            headers={**STORE._headers(), "Prefer": "return=minimal"},
+            json={"ativo": False, "encerrado_em": datetime.utcnow().isoformat() + "Z"},
+            timeout=10,
+        )
+    except Exception as error:
+        print(f"[auth] falha ao encerrar sessão: {error}")
+
+
 @app.route("/", methods=["GET"])
 def home():
     return redirect(PORTFOLIO_URL, code=302)
@@ -1627,12 +1673,19 @@ def oauth_callback():
     session["cargo"] = cargo
     session["perms"] = perms
     session["sub"] = sub
+    session["sid"] = secrets.token_urlsafe(24)
     session.permanent = True
+    _registrar_sessao(email)
+    if cargo != "CLIENTE":
+        audit_log("login", f"{email} | {name}")
     return redirect("/acesso")
 
 
 @app.route("/logout")
 def logout():
+    _encerrar_sessao(session.get("sid"))
+    if session.get("email"):
+        audit_log("logout", session.get("email", ""))
     session.clear()
     return redirect(PORTFOLIO_URL)
 
