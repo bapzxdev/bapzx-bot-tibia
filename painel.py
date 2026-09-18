@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.1"
+VERSION = "2.7.2"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -2480,7 +2480,29 @@ def admin_grupos():
     if not user:
         return redirect("/login")
     grupos = _fetch_soft("grupos", order="ordem.asc")
+    csrf = html.escape(_csrf_token())
+    pode = bool(user and _require_perm("gerenciar_grupos"))
     body = f"<div class='cards'><div class='card'><div class='num'>{len(grupos)}</div><div class='lbl'>Grupos</div></div></div>"
+    if pode:
+        body += (
+            "<section>"
+            "<h2>Adicionar grupo</h2>"
+            "<form method='post' action='/admin/grupos/novo'>"
+            f"<input type='hidden' name='_csrf' value='{csrf}'>"
+            "<div class='box'>"
+            "<div><label>Nome</label><input name='nome' type='text' maxlength='100' required placeholder='Ex.: Auroria'></div>"
+            "<div><label>Link do WhatsApp</label><input name='link' type='url' placeholder='https://chat.whatsapp.com/...'></div>"
+            "</div>"
+            "<div class='box'>"
+            "<div><label>Ordem (número)</label><input name='ordem' type='number' min='0' step='1' "
+            f"value='{len(grupos) + 1}'></div>"
+            "<div style='display:flex;align-items:center'><label style='margin:0 8px 0 0'>Ativo</label>"
+            "<input name='ativo' type='checkbox' checked></div>"
+            "</div>"
+            "<p style='margin-top:12px'><button class='btn' type='submit'>Adicionar grupo</button></p>"
+            "</form>"
+            "</section>"
+        )
     body += (
         "<section><h2>Grupos do WhatsApp</h2><table>"
         "<tr><th>ID</th><th>Nome</th><th>Link</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>"
@@ -2488,6 +2510,38 @@ def admin_grupos():
         + "</table></section>"
     )
     return _admin_page(user, "Grupos", body, "grupos")
+
+
+@bp.route("/admin/grupos/novo", methods=["POST"])
+def admin_grupo_novo():
+    user = _require_perm("gerenciar_grupos")
+    if not user:
+        return redirect("/login")
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    nome = (request.form.get("nome") or "").strip()[:100]
+    if not nome:
+        return "O nome do grupo é obrigatório.", 400
+    link = (request.form.get("link") or "").strip()
+    ativo = request.form.get("ativo") == "on"
+    try:
+        ordem = int((request.form.get("ordem") or "0").strip() or 0)
+    except ValueError:
+        ordem = 0
+    payload = {"nome": nome, "link": link, "ativo": ativo, "ordem": ordem}
+    try:
+        response = requests.post(
+            f"{SUPA_URL}/rest/v1/grupos",
+            headers={**_headers(), "Prefer": "return=representation"},
+            json=payload,
+            timeout=15,
+        )
+        if response.status_code not in (200, 201):
+            return f"Falha ao criar ({response.status_code}): {response.text[:200]}", 400
+        _audit(user, "grupo_criar", nome)
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    return redirect("/admin/grupos")
 
 
 @bp.route("/admin/grupos/<int:gid>", methods=["GET", "POST"])
