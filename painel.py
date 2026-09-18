@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.2"
+VERSION = "2.7.3"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -647,6 +647,7 @@ def _cors_ok():
 
 _ICONS = {
     "grid": "<rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/>",
+    "chart": "<line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/>",
     "cart": "<circle cx='9' cy='21' r='1'/><circle cx='20' cy='21' r='1'/><path d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6'/>",
     "package": "<path d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/><polyline points='3.27 6.96 12 12.01 20.73 6.96'/><line x1='12' y1='22.08' x2='12' y2='12'/>",
     "users": "<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>",
@@ -672,6 +673,7 @@ _ICONS = {
     "key": "<path d='m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4'/>",
     "monitor": "<rect x='2' y='3' width='20' height='14' rx='2'/><line x1='8' y1='21' x2='16' y2='21'/><line x1='12' y1='17' x2='12' y2='21'/>",
     "phone": "<path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'/>",
+    "chart": "<line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/>",
 }
 
 
@@ -859,6 +861,7 @@ def _page(user, title, body, active=""):
     principal = []
     if peut("ver_dashboard"):
         principal.append(("/admin", "Dashboard", "dash", "grid"))
+        principal.append(("/admin/analytics", "Analytics", "analytics", "chart"))
     if peut("ver_servicos_manuais"):
         principal.append(("/admin/services", "Service", "services", "dollar"))
     if peut("ver_dashboard"):
@@ -1199,6 +1202,254 @@ def admin_dashboard():
         + "</table></section>"
     )
     return _admin_page(user, "Dashboard", body, "dash")
+
+
+@bp.route("/admin/analytics", methods=["GET"])
+def admin_analytics():
+    user = _require_perm("ver_dashboard")
+    if not user:
+        return redirect("/login")
+    per = request.args.get("per", "7")
+    dias_n = 7 if per in ("7", "14", "30") else 7
+    if per == "14":
+        dias_n = 14
+    elif per == "30":
+        dias_n = 30
+
+    hoje = datetime.utcnow().date()
+    ultimo = hoje.isoformat() + "T23:59:59"
+    inicio = _iso_days_ago(dias_n - 1)
+
+    try:
+        visitas = _fetch_soft(
+            "visitas",
+            select="pagina,referer,criado_em",
+            order="criado_em.desc",
+            range_="0-4999",
+        )
+    except Exception:
+        visitas = []
+
+    try:
+        orders = _fetch("pedidos", order="criado_em.asc")
+    except Exception:
+        orders = []
+
+    try:
+        profiles = _fetch("profiles", select="email,criado_em", order="criado_em.asc")
+    except Exception:
+        profiles = []
+
+    try:
+        servicos = _fetch_soft(
+            "servicos_manuais",
+            select="servico,valor,status,criado_em",
+            order="criado_em.asc",
+            range_="0-4999",
+        )
+    except Exception:
+        servicos = []
+
+    def no_periodo(iso):
+        s = str(iso or "")[:10]
+        return s >= inicio[:10]
+
+    vis_p = [v for v in visitas if no_periodo(v.get("criado_em"))]
+    ord_p = [o for o in orders if no_periodo(o.get("criado_em") or o.get("data"))]
+    novo_dt = _iso_days_ago(7)
+    usr_total = len(profiles)
+    usr_novos = sum(1 for p in profiles if no_periodo(p.get("criado_em")))
+
+    total_visitas = len(visitas)
+    visitas_periodo = len(vis_p)
+    visitas_hoje = sum(1 for v in vis_p if str(v.get("criado_em") or "")[:10] == hoje.isoformat())
+
+    vendas_periodo = len(ord_p)
+    vendas_total = len(orders)
+    fat, _, _, pagos = _metrics(orders) if orders else (0.0, {}, 0, 0)
+    fat_periodo = sum(_parse_brl(o.get("preco")) for o in ord_p if (o.get("status") or "pendente") in ("pago", "entregue"))
+    conversao = (vendas_periodo / visitas_periodo * 100) if visitas_periodo else 0.0
+
+    por_pagina = {}
+    for v in vis_p:
+        pg = (v.get("pagina") or "-").strip() or "-"
+        por_pagina[pg] = por_pagina.get(pg, 0) + 1
+    top_paginas = sorted(por_pagina.items(), key=lambda kv: kv[1], reverse=True)
+
+    rotas_sistema = ("/admin", "/login", "/criar-conta", "/redefinir", "/api", "/", "/catalogo")
+    top_produtos = [
+        (pg, n) for pg, n in top_paginas
+        if pg not in rotas_sistema and "static" not in pg and not pg.startswith("/admin")
+    ][:8]
+
+    por_servico = {}
+    for s in servicos:
+        if not no_periodo(s.get("criado_em")):
+            continue
+        v = _parse_brl(s.get("valor"))
+        nome = (s.get("servico") or "-").strip() or "-"
+        item = por_servico.setdefault(nome, {"qtd": 0, "total": 0.0})
+        item["qtd"] += 1
+        item["total"] += v
+    top_servicos = sorted(por_servico.items(), key=lambda kv: kv[1]["qtd"], reverse=True)[:6]
+
+    def origem(referer):
+        r = str(referer or "").lower()
+        if not r:
+            return "Direto"
+        if "whatsapp" in r or "wa.me" in r:
+            return "WhatsApp"
+        if "instagram" in r:
+            return "Instagram"
+        if "telegram" in r or "t.me" in r:
+            return "Telegram"
+        if "google" in r:
+            return "Google"
+        if "facebook" in r or "fb.com" in r:
+            return "Facebook"
+        if "youtube" in r:
+            return "YouTube"
+        if "tiktok" in r:
+            return "TikTok"
+        return "Outro"
+
+    por_origem = {}
+    for v in vis_p:
+        o = origem(v.get("referer"))
+        por_origem[o] = por_origem.get(o, 0) + 1
+    top_origens = sorted(por_origem.items(), key=lambda kv: kv[1], reverse=True)
+    total_origem = sum(por_origem.values()) or 1
+    origem_rows = "".join(
+        f"<tr><td>{html.escape(o)}</td><td>{n}</td><td>{n / total_origem * 100:.0f}%</td></tr>"
+        for o, n in top_origens
+    )
+
+    dias_map = {}
+    for v in vis_p:
+        d = str(v.get("criado_em") or "")[:10]
+        if d:
+            dias_map.setdefault(d, [0, 0])
+            dias_map[d][0] += 1
+    for o in ord_p:
+        d = str(o.get("criado_em") or o.get("data") or "")[:10]
+        if d:
+            dias_map.setdefault(d, [0, 0])
+            dias_map[d][1] += 1
+
+    colunas = ""
+    if dias_map:
+        from datetime import timedelta
+
+        maxima = max(dias_map[d][0] if dias_map[d][1] == 0 else dias_map[d][1]
+                     for d in dias_map) or 1
+        for d in sorted(dias_map)[-dias_n:]:
+            vis_d, vend = dias_map[d]
+            pct_v = int(vis_d / maxima * 100)
+            pct_p = int(vend / maxima * 100)
+            colunas += (
+                f"<div class='bar-col' title='{d} — {vis_d} visitas, {vend} pedido(s)'>"
+                f"<div class='dual'><span class='bar' style='height:{pct_v}%'></span>"
+                f"<span class='bar bar-alt' style='height:{pct_p}%'></span></div>"
+                f"<span class='bar-lbl'>{d[8:10]}/{d[5:7]}</span></div>"
+            )
+
+    serv_rows = "".join(
+        f"<tr><td>{html.escape(nome)}</td><td>{qtd}</td><td>{_fmt_brl(total)}</td></tr>"
+        for nome, d in top_servicos
+    ) or "<tr><td colspan='3' style='color:#64748b;text-align:center'>Sem vendas no período</td></tr>"
+
+    top_rows = "".join(
+        f"<tr><td>{html.escape(pg)}</td><td>{n}</td></tr>"
+        for pg, n in top_produtos
+    ) or "<tr><td colspan='2' style='color:#64748b;text-align:center'>Sem dados de produto no período</td></tr>"
+
+    fat_antes = sum(
+        _parse_brl(o.get("preco"))
+        for o in orders
+        if (o.get("status") or "pendente") in ("pago", "entregue")
+        and (str(o.get("criado_em") or o.get("data") or "")[:10] >= _iso_days_ago(dias_n * 2)[:10])
+        and str(o.get("criado_em") or o.get("data") or "")[:10] < inicio[:10]
+    )
+    vis_antes = sum(
+        1 for v in visitas
+        if (str(v.get("criado_em") or "")[:10] >= _iso_days_ago(dias_n * 2)[:10])
+        and str(v.get("criado_em") or "")[:10] < inicio[:10]
+    )
+    vend_antes = sum(
+        1 for o in orders
+        if (str(o.get("criado_em") or o.get("data") or "")[:10] >= _iso_days_ago(dias_n * 2)[:10])
+        and str(o.get("criado_em") or o.get("data") or "")[:10] < inicio[:10]
+    )
+
+    def delta(atual, anterior):
+        if anterior <= 0:
+            return 0 if atual == 0 else 100
+        return round((atual - anterior) / anterior * 100)
+
+    vis_hoje_ontem = delta(visitas_hoje, max(0, len(top_paginas)))
+    cards_seg = 0
+
+    kpis = (
+        "<div class='cards'>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Visitas {dias_n}d</span>"
+        f"<span class='k-ico'>{_icon('chart')}</span></div><div class='k-num'>{visitas_periodo}</div>"
+        "<div class='k-sub'>Hoje: " + str(visitas_hoje) + "</div></div>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Pedidos {dias_n}d</span>"
+        f"<span class='k-ico'>{_icon('dollar')}</span></div><div class='k-num'>{vendas_periodo}</div>"
+        f"<div class='k-sub'>Total: {vendas_total}</div></div>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Faturamento {dias_n}d</span>"
+        f"<span class='k-ico'>{_icon('wallet')}</span></div><div class='k-num'>{_fmt_brl(fat_periodo)}</div>"
+        f"<div class='k-sub'>Acumulado: {_fmt_brl(fat)}</div></div>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Conversão</span>"
+        f"<span class='k-ico'>{_icon('swap')}</span></div><div class='k-num'>{conversao:.1f}%</div>"
+        "<div class='k-sub'>Pedidos por visita</div></div>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Usuários</span>"
+        f"<span class='k-ico'>{_icon('users')}</span></div><div class='k-num'>{usr_total}</div>"
+        f"<div class='k-sub'>Novos: {usr_novos}</div></div>"
+        "</div>"
+    )
+
+    comparar = (
+        "<section><h2>Comparação de períodos</h2><table>"
+        "<tr><th>Métrica</th><th>" + str(dias_n) + " dias</th><th>Período anterior</th><th>Variação</th></tr>"
+        f"<tr><td>Visitas</td><td>{visitas_periodo}</td><td>{vis_antes}</td><td>{'+' if delta(visitas_periodo, vis_antes) >= 0 else ''}{delta(visitas_periodo, vis_antes)}%</td></tr>"
+        f"<tr><td>Pedidos</td><td>{vendas_periodo}</td><td>{vend_antes}</td><td>{'+' if delta(vendas_periodo, vend_antes) >= 0 else ''}{delta(vendas_periodo, vend_antes)}%</td></tr>"
+        f"<tr><td>Faturamento</td><td>{_fmt_brl(fat_periodo)}</td><td>{_fmt_brl(fat_antes)}</td><td>{'+' if delta(fat_periodo, fat_antes) >= 0 else ''}{delta(fat_periodo, fat_antes)}%</td></tr>"
+        "</table></section>"
+    )
+
+    period_btns = "".join(
+        f"<a class='btn {('active' if per == p else '')}' href='/admin/analytics?per={p}'>"
+        f"{p} dias</a>"
+        for p in ("7", "14", "30")
+    )
+
+    body = (
+        kpis
+        + comparar
+        + "<section><div class='chart-head'><h2>Tráfego e vendas — diário</h2>"
+        + "<div class='period-switch'>" + period_btns + "</div></div>"
+        + f"<div class='barchart'>{colunas}</div>"
+        + "<p style='color:#64748b;font-size:.82rem;margin-top:.5rem'>"
+        "Barras: visitas (azul) e pedidos (verde). Passe o mouse para detalhes.</p></section>"
+        + "<div class='charts'>"
+        + "<section><h2>Páginas de produto mais acessadas</h2>"
+        + "<table><tr><th>Página</th><th>Acessos</th></tr>" + top_rows + "</table></section>"
+        + "<section><h2>Serviços/produtos mais vendidos</h2>"
+        + "<table><tr><th>Produto</th><th>Qtd</th><th>Receita</th></tr>" + serv_rows + "</table></section>"
+        + "</div>"
+        + "<div class='charts'>"
+        + "<section><h2>Origem dos visitantes</h2>"
+        + "<table><tr><th>Origem</th><th>Visitas</th><th>%</th></tr>" + origem_rows + "</table></section>"
+        + "<section><h2>Resumo</h2><table><tr><th>Métrica</th><th>Valor</th></tr>"
+        f"<tr><td>Visitas totais</td><td>{total_visitas}</td></tr>"
+        f"<tr><td>Pedidos totais</td><td>{vendas_total}</td></tr>"
+        f"<tr><td>Faturamento total</td><td>{_fmt_brl(fat)}</td></tr>"
+        f"<tr><td>Pedidos pagos</td><td>{pagos}</td></tr>"
+        "</table></section></div>"
+    )
+
+    return _admin_page(user, "Analytics", body, "analytics")
 
 
 @bp.route("/admin/pedidos", methods=["GET"])
