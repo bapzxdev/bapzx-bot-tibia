@@ -1,4 +1,4 @@
-# Memória de Pendências
+﻿# Memória de Pendências
 
 Lista única de pendências, observações e bloqueios do projeto BAPZX / RUBINI COINS.
 Atualizar sempre que algo mudar de estado.
@@ -57,7 +57,7 @@ Atualizar sempre que algo mudar de estado.
       `/api/servicos` agora retornam lista vazia (200) em conexão/timeout/5xx
       do Supabase em vez de 500; 401/403/PGRST30x continuam subindo.
 - [x] **Aplicar `supabase_migracao_v118.sql` (v2.0.0) — FEITO pelo dono.**
-      Tabelas `users` e `grupos` no ar (o `/api/grupos` retorna vazio porque
+os 4 links ainda estão vazios - preencher no `/admin/grupos` (agora com botão/form "Adicionar grupo" desde v2.7.2, CRUD completo testado).
       os 4 links ainda estão vazios — preencher no `/admin/grupos`).
 - [ ] **Publicar o app Google (OAuth)** — console.cloud.google.com/auth →
       Settings → Branding → Publishing status → **Publish app**.
@@ -174,3 +174,9 @@ Atualizar sempre que algo mudar de estado.
       https://bapzxdev.github.io/bapzx-portfolio/) — FEITO.
 - [x] Auditoria de segurança v1.11.2 (XSS `/dashboard`, referer exato,
       sessão 7 dias + headers, secret do webhook) — FEITA.
+## LOG v2.7.2 (17/09/2026) - B?tn/form Adicionar Grupo
+- GET /admin/grupos agora tem se?o `Adicionar grupo` (nome/link/ativo + ordem autom?tica) acima da tabela.
+- Nova rota POST /admin/grupos/novo (perm gerenciar_grupos + CSRF + audit grupo_criar).
+- Su?te Services+Seguran?a+Grupos: TODOS PASSARAM (test_services_seguranca.py, 230 linhas).
+- painel.py/bot.py VERSION bump 2.7.1 -> 2.7.2; py_compile OK; commit+push (raz?o: 2).
+
