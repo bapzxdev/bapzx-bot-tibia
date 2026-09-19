@@ -210,3 +210,14 @@ os 4 links ainda estão vazios - preencher no `/admin/grupos` (agora com botão/
 - Validado: py_compile OK; test client com mocks: KPI "1000 Coins", linha COINS
   "500 Coins", PIX "R$ 100,00", horas "3" (n?o 3.0) e "2.5" preservado.
 
+## LOG v2.7.7 (19/09/2026) - Dashboard: remover "Ultimas a??es do admin" (duplicada)
+- Pedido do dono: a se??o "Ultimas a??es do admin" no topo do dashboard principal
+  duplicava a p?gina de Auditoria (/admin/audit, v2.5.0: busca, filtros, pagina??o
+  e exportar CSV). Confirmado que a auditoria completa j? existe na p?gina pr?pria.
+- Fix (painel.py admin_index): removidos o bloco `audit = _fetch("audit_log"...)` /
+  `audit_rows` e a se??o `<h2>Ultimas a??es do admin</h2>` do dashboard. O restante
+  (KPIs, gr?fico 14 dias, p?ginas mais visitadas, ultimos pedidos) inalterado.
+- VERSION painel.py 2.7.6 -> 2.7.7 (bot.py 2.7.3 inalterado).
+- Validado: py_compile OK; test client /admin 200 sem a se??o na p?gina e com
+  "Ultimos pedidos" preservado; grep audit_rows/sess?o ausentes.
+

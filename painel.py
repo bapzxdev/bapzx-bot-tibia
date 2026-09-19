@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.6"
+VERSION = "2.7.7"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -1108,15 +1108,6 @@ def admin_dashboard():
         for pagina, count in top
     ) or "<tr><td colspan='2' style='color:#64748b;text-align:center'>Sem visitas ainda</td></tr>"
 
-    audit = _fetch("audit_log", order="criado_em.desc", range_="0-9")
-    audit_rows = "".join(
-        f"<tr><td>{html.escape(str(a.get('criado_em') or '-'))}</td>"
-        f"<td>{html.escape(str(a.get('email') or '-'))}</td>"
-        f"<td>{html.escape(str(a.get('acao') or '-'))}</td>"
-        f"<td>{html.escape(str(a.get('detalhes') or '-'))}</td></tr>"
-        for a in audit
-    ) or "<tr><td colspan='4' style='color:#64748b;text-align:center'>Sem auditoria ainda</td></tr>"
-
     # grafico de pedidos por dia (14 dias)
     dias = []
     base = datetime.now().date()
@@ -1186,13 +1177,6 @@ def admin_dashboard():
     )
 
     body = sub + kpis + f"<div class='charts'>{chart}{pages}</div>"
-    if rbac.tem_perm(user["role"], user["perms"], "ver_audit"):
-        body += (
-            "<section><h2>Últimas ações do admin</h2><table>"
-            "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th></tr>"
-            + audit_rows
-            + "</table></section>"
-        )
     pode_marcar = rbac.tem_qualquer_perm(user["role"], user["perms"], "marcar_pagamento", "marcar_entrega")
     body += (
         "<section><h2>Últimos pedidos</h2><table>"
