@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.7"
+VERSION = "2.7.8"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -1338,7 +1338,7 @@ def admin_analytics():
             )
 
     serv_rows = "".join(
-        f"<tr><td>{html.escape(nome)}</td><td>{qtd}</td><td>{_fmt_brl(total)}</td></tr>"
+        f"<tr><td>{html.escape(nome)}</td><td>{d['qtd']}</td><td>{_fmt_brl(d['total'])}</td></tr>"
         for nome, d in top_servicos
     ) or "<tr><td colspan='3' style='color:#64748b;text-align:center'>Sem vendas no período</td></tr>"
 

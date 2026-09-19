@@ -1,6 +1,35 @@
-﻿# Memória de Pendências
+﻿## LOG v2.7.8 (19/09/2026) - Analytics: corrigido NameError na tabela "Serviços mais vendidos"
+- Erro real-reportado no dashboard Analytics (`/admin/analytics`): quando havia
+  serviços no período (`top_servicos` não-vazio), o generator de `serv_rows`
+  (painel.py ~1341) referenciada `qtd` e `total` (variáveis inexistentes) em vez
+  de `d['qtd']` / `d['total']` → `NameError: name 'qtd' is not defined` → HTTP 500.
+  Só disparava com dados; com mocks de painel vazios passava (o fallback
+  `or "<tr>...Sem vendas..."` nunca avaliava o generator).
+- Fix (painel.py, admin_analytics): generator agora usa `d['qtd']` (qtd vendida)
+  e `_fmt_brl(d['total'])` (receita) por serviço.
+- VERSION painel.py **2.7.8**.
+- Validado: py_compile OK; repro com dados realistas (3 visitas + 2 pedidos +
+  1 profile + 2 serviços concluidos/pago) → `/admin/analytics?per=7/14/30`
+  todas 200, sem traceback; "Venda 100/250 coins" renderizam.
+
+# Memória de Pendências
 
 Lista única de pendências, observações e bloqueios do projeto BAPZX / RUBINI COINS.
+
+## LOG v2.7.8 (19/09/2026) - Analytics: corrigido NameError na tabela "Serviços mais vendidos"
+- Erro real-reportado no dashboard Analytics (`/admin/analytics`, v2.7.7): quando
+  havia serviços no período (top_servicos não-vazio), o generator `serv_rows`
+  referenciava `qtd`/`total` (variáveis inexistentes) em vez de `d['qtd']`/`d['total']`
+  → `NameError: name 'qtd' is not defined` → HTTP 500 sênio se apresenta no roteiro.
+- Fix (painel.py, admin_analytics): linha do generator `serv_rows` agora usa
+  `d['qtd']` (quantidade) e `_fmt_brl(d['total'])`.
+- VERSION painel.py **2.7.8**.
+- Validado: py_compile OK; test client com dados realistas (3 visitas + 2 pedidos
+  pago + 1 profile + 2 serviços concluidos/pago) → `/admin/analytics?per=7/14/30`
+  todas 200 sem traceback; "Venda 100 coins"/"Venda 250 coins" renderizam.
+- Observação: quando top_servicos vazio o fallback `or "<tr>...Sem vendas..."`
+  (que não toca qtd/total) mascarava o bug em testes de mocks vazios.
+
 Atualizar sempre que algo mudar de estado.
 
 ## Bloqueios que dependem do dono (1 clique quando quiser)
