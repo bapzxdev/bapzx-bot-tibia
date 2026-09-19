@@ -180,3 +180,17 @@ os 4 links ainda estão vazios - preencher no `/admin/grupos` (agora com botão/
 - Su?te Services+Seguran?a+Grupos: TODOS PASSARAM (test_services_seguranca.py, 230 linhas).
 - painel.py/bot.py VERSION bump 2.7.1 -> 2.7.2; py_compile OK; commit+push (raz?o: 2).
 
+## LOG v2.7.4 (19/09/2026) - Service form fix (pedido do dono no check-in)
+- Bug: horas com v?rgula (ex.: 2,5) viravam 0 ao salvar/editar o servi?o. Causa real:
+  `float("2,5")` nos POSTs novo/editar dava ValueError e o `except` zerava horas (e
+  valor_hora/desconto). O HTML tipo=number pode enviar a v?rgula conforme o locale.
+- Fix: helper `_sv_num(val)` em painel.py (utils do Service) — aceita "2,5", "2.5" e
+  formato BR "1.500,50"; usado nos 2 POSTs p/ valor_hora, horas e desconto.
+  Fluxo: 2,5 -> _sv_num -> 2.5 -> salvo numeric 2.5 -> editar mostra value=2.5 (n?o 0).
+- Removida a l?gica `svRecalc` e suas chamadas dos 2 forms (novo + editar). Mantida e
+  elevada `svCoinToggle` a fun??o independente (antes aninhada em svRecalc no form novo;
+  no editar era svfpToggle). forma_pagamento, qtd_coins_row/campo COINS inalterados.
+- VERSION painel.py 2.7.3 -> 2.7.4 (bot.py permanece 2.7.3 — sem mudan?a funcional).
+- Validado: py_compile OK; _sv_num('2,5')=2.5, _sv_num('2.5')=2.5, 20x2,5-0=50.0;
+  grep svRecalc = 0 ocorr?ncias; svCoinToggle presente nos 2 forms.
+

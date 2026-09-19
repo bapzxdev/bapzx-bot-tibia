@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.3"
+VERSION = "2.7.4"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -3455,26 +3455,24 @@ def admin_services():
             "<div><label>Desconto (R$)</label><input name='desconto' type='number' step='0.01' min='0' value='0'></div>"
             "</div>"
             "<div class='box'>"
-            "<div><label>Forma de pagamento</label><select name='forma_pagamento'>"
+            "<div><label>Forma de pagamento</label><select name='forma_pagamento' id='fp_sel'>"
             "<option value='pix'>Pix</option><option value='coins'>Coins</option></select></div>"
-            "<div><label>Valor cobrado (calculado)</label>"
-            "<span id='sv_total' style='font-weight:700;font-size:18px'>R$ 0,00</span></div>"
+            "<div id='qtd_coins_row' style='display:none'><label>Quantidade de COINS</label>"
+            "<input name='qtd_coins' type='number' min='0' step='1' placeholder='Ex.: 50'></div>"
             "</div>"
             "<label>Observação</label><textarea name='observacao' rows='2' placeholder='Detalhes do que foi feito...'></textarea>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Lançar serviço</button></p>"
             "</form>"
             "<script>"
-            "function svRecalc(){"
-            "var v=parseFloat(document.querySelector('[name=valor_hora]').value)||0;"
-            "var h=parseFloat(document.querySelector('[name=horas]').value)||0;"
-            "var d=parseFloat(document.querySelector('[name=desconto]').value)||0;"
-            "var t=Math.max(0,v*h-d);"
-            "var el=document.getElementById('sv_total');"
-            "if(el)el.textContent='R$ '+t.toFixed(2).replace('.',',');"
+            "function svCoinToggle(){"
+            "var sel=document.getElementById('fp_sel');"
+            "var row=document.getElementById('qtd_coins_row');"
+            "if(!sel||!row)return;"
+            "row.style.display=(sel.value==='coins')?'':'none';"
             "}"
-            "var asd=document.querySelectorAll('[name=valor_hora],[name=horas],[name=desconto]');"
-            "for(var i=0;i<asd.length;i++)asd[i].addEventListener('input',svRecalc);"
-            "svRecalc();"
+            "var fpEl=document.getElementById('fp_sel');"
+            "if(fpEl)fpEl.addEventListener('change',svCoinToggle);"
+            "svCoinToggle();"
             "</script></section>"
         )
         body += form
@@ -3517,6 +3515,46 @@ def admin_services():
     return _admin_page(user, "Service", body, "services")
 
 
+def _sv_num(val):
+    if val is None:
+        return 0.0
+    s = str(val).strip()
+    if s in ("", "0"):
+        return 0.0
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _sv_qtd_prefix():
+    f = (request.form.get("forma_pagamento") or "").strip()[:10]
+    if f != "coins":
+        return ""
+    try:
+        n = int(float((request.form.get("qtd_coins") or 0) or 0))
+    except (TypeError, ValueError):
+        n = 0
+    return f"QTD COINS: {n} | " if n > 0 else ""
+
+
+def _sv_qtd_from_obs(obs):
+    o = str(obs or "")
+    low = o.strip().upper()
+    if low.startswith("QTD COINS:"):
+        rest = o.strip()[len("QTD COINS:"):].lstrip()
+        if "|" in rest:
+            num, resto = rest.split("|", 1)
+            try:
+                q = int(float(num.strip()))
+            except (TypeError, ValueError):
+                q = 0
+            return (q, resto.strip())
+    return (None, o)
+
+
 @bp.route("/admin/services/novo", methods=["POST"])
 def admin_service_novo():
     user = _require_perm("gerenciar_servicos_manuais")
@@ -3524,12 +3562,9 @@ def admin_service_novo():
         return "Acesso restrito.", 403
     if not _csrf_ok():
         return "Requisição inválida (CSRF).", 403
-    try:
-        valor_hora = float(request.form.get("valor_hora") or 0)
-        horas = float(request.form.get("horas") or 0)
-        desconto = float(request.form.get("desconto") or 0)
-    except (TypeError, ValueError):
-        valor_hora, horas, desconto = 0.0, 0.0, 0.0
+    valor_hora = _sv_num(request.form.get("valor_hora"))
+    horas = _sv_num(request.form.get("horas"))
+    desconto = _sv_num(request.form.get("desconto"))
     valor = max(0.0, round(valor_hora * horas - desconto, 2))
     payload = {
         "email": user["email"],
@@ -3543,7 +3578,7 @@ def admin_service_novo():
         "desconto": desconto,
         "forma_pagamento": (request.form.get("forma_pagamento") or "pix")[:10],
         "horas": horas,
-        "observacao": (request.form.get("observacao") or "").strip()[:500],
+        "observacao": (_sv_qtd_prefix() + (request.form.get("observacao") or "").strip())[:500],
         "status": "pendente",
     }
     try:
@@ -3573,12 +3608,9 @@ def admin_service_detalhe(sid):
     if request.method == "POST":
         if not _csrf_ok():
             return "Requisição inválida (CSRF).", 403
-        try:
-            valor_hora = float(request.form.get("valor_hora") or 0)
-            horas = float(request.form.get("horas") or 0)
-            desconto = float(request.form.get("desconto") or 0)
-        except (TypeError, ValueError):
-            valor_hora, horas, desconto = 0.0, 0.0, 0.0
+        valor_hora = _sv_num(request.form.get("valor_hora"))
+        horas = _sv_num(request.form.get("horas"))
+        desconto = _sv_num(request.form.get("desconto"))
         valor = max(0.0, round(valor_hora * horas - desconto, 2))
         payload = {
             "data": (request.form.get("data") or "")[:10],
@@ -3591,7 +3623,7 @@ def admin_service_detalhe(sid):
             "desconto": desconto,
             "forma_pagamento": (request.form.get("forma_pagamento") or "pix")[:10],
             "horas": horas,
-            "observacao": (request.form.get("observacao") or "").strip()[:500],
+        "observacao": (_sv_qtd_prefix() + _sv_qtd_from_obs((request.form.get("observacao") or "").strip())[1])[:500],
             "atualizado_em": datetime.utcnow().isoformat(),
         }
         try:
@@ -3625,9 +3657,11 @@ def admin_service_detalhe(sid):
         f"<div><label>Desconto (R$)</label><input name='desconto' type='number' step='0.01' min='0' value='{html.escape(str(s.get('desconto') or 0))}'></div>"
         "</div>"
         "<div class='box'>"
-        "<div><label>Forma de pagamento</label><select name='forma_pagamento'>"
+        "<div><label>Forma de pagamento</label><select name='forma_pagamento' id='fp_sel'>"
         f"<option value='pix' {'selected' if (s.get('forma_pagamento') or 'pix') == 'pix' else ''}>Pix</option>"
         f"<option value='coins' {'selected' if (s.get('forma_pagamento') or '') == 'coins' else ''}>Coins</option></select></div>"
+        f"<div id='qtd_coins_row' style='display:none'><label>Quantidade de COINS</label>"
+        f"<input name='qtd_coins' type='number' min='0' step='1' value='{html.escape(str(_sv_qtd_from_obs(s.get('observacao'))[0] or 0))}'></div>"
         f"<div><label>Valor cobrado (calculado)</label><span id='sv_total' style='font-weight:700;font-size:18px'>{_fmt_brl(_parse_brl(s.get('valor')))}</span></div>"
         "</div>"
         f"<label>Observação</label><textarea name='observacao' rows='2'>{html.escape(str(s.get('observacao') or ''))}</textarea>"
@@ -3635,17 +3669,15 @@ def admin_service_detalhe(sid):
         "<a class='btn ghost' href='/admin/services'>Voltar</a></p>"
         "</form>"
         "<script>"
-        "function svRecalc(){"
-        "var v=parseFloat(document.querySelector('[name=valor_hora]').value)||0;"
-        "var h=parseFloat(document.querySelector('[name=horas]').value)||0;"
-        "var d=parseFloat(document.querySelector('[name=desconto]').value)||0;"
-        "var t=Math.max(0,v*h-d);"
-        "var el=document.getElementById('sv_total');"
-        "if(el)el.textContent='R$ '+t.toFixed(2).replace('.',',');"
+        "function svCoinToggle(){"
+        "var sel=document.getElementById('fp_sel');"
+        "var row=document.getElementById('qtd_coins_row');"
+        "if(!sel||!row)return;"
+        "row.style.display=(sel.value==='coins')?'':'none';"
         "}"
-        "var asd=document.querySelectorAll('[name=valor_hora],[name=horas],[name=desconto]');"
-        "for(var i=0;i<asd.length;i++)asd[i].addEventListener('input',svRecalc);"
-        "svRecalc();"
+        "var fpel=document.getElementById('fp_sel');"
+        "if(fpel)fpel.addEventListener('change',svCoinToggle);"
+        "svCoinToggle();"
         "</script></section>"
     )
     status_badge = "<span class='status pago'>concluido</span>" if status == "concluido" else "<span class='status pendente'>pendente</span>"
