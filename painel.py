@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.4"
+VERSION = "2.7.6"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -3413,14 +3413,15 @@ def admin_services():
     pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_servicos_manuais")
     total = len(servicos)
     concluidos = sum(1 for s in servicos if (s.get("status") or "") == "concluido")
-    soma = {"pix": 0.0, "coins": 0.0}
+    soma = {"pix": 0.0, "coins": 0}
     horas = 0.0
     for s in servicos:
         forma = (s.get("forma_pagamento") or "pix").lower()
         if forma == "pix":
             soma["pix"] += _parse_brl(s.get("valor"))
         else:
-            soma["coins"] += _parse_brl(s.get("valor"))
+            qtd, _ = _sv_qtd_from_obs(s.get("observacao"))
+            soma["coins"] += (qtd or 0)
         try:
             horas += float(s.get("horas") or 0)
         except (TypeError, ValueError):
@@ -3430,7 +3431,7 @@ def admin_services():
         f"<div class='card'><div class='num'>{total}</div><div class='lbl'>Serviços</div></div>"
         f"<div class='card'><div class='num'>{concluidos}</div><div class='lbl'>Concluídos</div></div>"
         f"<div class='card'><div class='num'>R$ {_fmt_brl(soma['pix'])}</div><div class='lbl'>Total Pix</div></div>"
-        f"<div class='card'><div class='num'>{_fmt_brl(soma['coins'])}</div><div class='lbl'>Total Coins</div></div>"
+        f"<div class='card'><div class='num'>{soma['coins']:g} Coins</div><div class='lbl'>Total Coins</div></div>"
         f"<div class='card'><div class='num'>{horas:g}h</div><div class='lbl'>Horas</div></div>"
         "</div>"
     )
@@ -3480,6 +3481,9 @@ def admin_services():
     for s in servicos:
         sid = html.escape(str(s.get("id") or ""))
         status = "concluido" if (s.get("status") or "") == "concluido" else "pendente"
+        qtd_coins, _ = _sv_qtd_from_obs(s.get("observacao"))
+        forma = (s.get("forma_pagamento") or "pix").lower()
+        val_cell = (f"{qtd_coins or 0} Coins" if forma == "coins" else _fmt_brl(_parse_brl(s.get("valor"))))
         acoes = ""
         if pode_gerenciar:
             acoes = (
@@ -3498,9 +3502,9 @@ def admin_services():
             f"<td>{html.escape(str(s.get('servico') or ''))}</td>"
             f"<td>{html.escape(str(s.get('nome_cliente') or '-'))}</td>"
             f"<td>{html.escape(str(s.get('whatsapp') or '-'))}</td>"
-            f"<td>{_fmt_brl(_parse_brl(s.get('valor')))}</td>"
+            f"<td>{val_cell}</td>"
             f"<td>{html.escape(str((s.get('forma_pagamento') or 'pix').upper()))}</td>"
-            f"<td>{html.escape(str(s.get('horas') or 0))}</td>"
+            f"<td>{html.escape(_sv_fmt_hrs(s.get('horas')))}</td>"
             f"<td><span class='status {status}'>{status}</span></td>"
             f"<td style='text-align:right;white-space:nowrap'>{acoes}</td>"
             "</tr>"
@@ -3538,6 +3542,14 @@ def _sv_qtd_prefix():
     except (TypeError, ValueError):
         n = 0
     return f"QTD COINS: {n} | " if n > 0 else ""
+
+
+def _sv_fmt_hrs(val):
+    try:
+        h = float(val or 0)
+        return f"{h:g}"
+    except (TypeError, ValueError):
+        return "0"
 
 
 def _sv_qtd_from_obs(obs):
@@ -3653,7 +3665,7 @@ def admin_service_detalhe(sid):
         "</div>"
         "<div class='box'>"
         f"<div><label>Valor por hora (R$)</label><input name='valor_hora' type='number' step='0.01' min='0' value='{html.escape(str(s.get('valor_hora') or 20))}' required></div>"
-        "<div><label>Horas</label><input name='horas' type='number' step='0.5' min='0' value='{html.escape(str(s.get('horas') or 0))}'></div>"
+        "<div><label>Horas</label><input name='horas' type='number' step='0.5' min='0' value='{html.escape(_sv_fmt_hrs(s.get('horas')))}'></div>"
         f"<div><label>Desconto (R$)</label><input name='desconto' type='number' step='0.01' min='0' value='{html.escape(str(s.get('desconto') or 0))}'></div>"
         "</div>"
         "<div class='box'>"

@@ -194,3 +194,19 @@ os 4 links ainda estão vazios - preencher no `/admin/grupos` (agora com botão/
 - Validado: py_compile OK; _sv_num('2,5')=2.5, _sv_num('2.5')=2.5, 20x2,5-0=50.0;
   grep svRecalc = 0 ocorr?ncias; svCoinToggle presente nos 2 forms.
 
+## LOG v2.7.6 (19/09/2026) - Service: Total Coins em COINS + horas sem ponto (pedido do dono)
+- Bug 1: KPI "Total Coins" e a coluna Valor mostravam R$ (somavam o campo `valor`
+  que é calculado em R$); serviços COINS exibiam "R$ 0,00". A quantidade digitada
+  em `qtd_coins` já era gravada na observa??o via prefixo "QTD COINS: N |".
+- Fix 1 (painel.py admin_services): KPI Total Coins agora soma o `qtd_coins`
+  extra?do da observa??o (`_sv_qtd_from_obs`) e exibe "1000 Coins" (e n?o R$);
+  a coluna Valor mostra "500 Coins" p/ servi?o COINS (ou "0 Coins" p/ registros
+  antigos sem prefixo) e "R$ ..." p/ PIX.
+- Bug 2: horas exibidas com ponto decimal (ex.: 3.0) na tabela e no form de
+  edi??o (str(float)).
+- Fix 2: helper `_sv_fmt_hrs()` (`:g` -> 3.0 vira 3, 2.5 continua 2.5) usado na
+  tabela e no input horas do form de edi??o; KPI Horas j? usava :g.
+- VERSION painel.py 2.7.5 -> 2.7.6 (bot.py 2.7.3 inalterado).
+- Validado: py_compile OK; test client com mocks: KPI "1000 Coins", linha COINS
+  "500 Coins", PIX "R$ 100,00", horas "3" (n?o 3.0) e "2.5" preservado.
+
