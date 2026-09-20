@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.8"
+VERSION = "2.7.9"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -1019,6 +1019,52 @@ def _admin_page(user, title, body, active=""):
     return _page(user, title, body, active)
 
 
+def _fmt_dt_amigavel(value):
+    """Converte ISO (UTC) -> dd/mm/aaaa · hh:mm no fuso do Brasil. Se der erro, devolve cru."""
+    from zoneinfo import ZoneInfo
+    from_zone = ZoneInfo("America/Sao_Paulo")
+    try:
+        txt = str(value or "").strip().replace("Z", "+00:00")
+        if not txt:
+            return "-"
+        dt = datetime.fromisoformat(txt)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+        return dt.astimezone(from_zone).strftime("%d/%m/%Y · %H:%M")
+    except Exception:
+        return str(value or "-")
+
+
+def _pedido_pagamento(order):
+    """Rótulo real de PAGAMENTO (independe do rótulo de entrega)."""
+    if (order.get("pix_confirmado_em") or order.get("pix_confirmado") or
+            str(order.get("status") or "") in ("pago", "entregue")):
+        return "pago"
+    return "pendente"
+
+
+def _pedido_entrega(order):
+    """Rótulo real de ENTREGA (independe do rótulo de pagamento)."""
+    if (order.get("entregue_em") or str(order.get("status") or "") == "entregue"):
+        return "entregue"
+    return "nao entregue"
+
+
+def _pedido_kpis(orders):
+    total = len(orders)
+    pagos = sum(1 for o in orders if _pedido_pagamento(o) == "pago")
+    pend = sum(1 for o in orders if _pedido_pagamento(o) == "pendente")
+    entregues = sum(1 for o in orders if _pedido_entrega(o) == "entregue")
+    return (
+        "<section class='kpis'>"
+        f"<div class='kpi'><div class='k-num'>{total}</div><div class='k-lbl'>Pedidos</div></div>"
+        f"<div class='kpi'><div class='k-num'>{pagos}</div><div class='k-lbl'>Pagos</div></div>"
+        f"<div class='kpi'><div class='k-num'>{pend}</div><div class='k-lbl'>Pendentes</div></div>"
+        f"<div class='kpi'><div class='k-num'>{entregues}</div><div class='k-lbl'>Entregues</div></div>"
+        "</section>"
+    )
+
+
 def _orders_rows(orders, with_actions=True, csrf=""):
     rows = ""
     for order in sorted(orders, key=lambda o: o.get("data") or "", reverse=True):
@@ -1051,6 +1097,73 @@ def _orders_rows(orders, with_actions=True, csrf=""):
         )
     if not rows:
         rows = "<tr><td colspan='9' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum pedido encontrado.</td></tr>"
+    return rows
+
+
+def _orders_rows_detalhado(orders, pode_marcar=False, csrf=""):
+    """Linhas da pagina de PEDIDOS com Pagamento x Entrega separados, data amigavel,
+    cliente nao identificado e acoes de detalhe em <dialog> nativo."""
+    rows = ""
+    for order in sorted(orders, key=lambda o: o.get("data") or "", reverse=True):
+        oid = str(order.get("id") or "")
+        pag = _pedido_pagamento(order)
+        ent = _pedido_entrega(order)
+        usuario = str(order.get("usuario") or "").strip()
+        cliente = usuario if usuario.isdigit() else (usuario or "-")
+        if usuario.isdigit() or not usuario:
+            cliente = "Cliente n\u00e3o identificado"
+        if not usuario:
+            cliente = "-"
+        mundo = str(order.get("mundo") or "-")
+        mundo = "Mundo " + mundo if not mundo.startswith("Mundo") else mundo
+        email = html.escape(str(order.get("email") or "-"))
+        detalhes = (
+            "<div class='dlg-content'>"
+            f"<p><b>Cliente</b>: {html.escape(cliente)}</p>"
+            f"<p><b>Char</b>: {html.escape(str(order.get('char') or '-'))}</p>"
+            f"<p><b>Qtd</b>: {html.escape(str(order.get('tc') or '-'))} RC</p>"
+            f"<p><b>Valor</b>: {html.escape(str(order.get('preco') or '-'))}</p>"
+            f"<p><b>Mundo</b>: {html.escape(mundo)}</p>"
+            f"<p><b>E-mail</b>: {email}</p>"
+            f"<p><b>Pagamento</b>: <span class='status {pag}'>{pag}</span></p>"
+            f"<p><b>Entrega</b>: <span class='status {ent}'>{ent}</span></p>"
+            "</div>"
+        )
+        acoes = ""
+        if pode_marcar:
+            for alvo, st, lbl in (("marcar_pagamento", "pago", "Marcar pago"),
+                                  ("marcar_entrega", "entregue", "Marcar entregue")):
+                acoes += (
+                    "<form method='post' action='/admin/marcar' style='display:inline'>"
+                    f"<input type='hidden' name='_csrf' value='{csrf}'>"
+                    f"<input type='hidden' name='order_id' value='{oid}'>"
+                    f"<input type='hidden' name='status' value='{st}'>"
+                    f"<button class='ghost'>{lbl}</button></form>"
+                )
+        fechar = "<button class='ghost' onclick=\"this.closest('dialog').close()\">Fechar</button>"
+        dlg_id = "dlg-" + oid
+        rows += (
+            "<tr>"
+            f"<td>{_fmt_dt_amigavel(order.get('data'))}</td>"
+            f"<td>{html.escape(cliente)}</td>"
+            f"<td>{html.escape(str(order.get('char') or '-'))}</td>"
+            f"<td>{html.escape(str(order.get('tc') or '-'))} RC</td>"
+            f"<td>{html.escape(str(order.get('preco') or '-'))}</td>"
+            f"<td>{html.escape(mundo)}</td>"
+            f"<td><span class='status {pag}'>{pag}</span></td>"
+            f"<td><span class='status {ent}'>{ent}</span></td>"
+            f"<td class='acts'>"
+            f"<button class='ghost' onclick=\"document.getElementById('{dlg_id}').showModal();return false;\">Ver detalhes</button>"
+            "</td></tr>"
+            f"<dialog id='{dlg_id}' class='dlg'>"
+            f"<h2>Pedido #{html.escape(oid)}</h2>{detalhes}"
+            "<div class='acts'>" + acoes + fechar + "</div>"
+            "</dialog>"
+        )
+    if not rows:
+        cols = 9
+        rows = ("<tr><td colspan='" + str(cols) + "' class='empty' "
+                "style='color:#64748b;padding:18px;text-align:center'>Nenhum pedido encontrado.</td></tr>")
     return rows
 # --------------------------------------------------------------------------
 # ROTAS DO PAINEL
@@ -1443,12 +1556,68 @@ def admin_pedidos():
         return redirect("/login")
     orders = _fetch("pedidos", order="data.asc")
     pode_marcar = rbac.tem_qualquer_perm(user["role"], user["perms"], "marcar_pagamento", "marcar_entrega")
-    body = f"<div class='cards'><div class='card'><div class='num'>{len(orders)}</div><div class='lbl'>Pedidos</div></div></div>"
+    body = _pedido_kpis(orders)
+
+    args = request.args
+    busca = (args.get("busca") or "").strip().lower()
+    f_pag = args.get("pag") or "todos"
+    f_ent = args.get("ent") or "todos"
+    f_de = args.get("de") or ""
+    f_ate = args.get("ate") or ""
+    f_mundo = (args.get("mundo") or "").strip().lower()
+    if not pode_marcar:
+        filtros = ""
+    else:
+        todos_mundos = sorted({str(o.get("mundo") or "") for o in orders if o.get("mundo")})
+        opts_mundo = "".join(
+            f"<option value='{html.escape(m)}' {'selected' if m.lower()==f_mundo else ''}>{html.escape(m)}</option>"
+            for m in todos_mundos
+        )
+        sel_pag = {
+            "pago": "<option value='pago' selected>Pago</option><option value='pendente'>Pendente</option>",
+            "pendente": "<option value='pago'>Pago</option><option value='pendente' selected>Pendente</option>",
+        }.get(f_pag, "<option value='pago'>Pago</option><option value='pendente'>Pendente</option>")
+        sel_ent = {
+            "entregue": "<option value='entregue' selected>Entregue</option><option value='nao entregue'>Nao entregue</option>",
+            "nao entregue": "<option value='entregue'>Entregue</option><option value='nao entregue' selected>Nao entregue</option>",
+        }.get(f_ent, "<option value='entregue'>Entregue</option><option value='nao entregue'>Nao entregue</option>")
+        filtros = (
+            "<section class='filtros'><form method='get'>"
+            f"<input type='search' name='busca' placeholder='Buscar cliente, char ou e-mail...' value='{html.escape(busca)}'>"
+            "<select name='pag'><option value='todos'>Pagamento: todos</option>" + sel_pag + "</select>"
+            "<select name='ent'><option value='todos'>Entrega: todos</option>" + sel_ent + "</select>"
+            f"<input type='date' name='de' value='{html.escape(f_de)}' title='De'>"
+            f"<input type='date' name='ate' value='{html.escape(f_ate)}' title='Ate'>"
+            "<select name='mundo'><option value=''>Mundo: todos</option>" + opts_mundo + "</select>"
+            "<button class='ghost'>Filtrar</button></form></section>"
+        )
+
+    filtrados = []
+    for o in orders:
+        data_o = str(o.get("data") or "")[:10]
+        if f_de and data_o < f_de:
+            continue
+        if f_ate and data_o > f_ate:
+            continue
+        if f_pag != "todos" and _pedido_pagamento(o) != f_pag:
+            continue
+        if f_ent != "todos" and _pedido_entrega(o) != f_ent:
+            continue
+        if f_mundo and str(o.get("mundo") or "").lower() != f_mundo:
+            continue
+        if busca:
+            texto = " ".join(str(o.get(k) or "") for k in ("usuario", "char", "email", "mundo"))
+            if busca not in texto.lower():
+                continue
+        filtrados.append(o)
+
+    body += filtros
     body += (
         "<section><h2>Todos os pedidos</h2><table>"
         "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
-        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
-        + _orders_rows(orders, with_actions=pode_marcar, csrf=_csrf_token())
+        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Pagamento</th>"
+        "<th>Entrega</th><th>A\u00e7\u00f5es</th></tr>"
+        + _orders_rows_detalhado(filtrados, pode_marcar=pode_marcar, csrf=_csrf_token())
         + "</table></section>"
     )
     return _admin_page(user, "Pedidos", body, "pedidos")
