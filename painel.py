@@ -1190,6 +1190,7 @@ def _orders_rows_detalhado(orders, pode_marcar=False, csrf=""):
             f"<td>{html.escape(str(order.get('tc') or '-'))} RC</td>"
             f"<td>{html.escape(str(order.get('preco') or '-'))}</td>"
             f"<td>{html.escape(mundo)}</td>"
+            f"<td>{email}</td>"
             f"<td><span class='status {pag}'>{pag}</span></td>"
             f"<td><span class='status {ent}'>{ent}</span></td>"
             f"<td class='acts'>"
