@@ -9,6 +9,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 import requests
 from flask import Flask, request, redirect, session
@@ -2033,7 +2034,7 @@ def set_webhook(url):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     if len(sys.argv) > 1 and sys.argv[1] == "--set-webhook":
-        set_webhook(sys.argv[2] if len(sys.argv) > 2 else f"http://localhost:{port}/webhook")
+        set_webhook(sys.argv[2] if len(sys.argv) > 2 else f"{RENDER_URL}/webhook")
     else:
         import threading
 

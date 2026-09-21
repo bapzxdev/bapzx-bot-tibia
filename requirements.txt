@@ -3,3 +3,4 @@ requests
 google-genai
 authlib
 reportlab
+tzdata

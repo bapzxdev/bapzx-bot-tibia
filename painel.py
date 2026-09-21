@@ -816,6 +816,42 @@ tbody tr:hover { background:rgba(52,211,153,.04); }
 .btn { display:inline-block; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; text-decoration:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; border:0; cursor:pointer; }
 .btn:hover { filter:brightness(1.12); }
 .btn.ghost { background:transparent; border:1px solid #1e2c40; color:#e2e8f0; }
+dialog.dlg { width:min(460px,92vw); max-height:86vh; overflow:auto; background:#ffffff; color:#1f2937; border:0; border-radius:18px; padding:0; box-shadow:0 24px 60px -20px rgba(2,6,23,.45), 0 2px 8px rgba(2,6,23,.18); font-size:14px; box-sizing:border-box; }
+dialog.dlg::backdrop { background:rgba(2,6,23,.58); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+.dlg-head { display:flex; flex-direction:column; gap:3px; padding:20px 24px 14px; border-bottom:1px solid #eef2f7; }
+.dlg-kicker { font-size:10px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase; color:#7c8aa5; }
+.dlg-head h2 { margin:0; font-size:19px; font-weight:800; letter-spacing:-.2px; color:#0f172a; }
+.dlg-body { padding:16px 24px; }
+.dlg-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; margin-bottom:0; }
+.dlg-field { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.dlg-field .lbl { font-size:11px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#7c8aa5; }
+.dlg-field .val { font-size:14px; font-weight:600; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dlg-field .val.strong { color:#0f172a; font-weight:800; font-size:15px; }
+.dlg-field.full { grid-column:1 / -1; }
+.dlg-status { display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; margin-top:16px; padding-top:14px; border-top:1px solid #eef2f7; }
+.dlg-status .dlg-item { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+.dlg-status .lbl { font-size:12px; color:#64748b; }
+.dlg .status { padding:3px 11px; border-radius:999px; font-size:11px; font-weight:700; }
+.dlg .status.pago { background:#ecfdf5; color:#059669; }
+.dlg .status.pendente { background:#fffbeb; color:#b45309; }
+.dlg .status.entregue { background:#eff6ff; color:#2563eb; }
+.dlg .status.cancelado { background:#fef2f2; color:#dc2626; }
+.dlg .acts { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; padding:14px 24px 18px; border-top:1px solid #eef2f7; background:#f8fafc; border-radius:0 0 18px 18px; }
+.dlg .acts form { margin:0; }
+.dlg .acts button { height:38px; min-width:120px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 16px; border-radius:10px; border:0; font-size:13px; font-weight:700; cursor:pointer; transition:filter .15s ease, transform .1s ease, background .15s ease, border-color .15s ease, color .15s ease; }
+.dlg .acts button.pago { background:#10b981; color:#fff; box-shadow:0 2px 6px rgba(16,185,129,.35); }
+.dlg .acts button.pago:hover { filter:brightness(1.08); }
+.dlg .acts button.entregue { background:#3b82f6; color:#fff; box-shadow:0 2px 6px rgba(59,130,246,.35); }
+.dlg .acts button.entregue:hover { filter:brightness(1.08); }
+.dlg .acts button.ghost { background:transparent; border:1px solid #e2e8f0; color:#64748b; box-shadow:none; }
+.dlg .acts button.ghost:hover { background:#f1f5f9; border-color:#cbd5e1; color:#0f172a; }
+.dlg .acts button:active { transform:translateY(1px); }
+@media (max-width:520px) {
+  .dlg-grid { grid-template-columns:1fr; }
+  .dlg-status { grid-template-columns:1fr; }
+  .dlg .acts { justify-content:stretch; }
+  .dlg .acts form, .dlg .acts button { flex:1 1 auto; }
+}
 input, textarea, select { background:#0b1120; border:1px solid #2a3a52; color:#e2e8f0; border-radius:9px; padding:10px 12px; font-size:14px; width:100%; box-sizing:border-box; }
 input:focus, textarea:focus, select:focus { outline:none; border-color:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.12); }
 label { display:block; font-size:13px; color:#8ea0b8; margin:12px 0 4px; }
@@ -1021,9 +1057,9 @@ def _admin_page(user, title, body, active=""):
 
 def _fmt_dt_amigavel(value):
     """Converte ISO (UTC) -> dd/mm/aaaa · hh:mm no fuso do Brasil. Se der erro, devolve cru."""
-    from zoneinfo import ZoneInfo
-    from_zone = ZoneInfo("America/Sao_Paulo")
     try:
+        from zoneinfo import ZoneInfo
+        from_zone = ZoneInfo("America/Sao_Paulo")
         txt = str(value or "").strip().replace("Z", "+00:00")
         if not txt:
             return "-"
@@ -1119,26 +1155,30 @@ def _orders_rows_detalhado(orders, pode_marcar=False, csrf=""):
         email = html.escape(str(order.get("email") or "-"))
         detalhes = (
             "<div class='dlg-content'>"
-            f"<p><b>Cliente</b>: {html.escape(cliente)}</p>"
-            f"<p><b>Char</b>: {html.escape(str(order.get('char') or '-'))}</p>"
-            f"<p><b>Qtd</b>: {html.escape(str(order.get('tc') or '-'))} RC</p>"
-            f"<p><b>Valor</b>: {html.escape(str(order.get('preco') or '-'))}</p>"
-            f"<p><b>Mundo</b>: {html.escape(mundo)}</p>"
-            f"<p><b>E-mail</b>: {email}</p>"
-            f"<p><b>Pagamento</b>: <span class='status {pag}'>{pag}</span></p>"
-            f"<p><b>Entrega</b>: <span class='status {ent}'>{ent}</span></p>"
+            "<div class='dlg-grid'>"
+            f"<div class='dlg-field full'><span class='lbl'>Cliente</span><span class='val'>{html.escape(cliente)}</span></div>"
+            f"<div class='dlg-field'><span class='lbl'>Char</span><span class='val'>{html.escape(str(order.get('char') or '-'))}</span></div>"
+            f"<div class='dlg-field'><span class='lbl'>Quantidade</span><span class='val strong'>{html.escape(str(order.get('tc') or '-'))} RC</span></div>"
+            f"<div class='dlg-field'><span class='lbl'>Valor</span><span class='val strong'>{html.escape(str(order.get('preco') or '-'))}</span></div>"
+            f"<div class='dlg-field'><span class='lbl'>Mundo</span><span class='val'>{html.escape(mundo)}</span></div>"
+            f"<div class='dlg-field full'><span class='lbl'>E-mail</span><span class='val'>{email}</span></div>"
+            "</div>"
+            "<div class='dlg-status'>"
+            f"<div class='dlg-item'><span class='lbl'>Pagamento</span><span class='status {pag}'>{pag}</span></div>"
+            f"<div class='dlg-item'><span class='lbl'>Entrega</span><span class='status {ent}'>{ent}</span></div>"
+            "</div>"
             "</div>"
         )
         acoes = ""
         if pode_marcar:
-            for alvo, st, lbl in (("marcar_pagamento", "pago", "Marcar pago"),
-                                  ("marcar_entrega", "entregue", "Marcar entregue")):
+            for alvo, st, lbl, cls in (("marcar_pagamento", "pago", "Marcar pago", "pago"),
+                                       ("marcar_entrega", "entregue", "Marcar entregue", "entregue")):
                 acoes += (
                     "<form method='post' action='/admin/marcar' style='display:inline'>"
                     f"<input type='hidden' name='_csrf' value='{csrf}'>"
                     f"<input type='hidden' name='order_id' value='{oid}'>"
                     f"<input type='hidden' name='status' value='{st}'>"
-                    f"<button class='ghost'>{lbl}</button></form>"
+                    f"<button class='{cls}'>{lbl}</button></form>"
                 )
         fechar = "<button class='ghost' onclick=\"this.closest('dialog').close()\">Fechar</button>"
         dlg_id = "dlg-" + oid
@@ -1156,7 +1196,8 @@ def _orders_rows_detalhado(orders, pode_marcar=False, csrf=""):
             f"<button class='ghost' onclick=\"document.getElementById('{dlg_id}').showModal();return false;\">Ver detalhes</button>"
             "</td></tr>"
             f"<dialog id='{dlg_id}' class='dlg'>"
-            f"<h2>Pedido #{html.escape(oid)}</h2>{detalhes}"
+            f"<div class='dlg-head'><span class='dlg-kicker'>Pedido</span><h2>Pedido #{html.escape(oid)}</h2></div>"
+            f"{detalhes}"
             "<div class='acts'>" + acoes + fechar + "</div>"
             "</dialog>"
         )
@@ -1765,7 +1806,7 @@ def admin_cliente_detalhe(email):
             "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer'>Bloquear</button></form>"
         ).format(e=html.escape(email_decoded))
     body = (
-        f"<div class='cards'><div class='card'><div class='num'>{email_decoded}</div><div class='lbl'>E-mail</div></div>"
+        f"<div class='cards'><div class='card'><div class='num'>{html.escape(email_decoded)}</div><div class='lbl'>E-mail</div></div>"
         f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
         + form
         + "<section><h2>Ações</h2>" + acoes + "</section>"
@@ -2808,8 +2849,10 @@ def admin_audit():
 
     pager = ""
     if total_paginas > 1:
-        ant = f"<a href='{base}&p={max(1, page - 1)}'>← anterior</a>" if page > 1 else ""
-        prox = f"<a href='{base}&p={min(total_paginas, page + 1)}'>próxima →</a>" if page < total_paginas else ""
+        def _pag_href(n):
+            return f"{base}&p={n}" if base else f"/admin/audit?p={n}"
+        ant = f"<a href='{_pag_href(max(1, page - 1))}'>← anterior</a>" if page > 1 else ""
+        prox = f"<a href='{_pag_href(min(total_paginas, page + 1))}'>próxima →</a>" if page < total_paginas else ""
         pager = (
             "<div class='pager'>"
             f"{ant}<span class='page-info'>Página {page} de {total_paginas} ({total} registros)</span>{prox}"
@@ -2963,7 +3006,10 @@ def admin_grupo_detalhe(gid):
         nome = (request.form.get("nome") or "").strip()[:100]
         link = (request.form.get("link") or "").strip()
         ativo = request.form.get("ativo") == "on"
-        ordem = int((request.form.get("ordem") or "0").strip() or "0")
+        try:
+            ordem = int((request.form.get("ordem") or "0").strip() or "0")
+        except ValueError:
+            ordem = 0
         now = datetime.utcnow().isoformat()
         patch = {"nome": nome, "link": link, "ativo": ativo, "ordem": ordem, "atualizado_em": now}
         try:
@@ -3583,7 +3629,7 @@ def admin_services():
         "<div class='cards'>"
         f"<div class='card'><div class='num'>{total}</div><div class='lbl'>Serviços</div></div>"
         f"<div class='card'><div class='num'>{concluidos}</div><div class='lbl'>Concluídos</div></div>"
-        f"<div class='card'><div class='num'>R$ {_fmt_brl(soma['pix'])}</div><div class='lbl'>Total Pix</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(soma['pix'])}</div><div class='lbl'>Total Pix</div></div>"
         f"<div class='card'><div class='num'>{soma['coins']:g} Coins</div><div class='lbl'>Total Coins</div></div>"
         f"<div class='card'><div class='num'>{horas:g}h</div><div class='lbl'>Horas</div></div>"
         "</div>"

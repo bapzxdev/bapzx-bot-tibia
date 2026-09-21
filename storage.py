@@ -41,8 +41,7 @@ class OrderStore:
                 return entry
             except Exception as error:
                 print(f"[storage] Supabase falhou, gravando em arquivo: {error}")
-        self._append_file(entry)
-        return entry
+        return self._append_file(entry)
 
     def _append_file(self, entry):
         try:
@@ -57,6 +56,7 @@ class OrderStore:
         orders.append(entry)
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(orders, f, ensure_ascii=False, indent=2)
+        return entry
 
     def set_status(self, order_id, status, timestamp_field=None, timestamp=None):
         if not self.remote:
