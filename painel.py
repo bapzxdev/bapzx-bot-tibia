@@ -816,35 +816,35 @@ tbody tr:hover { background:rgba(52,211,153,.04); }
 .btn { display:inline-block; background:linear-gradient(135deg,#34d399,#60a5fa); color:#04111b; text-decoration:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; border:0; cursor:pointer; }
 .btn:hover { filter:brightness(1.12); }
 .btn.ghost { background:transparent; border:1px solid #1e2c40; color:#e2e8f0; }
-dialog.dlg { width:min(460px,92vw); max-height:86vh; overflow:auto; background:#ffffff; color:#1f2937; border:0; border-radius:18px; padding:0; box-shadow:0 24px 60px -20px rgba(2,6,23,.45), 0 2px 8px rgba(2,6,23,.18); font-size:14px; box-sizing:border-box; }
-dialog.dlg::backdrop { background:rgba(2,6,23,.58); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
-.dlg-head { display:flex; flex-direction:column; gap:3px; padding:20px 24px 14px; border-bottom:1px solid #eef2f7; }
-.dlg-kicker { font-size:10px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase; color:#7c8aa5; }
-.dlg-head h2 { margin:0; font-size:19px; font-weight:800; letter-spacing:-.2px; color:#0f172a; }
-.dlg-body { padding:16px 24px; }
-.dlg-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; margin-bottom:0; }
-.dlg-field { display:flex; flex-direction:column; gap:3px; min-width:0; }
-.dlg-field .lbl { font-size:11px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#7c8aa5; }
-.dlg-field .val { font-size:14px; font-weight:600; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dlg-field .val.strong { color:#0f172a; font-weight:800; font-size:15px; }
+dialog.dlg { width:min(480px,94vw); max-height:88vh; overflow:auto; background:#111a2e; color:#e2e8f0; border:1px solid #1e2c40; border-radius:18px; padding:0; box-shadow:0 24px 60px -20px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4); font-size:14px; box-sizing:border-box; }
+dialog.dlg::backdrop { background:rgba(2,6,17,.62); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+.dlg-head { display:flex; flex-direction:column; gap:3px; padding:20px 24px 14px; border-bottom:1px solid #1e2c40; }
+.dlg-kicker { font-size:10px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase; color:#34d399; }
+.dlg-head h2 { margin:0; font-size:19px; font-weight:800; letter-spacing:-.2px; color:#fff; }
+.dlg-body { padding:18px 24px 20px; }
+.dlg-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 22px; margin-bottom:0; }
+.dlg-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.dlg-field .lbl { font-size:11px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#5b6b82; }
+.dlg-field .val { font-size:14px; font-weight:600; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dlg-field .val.strong { color:#fff; font-weight:800; font-size:15px; }
 .dlg-field.full { grid-column:1 / -1; }
-.dlg-status { display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; margin-top:16px; padding-top:14px; border-top:1px solid #eef2f7; }
+.dlg-status { display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; margin-top:18px; padding-top:16px; border-top:1px solid #1e2c40; }
 .dlg-status .dlg-item { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
-.dlg-status .lbl { font-size:12px; color:#64748b; }
+.dlg-status .lbl { font-size:12px; color:#8ea0b8; }
 .dlg .status { padding:3px 11px; border-radius:999px; font-size:11px; font-weight:700; }
-.dlg .status.pago { background:#ecfdf5; color:#059669; }
-.dlg .status.pendente { background:#fffbeb; color:#b45309; }
-.dlg .status.entregue { background:#eff6ff; color:#2563eb; }
-.dlg .status.cancelado { background:#fef2f2; color:#dc2626; }
-.dlg .acts { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; padding:14px 24px 18px; border-top:1px solid #eef2f7; background:#f8fafc; border-radius:0 0 18px 18px; }
+.dlg .status.pago { background:#064e3b; color:#4ade80; }
+.dlg .status.pendente { background:#78350f; color:#fbbf24; }
+.dlg .status.entregue { background:#1e3a5f; color:#60a5fa; }
+.dlg .status.cancelado { background:#7f1d1d; color:#f87171; }
+.dlg .acts { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; padding:14px 24px 18px; border-top:1px solid #1e2c40; background:#0b1120; border-radius:0 0 18px 18px; }
 .dlg .acts form { margin:0; }
 .dlg .acts button { height:38px; min-width:120px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 16px; border-radius:10px; border:0; font-size:13px; font-weight:700; cursor:pointer; transition:filter .15s ease, transform .1s ease, background .15s ease, border-color .15s ease, color .15s ease; }
 .dlg .acts button.pago { background:#10b981; color:#fff; box-shadow:0 2px 6px rgba(16,185,129,.35); }
 .dlg .acts button.pago:hover { filter:brightness(1.08); }
 .dlg .acts button.entregue { background:#3b82f6; color:#fff; box-shadow:0 2px 6px rgba(59,130,246,.35); }
 .dlg .acts button.entregue:hover { filter:brightness(1.08); }
-.dlg .acts button.ghost { background:transparent; border:1px solid #e2e8f0; color:#64748b; box-shadow:none; }
-.dlg .acts button.ghost:hover { background:#f1f5f9; border-color:#cbd5e1; color:#0f172a; }
+.dlg .acts button.ghost { background:transparent; border:1px solid #2a3a52; color:#8ea0b8; box-shadow:none; }
+.dlg .acts button.ghost:hover { background:#16203a; border-color:#3b4d6b; color:#fff; }
 .dlg .acts button:active { transform:translateY(1px); }
 @media (max-width:520px) {
   .dlg-grid { grid-template-columns:1fr; }
@@ -1154,7 +1154,7 @@ def _orders_rows_detalhado(orders, pode_marcar=False, csrf=""):
         mundo = "Mundo " + mundo if not mundo.startswith("Mundo") else mundo
         email = html.escape(str(order.get("email") or "-"))
         detalhes = (
-            "<div class='dlg-content'>"
+            "<div class='dlg-body'>"
             "<div class='dlg-grid'>"
             f"<div class='dlg-field full'><span class='lbl'>Cliente</span><span class='val'>{html.escape(cliente)}</span></div>"
             f"<div class='dlg-field'><span class='lbl'>Char</span><span class='val'>{html.escape(str(order.get('char') or '-'))}</span></div>"
