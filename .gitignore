@@ -3,3 +3,8 @@
 __pycache__/
 *.pyc
 pedidos.json
+
+# Arquivos SQL do Supabase ficam em C:\DEV\Supabase (ver MEMORIA_MIGRATION.md)
+supabase_migracao_*.sql
+scripts/criar_tabela_supabase.sql
+scripts/migracao_status.sql

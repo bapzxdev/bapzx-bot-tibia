@@ -4105,7 +4105,7 @@ def admin_coins():
     if sem_tabela:
         aviso = (
             "<div class='notice'><b>A tabela coins_config ainda não existe.</b> "
-            "Rode o script <code>supabase_migracao_v123.sql</code> no SQL Editor do Supabase "
+            "Rode o script <code>supabase_migracao_v123.sql</code> (em C:\\DEV\\Supabase) no SQL Editor do Supabase "
             "para ativar os valores e o histórico de COINS.</div>"
         )
 

@@ -140,6 +140,7 @@ class TestCoinsPainel(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         html = resp.get_data(as_text=True)
         self.assertIn("supabase_migracao_v123.sql", html)
+        self.assertIn("C:\\DEV\\Supabase", html)
         self.assertIn("COINS disponíveis", html)
 
     def test_get_sem_perm_gerenciar_oculta_form(self):
