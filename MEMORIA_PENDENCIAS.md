@@ -12,6 +12,27 @@
   1 profile + 2 serviços concluidos/pago) → `/admin/analytics?per=7/14/30`
   todas 200, sem traceback; "Venda 100/250 coins" renderizam.
 
+## LOG v2.7.12 (22/09/2026) - Service: autocomplete de Cliente e WhatsApp
+- Pedido do dono no check-in: no dashboard Service, os campos "Nome do cliente"
+  e "WhatsApp do cliente" devem auto-completar com os clientes já cadastrados
+  (ex.: digitar "Dout" → completa "Doutor Odeioretro").
+- Implementado (painel.py): helper `_sv_sugestoes()` junta os pares
+  (nome, whatsapp) de `servicos_manuais` + `profiles` (perfis) e devolve
+  `(nomes, whats, pares)` com `pares` bidirecional (nome↔whatsapp).
+  `_sv_autocomplete_html()` renderiza 2 `<datalist>` (`sv_nomes`/`sv_whats`)
+  + JS `svPair` que, ao escolher um nome conhecido, preenche o WhatsApp
+  (e o inverso) se o campo parceiro estiver vazio. Inputs dos forms
+  novo e editar de serviço ganharam `list='sv_nomes'`/`list='sv_whats'`
+  com ids `sv_nome_input`/`sv_wpp_input`. Proteção `hasOwnProperty`
+  no JS (evita colisão com chaves tipo `__proto__`).
+- VERSION painel.py **2.7.12** (bot.py segue 2.7.3).
+- Validado: py_compile OK; test client real (Supabase) — `/admin/services`
+  200 com form novo + datalists + SV_PAIRS; `/admin/services/<sid>` 200 com
+  datalist no editar; `_sv_sugestoes()` retornou clientes reais
+  ("Doutor Odeioretro", "Milena Soares", "wak", +55 15 99814-7564 etc).
+- Observação (dado, fora de escopo): nome "Lucas �bapstyl3x� Cristianini"
+  tem mojibake pré-existente vindo do `profiles` (encoding na origem).
+
 # Memória de Pendências
 
 Lista única de pendências, observações e bloqueios do projeto BAPZX / RUBINI COINS.

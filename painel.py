@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.9"
+VERSION = "2.7.12"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -3610,6 +3610,7 @@ def admin_services():
     if not user:
         return redirect("/login")
     servicos = _fetch_soft("servicos_manuais", order="data.desc")
+    sugs = _sv_sugestoes()
     pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_servicos_manuais")
     total = len(servicos)
     concluidos = sum(1 for s in servicos if (s.get("status") or "") == "concluido")
@@ -3647,8 +3648,8 @@ def admin_services():
             "</div>"
             "<label>Serviço</label><input name='servico' required placeholder='Ex.: Farm de XP, Raid, Build...'>"
             "<div class='box'>"
-            "<div><label>Nome do cliente</label><input name='nome_cliente' placeholder='Nick / nome'></div>"
-            "<div><label>WhatsApp do cliente</label><input name='whatsapp' placeholder='(11) 99999-9999'></div>"
+            "<div><label>Nome do cliente</label><input name='nome_cliente' id='sv_nome_input' list='sv_nomes' placeholder='Nick / nome'></div>"
+            "<div><label>WhatsApp do cliente</label><input name='whatsapp' id='sv_wpp_input' list='sv_whats' placeholder='(11) 99999-9999'></div>"
             "</div>"
             "<div class='box'>"
             "<div><label>Valor por hora (R$)</label><input name='valor_hora' type='number' step='0.01' min='0' value='20' required></div>"
@@ -3677,6 +3678,8 @@ def admin_services():
             "</script></section>"
         )
         body += form
+        if sugs[0] or sugs[1]:
+            body += _sv_autocomplete_html(*sugs)
     rows = ""
     for s in servicos:
         sid = html.escape(str(s.get("id") or ""))
@@ -3767,6 +3770,67 @@ def _sv_qtd_from_obs(obs):
     return (None, o)
 
 
+def _sv_sugestoes():
+    """Clientes já cadastrados (nome + whatsapp) para o autocomplete do
+    Service: junta os registros de servicos_manuais com os perfis (profiles).
+    Retorna (nomes, whats, pares) — pares mapeia nome->whatsapp e o inverso."""
+    pares = {}
+    nomes_raw, whats_raw = [], []
+    try:
+        for r in _fetch_soft("servicos_manuais", select="nome_cliente,whatsapp", range_="0-499") or []:
+            nome = (r.get("nome_cliente") or "").strip()
+            wpp = (r.get("whatsapp") or "").strip()
+            if nome:
+                nomes_raw.append(nome)
+                pares.setdefault(nome, wpp)
+            if wpp:
+                whats_raw.append(wpp)
+    except Exception as exc:
+        print(f"[painel] sugestoes services (servicos_manuais) falhou: {exc}")
+    try:
+        for p in _fetch_soft("profiles", select="name,whatsapp", range_="0-499") or []:
+            nome = (p.get("name") or "").strip()
+            wpp = (p.get("whatsapp") or "").strip()
+            if nome:
+                nomes_raw.append(nome)
+                pares.setdefault(nome, wpp)
+            if wpp:
+                whats_raw.append(wpp)
+    except Exception as exc:
+        print(f"[painel] sugestoes services (profiles) falhou: {exc}")
+    nomes = sorted({n for n in nomes_raw if n}, key=str.lower)
+    whats = sorted({w for w in whats_raw if w}, key=str.lower)
+    pares_js = dict(pares)
+    for nome, wpp in pares.items():
+        if wpp and wpp not in pares_js:
+            pares_js[wpp] = nome
+    return nomes, whats, pares_js
+
+
+def _sv_autocomplete_html(nomes, whats, pares):
+    """Datalists + JS de emparelhamento nome<->whatsapp dos forms de Service."""
+    opt_n = "".join(f"<option value='{html.escape(n)}'></option>" for n in nomes)
+    opt_w = "".join(f"<option value='{html.escape(w)}'></option>" for w in whats)
+    pairs_js = json.dumps(pares, ensure_ascii=False)
+    return (
+        "<datalist id='sv_nomes'>" + opt_n + "</datalist>"
+        "<datalist id='sv_whats'>" + opt_w + "</datalist>"
+        "<script>"
+        "window.SV_PAIRS=" + pairs_js + ";"
+        "function svPair(srcId,dstId){"
+        "var s=document.getElementById(srcId),d=document.getElementById(dstId);"
+        "if(!s||!d)return;"
+        "function go(){var v=s.value.trim();"
+        "if(Object.prototype.hasOwnProperty.call(window.SV_PAIRS,v)&&!d.value.trim()){"
+        "d.value=window.SV_PAIRS[v];}}"
+        "s.addEventListener('input',go);s.addEventListener('change',go);"
+        "}"
+        "svPair('sv_nome_input','sv_wpp_input');"
+        "svPair('sv_wpp_input','sv_nome_input');"
+        "</script>"
+    )
+
+
 @bp.route("/admin/services/novo", methods=["POST"])
 def admin_service_novo():
     user = _require_perm("gerenciar_servicos_manuais")
@@ -3850,6 +3914,7 @@ def admin_service_detalhe(sid):
             return f"Falha: {exc}", 500
         return redirect("/admin/services")
     status = "concluido" if (s.get("status") or "") == "concluido" else "pendente"
+    sugs = _sv_sugestoes()
     form = (
         "<section><h2>Editar serviço</h2>"
         f"<form method='post' action='/admin/services/{html.escape(sid)}'>"
@@ -3860,8 +3925,8 @@ def admin_service_detalhe(sid):
         "</div>"
         f"<label>Serviço</label><input name='servico' required value='{html.escape(str(s.get('servico') or ''))}'>"
         "<div class='box'>"
-        f"<div><label>Nome do cliente</label><input name='nome_cliente' value='{html.escape(str(s.get('nome_cliente') or ''))}'></div>"
-        f"<div><label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(s.get('whatsapp') or ''))}'></div>"
+        f"<div><label>Nome do cliente</label><input name='nome_cliente' id='sv_nome_input' list='sv_nomes' value='{html.escape(str(s.get('nome_cliente') or ''))}'></div>"
+        f"<div><label>WhatsApp</label><input name='whatsapp' id='sv_wpp_input' list='sv_whats' value='{html.escape(str(s.get('whatsapp') or ''))}'></div>"
         "</div>"
         "<div class='box'>"
         f"<div><label>Valor por hora (R$)</label><input name='valor_hora' type='number' step='0.01' min='0' value='{html.escape(str(s.get('valor_hora') or 20))}' required></div>"
@@ -3898,6 +3963,7 @@ def admin_service_detalhe(sid):
         f"<div class='card'><div class='num'>{html.escape(str(s.get('servico') or '-'))}</div><div class='lbl'>Serviço</div></div>"
         f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
         + form
+        + (_sv_autocomplete_html(*sugs) if (sugs[0] or sugs[1]) else "")
     )
     return _admin_page(user, "Serviço", body, "services")
 
