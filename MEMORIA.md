@@ -4,7 +4,14 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
-- **v2.8.0 (22/09, módulo COINS administrativo + preço dinâmico)**: pedido do
+- **v2.8.1 (22/09, cache COINS instantâneo)**: pedido do dono — o cache de
+  2 min de `coins_config` deixava o preço/status demorar para valer no bot.
+  Agora o POST `/admin/coins/salvar` chama `_invalidate_coins_cache()` (gancho
+  registrado por bot.py via `painel._registra_invalidador_coins`, sem import
+  circular; bot.py `_coins_invalidate()` zera `_COINS_CACHE`) → mudança vale na
+  HORA (mesmo processo). TTL reduzido de 120s para **30s** (`_COINS_TTL`).
+  VERSION bot.py + painel.py **2.8.1**. Validado: py_compile + test_coins.py
+  **26 testes OK** (3 novos: ttl=30, invalidação zera cache, gancho ativo).
   dono — controlar o estoque/preço de Tibia Coins manualmente no dashboard, com
   histórico e permissões admin-only. **supabase_migracao_v123.sql** (PENDENTE do
   dono no Supabase SQL Editor — ARQUIVO EM `C:\DEV\Supabase\`: foi corrigido em

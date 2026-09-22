@@ -12,6 +12,19 @@
   1 profile + 2 serviços concluidos/pago) → `/admin/analytics?per=7/14/30`
   todas 200, sem traceback; "Venda 100/250 coins" renderizam.
 
+## LOG v2.8.1 (22/09) - cache COINS: invalidacao ao salvar + TTL reduzido
+- Pedido do dono: "tem como melhorar esses 2 min?" (atraso do cache de
+  `coins_config` que o bot le do Supabase).
+- Implementado: (1) **`_coins_invalidate()`** em bot.py zera
+  `_COINS_CACHE`; o painel registra o gancho via painel.py
+  `_registra_invalidador_coins()` (evita import circular) e o POST
+  `/admin/coins/salvar` chama `_invalidate_coins_cache()` logo apos salvar —
+  muda de status/preco/limites vale **na hora** no bot (mesmo processo
+  Flask). (2) TTL do cache reduzido de 120s para **30s** (`_COINS_TTL`).
+- VERSION bot.py + painel.py **2.8.1**.
+- Validado: py_compile OK; test_coins.py agora com **26 testes** (novos:
+  ttl=30, invalidade zera cache, gancho do painel ativo sem circular) — TODOS OK.
+
 ## LOG v2.8.0 (22/09/2026) - Modulo COINS admin + preco dinamico + mojibake do nome corrigido
 - Pedido do dono: controlar manualmente estoque/preco/limites/status de Tibia
   Coins no dashboard, com historico e permissao apenas para admins.

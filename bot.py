@@ -17,11 +17,11 @@ from werkzeug.exceptions import HTTPException
 
 from storage import OrderStore
 from painel import bp as painel_bp
-from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
+from painel import _registra_invalidador_coins, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.8.0"
+VERSION = "2.8.1"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -189,13 +189,24 @@ SERVICO_TEXT = (
 
 
 _COINS_CACHE = {"ts": 0.0, "dados": None}
+_COINS_TTL = 30
+
+
+def _coins_invalidate():
+    """Zera o cache de configuração COINS (o painel chama isso ao salvar,
+    então a próxima leitura do bot busca o valor novo na hora)."""
+    _COINS_CACHE["ts"] = 0.0
+    _COINS_CACHE["dados"] = None
+
+
+_registra_invalidador_coins(_coins_invalidate)
 
 
 def _coins_config():
     """Configuração atual do módulo COINS (linha única id=1).
     Cache de 2 min. Nunca derruba: sem a tabela ou em falha devolve None e o
     bot segue com o comportamento antigo (PRICES fixos, sem travas)."""
-    if time.time() - _COINS_CACHE["ts"] < 120:
+    if time.time() - _COINS_CACHE["ts"] < _COINS_TTL:
         return _COINS_CACHE["dados"]
     dados = None
     if STORE.remote:

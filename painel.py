@@ -14,8 +14,17 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.8.0"
+VERSION = "2.8.1"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
+
+_invalidate_coins_cache = lambda: None
+
+
+def _registra_invalidador_coins(fn):
+    """Permite o bot.py registrar a função que zera o cache de coins_config
+    (evita import circular)."""
+    global _invalidate_coins_cache
+    _invalidate_coins_cache = fn
 
 
 def _env_master():
@@ -4254,6 +4263,7 @@ def admin_coins_salvar():
         )
     except Exception as exc:
         return f"Falha ao salvar: {exc}", 500
+    _invalidate_coins_cache()
     if muda:
         try:
             requests.post(

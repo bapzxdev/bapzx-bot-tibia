@@ -3,6 +3,7 @@
 # Rodar: python test_coins.py
 
 import unittest
+import time
 from unittest import mock
 
 import bot
@@ -351,6 +352,28 @@ class TestCoinsBot(unittest.TestCase):
         self.assertIn("1.000 RC — R$ 100,00", txt)
         self.assertIn("- 1000 RC: [R$100,00]", txt)
         self.assertNotIn("R$ 90,00", txt)
+
+    # ---------- cache e invalidação ----------
+
+    def test_coins_cache_ttl_reduzido(self):
+        self.assertEqual(bot._COINS_TTL, 30)
+
+    def test_coins_invalidate_zera_cache(self):
+        bot._COINS_CACHE["ts"] = time.time()
+        bot._COINS_CACHE["dados"] = {"preco_mil": 90.0}
+        bot._coins_invalidate()
+        self.assertEqual(bot._COINS_CACHE["ts"], 0.0)
+        self.assertIsNone(bot._COINS_CACHE["dados"])
+
+    def test_painel_invalidador_ativo_sem_circular(self):
+        self.assertTrue(callable(painel._invalidate_coins_cache))
+        old = painel._invalidate_coins_cache
+        try:
+            bot._coins_invalidate()
+            painel._invalidate_coins_cache = lambda: None
+            self.assertTrue(callable(painel._invalidate_coins_cache))
+        finally:
+            painel._invalidate_coins_cache = old
 
 
 if __name__ == "__main__":
