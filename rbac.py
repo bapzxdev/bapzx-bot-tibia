@@ -1,4 +1,4 @@
-# BAPZX ACCESS / BAPZX RBAC v2.7.0
+# BAPZX ACCESS / BAPZX RBAC v2.8.0
 # Controle de acesso baseado em cargos (níveis) + permissões individuais.
 #
 # Modelo de cargos (item 13 do roadmap, alinhado ao pedido do dono):
@@ -75,6 +75,8 @@ PERMISSOES_LABEL = {
     "gerenciar_servicos_manuais": "Criar/editar/excluir serviços manuais",
     "ver_seguranca": "Ver segurança (sessões e logins)",
     "gerenciar_seguranca": "Encerrar sessões ativas",
+    "ver_coins": "Ver área COINS (estoque, preço e histórico)",
+    "gerenciar_coins": "Editar estoque, preço, status e limites de COINS",
 }
 
 PERM_TRACK = {
@@ -104,6 +106,8 @@ PERM_TRACK = {
     "gerenciar_servicos_manuais": "servicos_manuais",
     "ver_seguranca": "seguranca",
     "gerenciar_seguranca": "seguranca",
+    "ver_coins": "coins",
+    "gerenciar_coins": "coins",
 }
 
 _PADRAO_ADMINISTRADOR = "ALL"

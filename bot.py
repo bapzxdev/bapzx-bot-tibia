@@ -21,7 +21,7 @@ from painel import _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.7.3"
+VERSION = "2.8.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -188,25 +188,108 @@ SERVICO_TEXT = (
 )
 
 
+_COINS_CACHE = {"ts": 0.0, "dados": None}
+
+
+def _coins_config():
+    """Configuração atual do módulo COINS (linha única id=1).
+    Cache de 2 min. Nunca derruba: sem a tabela ou em falha devolve None e o
+    bot segue com o comportamento antigo (PRICES fixos, sem travas)."""
+    if time.time() - _COINS_CACHE["ts"] < 120:
+        return _COINS_CACHE["dados"]
+    dados = None
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/coins_config?select=*&id=eq.1",
+                headers=STORE._headers(),
+                timeout=10,
+            )
+            if response.status_code == 200 and response.json():
+                dados = response.json()[0]
+        except Exception:
+            dados = None
+    _COINS_CACHE["ts"] = time.time()
+    _COINS_CACHE["dados"] = dados
+    return dados
+
+
+def _coins_preco_mil():
+    """Preço configurado por 1.000 COINS (float) ou None se não houver."""
+    cfg = _coins_config() or {}
+    try:
+        value = float(cfg.get("preco_mil") or 0)
+    except (TypeError, ValueError):
+        value = 0.0
+    return value if value > 0 else None
+
+
+def _coins_limites():
+    """min/max de compra vigentes (0 = limite desativado)."""
+    cfg = _coins_config() or {}
+    try:
+        mn = float(cfg.get("min_compra") or 0)
+    except (TypeError, ValueError):
+        mn = 0.0
+    try:
+        mx = float(cfg.get("max_compra") or 0)
+    except (TypeError, ValueError):
+        mx = 0.0
+    return mn, mx
+
+
+def _coins_check(tc):
+    """Bloqueia a compra se as vendas estiverem pausadas ou a quantidade
+    estiver fora dos limites. Devolve a mensagem de bloqueio ou None (ok).
+    Sem config (tabela ainda não criada) libera sempre — comportamento antigo."""
+    cfg = _coins_config()
+    if not cfg:
+        return None
+    status = (cfg.get("status") or "ativo").strip().lower()
+    if status not in ("ativo", "aberto", ""):
+        return ("As vendas de COINS estão pausadas neste momento.\n"
+                "Fale com um atendente: /vendedor")
+    mn, mx = _coins_limites()
+    if mn > 0 and tc is not None and tc < mn:
+        return f"A compra mínima é de {int(mn):,} COINS.".replace(",", ".")
+    if mx > 0 and tc is not None and tc > mx:
+        return f"A compra máxima é de {int(mx):,} COINS.".replace(",", ".")
+    return None
+
+
+def _fmt_coin_brl(value):
+    return f"R${value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def price_table_text():
-    return (
-        "🪙 TABELA DE PREÇOS — BAPZX COINS\n\n"
-        "100 RC  — R$ 9,00\n"
-        "250 RC  — R$ 22,50\n"
-        "500 RC  — R$ 45,00\n"
-        "1.000 RC — R$ 90,00\n"
-        "2.500 RC — R$ 225,00\n\n"
-        "💳 Pagamento: Pix\n\n"
-        "⚡ Entrega:\n"
-        "Será enviada em até 10 minutos após a confirmação do pagamento.\n\n"
-        "🛒 Para comprar, use /compra\n"
-        "💬 Atendimento: /vendedor"
-    )
+    preco_mil = _coins_preco_mil()
+    linhas = ["🪙 TABELA DE PREÇOS — BAPZX COINS", ""]
+    for value, _ in PRICES.items():
+        if preco_mil:
+            price = "R$ " + _fmt_coin_brl(value * preco_mil / 1000)[2:]
+        else:
+            price = PRICES[value].replace("R$", "R$ ")
+        qtd = f"{value:,}".replace(",", ".")
+        linhas.append(f"{qtd} RC  — {price}")
+    linhas += [
+        "",
+        "💳 Pagamento: Pix",
+        "",
+        "⚡ Entrega:",
+        "Será enviada em até 10 minutos após a confirmação do pagamento.",
+        "",
+        "🛒 Para comprar, use /compra",
+        "💬 Atendimento: /vendedor",
+    ]
+    return "\n".join(linhas)
 
 
 def price_table_compact():
+    preco_mil = _coins_preco_mil()
     lines = []
     for value, price in PRICES.items():
+        if preco_mil:
+            price = _fmt_coin_brl(value * preco_mil / 1000)
         qtd = f"{value:,}".replace(",", ".")
         lines.append(f"  {qtd} RC - {price}")
     return "\n".join(lines)
@@ -243,12 +326,41 @@ def _default_payer_email():
     return "cliente@bapzx.com"
 
 
+def _persona_precos():
+    """Blocos de preços da persona com o preço/1.000 configurado.
+    Mantém o formato atual da persona (abertura com 'R$ ' e produtos sem)."""
+    preco_mil = _coins_preco_mil()
+    abertura, produtos = [], []
+    for value, preco_fixo in PRICES.items():
+        if preco_mil:
+            p_esp = "R$ " + _fmt_coin_brl(value * preco_mil / 1000)[2:]
+            p_cur = _fmt_coin_brl(value * preco_mil / 1000)
+        else:
+            p_esp = preco_fixo.replace("R$", "R$ ")
+            p_cur = preco_fixo
+        qtd_p = f"{value:,}".replace(",", ".")
+        abertura.append(f"{qtd_p} RC — {p_esp}")
+        produtos.append(f"- {value} RC: [{p_cur}]")
+    return "\n".join(abertura), "\n".join(produtos)
+
+
 def load_persona():
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "persona.txt")
     if os.path.isfile(path):
         with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    return 'Você é um assistente de atendimento em português do Brasil.'
+            persona = f.read().strip()
+    else:
+        persona = 'Você é um assistente de atendimento em português do Brasil.'
+    abertura_novo, produtos_novo = _persona_precos()
+    persona = persona.replace(
+        "100 RC — R$ 9,00\n250 RC — R$ 22,50\n500 RC — R$ 45,00\n1.000 RC — R$ 90,00\n2.500 RC — R$ 225,00",
+        abertura_novo,
+    )
+    persona = persona.replace(
+        "- 100 RC: [R$9,00]\n- 250 RC: [R$22,50]\n- 500 RC: [R$45,00]\n- 1000 RC: [R$90,00]\n- 2500 RC: [R$225,00]",
+        produtos_novo,
+    )
+    return persona
 
 
 def clean_ai_text(text):
@@ -275,8 +387,9 @@ def ask_ai(text):
         '- O e-mail do cliente quem pede é o próprio sistema (depois de fechar o pedido);\n'
         '  não peça e-mail na conversa da IA.\n'
         "- Para calcular o valor de uma quantidade de TC fora da tabela acima, use a "
-        'proporção de que 1.000 RC custam R$ 90: multiplique a quantidade por 90, divida '
-        'por 1.000 e mostre o cálculo passo a passo, terminando com o valor em Reais.\n'
+        f"proporção de que 1.000 RC custam {_fmt_coin_brl((_coins_preco_mil() or 90) * 1000 / 1000)}: multiplique a quantidade por "
+        f"{_coins_preco_mil() or 90}, divida por 1.000 e mostre o cálculo passo a passo, "
+        'terminando com o valor em Reais.\n'
         '- Quantidades que estão na tabela (100, 250, 500, 1.000, 2.500 RC) usam o valor '
         'da tabela, sem recálculo.\n\n'
         f"Cliente: {text}"
@@ -480,11 +593,14 @@ def _precos_config():
 def calc_price(tc):
     if not tc:
         return None
+    preco_mil = _coins_preco_mil()
+    if preco_mil:
+        return _fmt_coin_brl(tc * preco_mil / 1000)
     tabela = _precos_config()
     if tc in tabela:
         return tabela[tc]
     value = tc * 90 / 1000
-    return f"R${value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return _fmt_coin_brl(value)
 
 
 _CONFIG_CACHE = {"ts": 0.0, "dados": {}}
@@ -1139,6 +1255,10 @@ def webhook():
 
     if chat_type == "private" and looks_like_order(text):
         entry = build_order(chat_id, username, text)
+        bloqueio = _coins_check(entry.get("tc"))
+        if bloqueio:
+            send_message(chat_id, bloqueio)
+            return "ok", 200
         if not entry.get("tc") and not entry.get("char"):
             send_message(
                 chat_id,

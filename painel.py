@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.7.12"
+VERSION = "2.8.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 
@@ -907,6 +907,8 @@ def _page(user, title, body, active=""):
     vendas = []
     if peut("ver_pedidos"):
         vendas.append(("/admin/pedidos", "Pedidos", "pedidos", "cart"))
+    if peut("ver_coins"):
+        vendas.append(("/admin/coins", "COINS", "coins", "dollar"))
     if peut("ver_itens"):
         vendas.append(("/admin/itens", "Itens", "itens", "package"))
     if peut("ver_cupons"):
@@ -2762,6 +2764,7 @@ _ACOES_AUDIT = {
     "servico_concluir": ("Serviço concluído", "#064e3b", "#4ade80"),
     "servico_reabrir": ("Serviço reaberto", "#78350f", "#fbbf24"),
     "servico_excluir": ("Serviço excluído", "#7f1d1d", "#f87171"),
+    "coins_salvar": ("COINS editado", "#065f46", "#34d399"),
 }
 
 
@@ -4007,6 +4010,269 @@ def admin_service_excluir(sid):
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/services")
+
+
+def _coins_num(value):
+    """Número a partir de texto BR (aceita '2.500,50', '2500.5', '90' e '200.000').
+    Sem vírgula, só há vírgula quando tem decimais; ponto antes de 1-2 dígitos
+    finais com até 3 dígitos antes é decimal (89.5), caso contrário é milhar (1.500)."""
+    if value is None:
+        return 0.0
+    s = str(value).strip().replace(" ", "")
+    if s in ("", "-"):
+        return 0.0
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "." in s:
+        _, _, dec = s.rpartition(".")
+        if not (dec.isdigit() and len(dec) <= 2 and s.count(".") == 1):
+            s = s.replace(".", "")
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _coins_int(value):
+    """Quantidade inteira formatada no padrão BR (ex.: 1.000 / 50.000)."""
+    n = int(_coins_num(value) or 0)
+    if n < 1000:
+        return str(n)
+    return f"{n:,}".replace(",", ".")
+
+
+def _coins_dec(value):
+    """Decimal BR para preencher inputs (90 e 89,50 mas nunca 90,00)."""
+    v = _coins_num(value)
+    s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    inteiro, decimal = s.split(",")
+    if decimal == "00":
+        return inteiro
+    return f"{inteiro},{decimal}"
+
+
+def _coins_linha():
+    """Linha única (id=1) da config de COINS, ou {} se a tabela faltar."""
+    try:
+        rows = _fetch_soft("coins_config", query="id=eq.1", range_="0-0")
+    except Exception:
+        return {}
+    return rows[0] if rows else {}
+
+
+def _coins_brl(qtd, preco_mil):
+    try:
+        return _fmt_brl(_coins_num(qtd) * _coins_num(preco_mil) / 1000)
+    except (TypeError, ValueError):
+        return "R$ 0,00"
+
+
+@bp.route("/admin/coins", methods=["GET"])
+def admin_coins():
+    user = _require_perm("ver_coins")
+    if not user:
+        return redirect("/login")
+    cfg = _coins_linha()
+    sem_tabela = not bool(cfg)
+    estoque = cfg.get("estoque")
+    preco_mil = cfg.get("preco_mil")
+    mn = cfg.get("min_compra")
+    mx = cfg.get("max_compra")
+    status = (cfg.get("status") or "ativo").lower()
+    obs = cfg.get("observacao") or ""
+    status_ativo = status in ("ativo", "aberto")
+    preco_base = _coins_num(preco_mil) or 90
+
+    cards = (
+        "<div class='cards'>"
+        f"<div class='card'><div class='num'>{_coins_int(estoque)}</div><div class='lbl'>COINS disponíveis</div></div>"
+        f"<div class='card'><div class='num'>{_coins_dec(preco_base)}</div><div class='lbl'>Preço por 1.000 (R$)</div></div>"
+        + (
+            "<div class='card'><div class='num' style='color:#bbf7d0'>ATIVO</div><div class='lbl'>Vendas liberadas</div></div>"
+            if status_ativo
+            else "<div class='card'><div class='num' style='color:#fecaca'>PAUSADO</div><div class='lbl'>Vendas pausadas</div></div>"
+        )
+        + (
+            "<div class='card'><div class='num' style='font-size:16px'>-</div><div class='lbl'>Última atualização</div></div>"
+            if sem_tabela
+            else f"<div class='card'><div class='num' style='font-size:16px'>{html.escape(_fmt_dt_amigavel(cfg.get('atualizado_em')))}</div>"
+                 f"<div class='lbl'>Última atualização · {html.escape(cfg.get('atualizado_por') or '—')}</div></div>"
+        )
+        + "</div>"
+    )
+
+    aviso = ""
+    if sem_tabela:
+        aviso = (
+            "<div class='notice'><b>A tabela coins_config ainda não existe.</b> "
+            "Rode o script <code>supabase_migracao_v123.sql</code> no SQL Editor do Supabase "
+            "para ativar os valores e o histórico de COINS.</div>"
+        )
+
+    body = cards + aviso
+
+    form = ""
+    pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_coins")
+    if pode_gerenciar:
+        f_min = mx_lbl = ""
+        form = (
+            "<section><h2>Editar configurações</h2>"
+            "<form method='post' action='/admin/coins/salvar'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<div class='box'>"
+            f"<div><label>COINS disponíveis</label><input name='estoque' type='text' value='{_coins_int(estoque) if not sem_tabela else '100000'}' required></div>"
+            f"<div><label>Preço por 1.000 (R$)</label><input name='preco_mil' type='text' value='{_coins_dec(preco_base)}' required></div>"
+            f"<div><label>Compra mínima</label><input name='min_compra' type='text' value='{_coins_int(mn) if not sem_tabela else '100'}'></div>"
+            f"<div><label>Compra máxima</label><input name='max_compra' type='text' value='{_coins_int(mx) if not sem_tabela else '50000'}'></div>"
+            "<div><label>Status da venda</label><select name='status'>"
+            f"<option value='ativo'{' selected' if status_ativo else ''}>ATIVO</option>"
+            f"<option value='pausado'{' selected' if not status_ativo else ''}>PAUSADO</option>"
+            "</select></div></div>"
+            "<label>Observação interna</label>"
+            f"<textarea name='observacao' rows='2' placeholder='Nota visível só para administradores...'>{html.escape(obs)}</textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar alterações</button></p>"
+            "</form></section>"
+        )
+        body += form
+
+    calculadora = (
+        "<section><h2>Calculadora de COINS</h2>"
+        "<div class='box'>"
+        "<div><label>Quantidade de COINS</label><input id='coins_qtd' type='text' placeholder='Ex.: 2.500'></div>"
+        "<div><label>Valor total (Pix)</label><input id='coins_valor' type='text' value='R$ 0,00' readonly></div>"
+        "</div>"
+        f"<p class='page-sub'>Referência: 1.000 COINS = {_coins_brl(1000, preco_base)} · 2.500 = {_coins_brl(2500, preco_base)} · 5.000 = {_coins_brl(5000, preco_base)}</p>"
+        "<script>"
+        "function coinsCalc(){"
+        "var raw=document.getElementById('coins_qtd').value||'';"
+        "raw=raw.replace(/[^0-9.,]/g,'').replace(/\\.(?=\\d{3}([.,]|$))/g,'').replace(',','.');"
+        f"var q=parseFloat(raw)||0;var v=q*{preco_base}/1000;"
+        "var s=v.toFixed(2).replace('.',',');var p=s.split(',');"
+        "var i=String(p[0]).replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.');"
+        "document.getElementById('coins_valor').value='R$ '+i+','+p[1];}"
+        "var elq=document.getElementById('coins_qtd');"
+        "if(elq)elq.addEventListener('input',coinsCalc);"
+        "</script></section>"
+    )
+    body += calculadora
+
+    try:
+        hist = _fetch_soft("coins_historico", order="criado_em.desc", range_="0-99")
+    except Exception:
+        hist = []
+    rows = ""
+    for h in hist:
+        q_ant, q_nov = h.get("qtd_anterior"), h.get("qtd_nova")
+        p_ant, p_nov = h.get("preco_anterior"), h.get("preco_novo")
+        qd = (f"{_coins_int(q_ant)} → {_coins_int(q_nov)}"
+              if q_ant is not None or q_nov is not None else "-")
+        pd = (f"{_fmt_brl(_coins_num(p_ant))} → {_fmt_brl(_coins_num(p_nov))}"
+              if p_ant is not None or p_nov is not None else "-")
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(_fmt_dt(h.get('criado_em'), 16))}</td>"
+            f"<td>{html.escape(str(h.get('admin') or '-'))}</td>"
+            f"<td>{qd}</td><td>{pd}</td>"
+            f"<td>{html.escape(str(h.get('alteracao') or '-'))}</td>"
+            "</tr>"
+        )
+    body += (
+        "<section><h2>Histórico de alterações</h2><table>"
+        "<tr><th>Quando</th><th>Administrador</th><th>Quantidade</th><th>Preço (R$/1.000)</th><th>Alteração realizada</th></tr>"
+        + (rows or "<tr><td colspan='5' style='color:#5b6b82'>Nenhuma alteração registrada ainda.</td></tr>")
+        + "</table></section>"
+    )
+    return _admin_page(user, "COINS", body, "coins")
+
+
+@bp.route("/admin/coins/salvar", methods=["POST"])
+def admin_coins_salvar():
+    user = _require_perm("gerenciar_coins")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    estoque = _coins_num(request.form.get("estoque"))
+    preco_mil = _coins_num(request.form.get("preco_mil"))
+    mn = _coins_num(request.form.get("min_compra"))
+    mx = _coins_num(request.form.get("max_compra"))
+    status = (request.form.get("status") or "ativo").strip().lower()
+    obs = (request.form.get("observacao") or "").strip()[:1000]
+    if estoque < 0:
+        return "COINS disponíveis não podem ser negativos.", 400
+    if preco_mil <= 0:
+        return "O preço por 1.000 COINS deve ser maior que zero.", 400
+    if mn < 0 or mx < 0:
+        return "Os limites de compra não podem ser negativos.", 400
+    if mn > 0 and mx > 0 and mn > mx:
+        return "A compra mínima não pode ser maior que a máxima.", 400
+    if status not in ("ativo", "pausado"):
+        return "Status inválido.", 400
+
+    atual = _coins_linha()
+    a_est = _coins_num(atual.get("estoque"))
+    a_prc = _coins_num(atual.get("preco_mil"))
+    a_mn = _coins_num(atual.get("min_compra"))
+    a_mx = _coins_num(atual.get("max_compra"))
+    a_status = (atual.get("status") or "ativo").lower()
+    a_obs = atual.get("observacao") or ""
+
+    muda = []
+    q_ant = q_nov = p_ant = p_nov = None
+    if a_est != estoque:
+        muda.append(f"estoque {_coins_int(a_est)} → {_coins_int(estoque)}")
+        q_ant, q_nov = a_est, estoque
+    if a_prc != preco_mil:
+        muda.append(f"preço {_coins_dec(a_prc)} → {_coins_dec(preco_mil)} por 1.000")
+        p_ant, p_nov = a_prc, preco_mil
+    if a_mn != mn:
+        muda.append(f"mínima {_coins_int(a_mn)} → {_coins_int(mn)}")
+    if a_mx != mx:
+        muda.append(f"máxima {_coins_int(a_mx)} → {_coins_int(mx)}")
+    if a_status != status:
+        muda.append(f"status {a_status.upper()} → {status.upper()}")
+    if a_obs != obs:
+        muda.append("observação")
+    descricao = "; ".join(muda) if muda else "sem mudanças"
+
+    payload = {
+        "estoque": estoque,
+        "preco_mil": preco_mil,
+        "min_compra": mn,
+        "max_compra": mx,
+        "status": status,
+        "observacao": obs,
+        "atualizado_em": datetime.utcnow().isoformat(),
+        "atualizado_por": user["email"],
+    }
+    try:
+        requests.post(
+            f"{SUPA_URL}/rest/v1/coins_config?on_conflict=id",
+            headers={**_headers(), "Prefer": "resolution=merge-duplicates,return=representation"},
+            json={"id": 1, **payload},
+            timeout=15,
+        )
+    except Exception as exc:
+        return f"Falha ao salvar: {exc}", 500
+    if muda:
+        try:
+            requests.post(
+                f"{SUPA_URL}/rest/v1/coins_historico",
+                headers=_headers(),
+                json={
+                    "admin": user["email"],
+                    "qtd_anterior": q_ant,
+                    "qtd_nova": q_nov,
+                    "preco_anterior": p_ant,
+                    "preco_novo": p_nov,
+                    "alteracao": f"{descricao} (por {user['email']})",
+                },
+                timeout=15,
+            )
+        except Exception as exc:
+            return f"Configuração salva, mas o histórico falhou: {exc}", 500
+    _audit(user, "coins_salvar", descricao)
+    return redirect("/admin/coins")
 
 
 @bp.route("/admin/seguranca", methods=["GET"])

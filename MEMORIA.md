@@ -4,6 +4,47 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.8.0 (22/09, módulo COINS administrativo + preço dinâmico)**: pedido do
+  dono — controlar o estoque/preço de Tibia Coins manualmente no dashboard, com
+  histórico e permissões admin-only. **supabase_migracao_v123.sql** (PENDENTE do
+  dono no Supabase SQL Editor): `coins_config` (linha única id=1 — estoque
+  numeric(14,2) default 100000, preco_mil numeric(12,2) default 90, min_compra
+  default 100, max_compra default 50000, status 'ativo'|'pausado', observacao,
+  atualizado_em, atualizado_por, criado_em) + `coins_historico` (admin,
+  qtd_anterior/qtd_nova, preco_anterior/preco_novo, alteracao, criado_em) +
+  índices + seed `insert on conflict (id) do nothing`. **rbac.py**: novas
+  permissões `ver_coins` e `gerenciar_coins` (labels + PERM_TRACK "coins");
+  ADMINISTRADOR=ALL e MASTER cobrem automaticamente. **painel.py** (VERSION
+  2.8.0): item **COINS** na sidebar (grupo Vendas, ícone dollar, gated
+  `ver_coins`); GET `/admin/coins` — 4 cards (COINS disponíveis, Preço/1.000,
+  Status ATIVO/PAUSADO, Última atualização + por), aviso de migração pendente,
+  form de edição (se `gerenciar_coins`: estoque, preço/1.000, mínimo, máximo,
+  status, observação), calculadora JS `qtd*preco_mil/1000`, tabela de histórico
+  (até 100 registros); POST `/admin/coins/salvar` — CSRF, validações
+  (estoque ≥0, preco_mil>0, min/max ≥0, min≤max, status ativo|pausado), grava
+  `coins_historico` SÓ quando há mudança (diff), upsert `id=1` com `Prefer:
+  resolution=merge-duplicates`, auditoria `coins_salvar`. Helpers `_coins_num`
+  (parser BR: vírgula → ponto; sem vírgula, ponto único com ≤2 decimais =
+  decimal, senão milhar), `_coins_int`, `_coins_dec`, `_coins_linha`,
+  `_coins_brl`. **bot.py** (VERSION 2.8.0): preço agora É DINÂMICO —
+  `_coins_config()` (cache 120s, fail-soft → legado) alimenta `calc_price`
+  (`preco_mil` com fallback PRICES/90), `price_table_text`,
+  `price_table_compact`, proporção no prompt da IA (`ask_ai`) e `persona.txt`
+  (`_persona_precos()` reescreve os 2 blocos fixos em `load_persona`; busca por
+  strings legadas, sem match = no-op). `_coins_check(tc)` barra a venda quando
+  status='pausado' ou tc fora de [min,max] — chamado no webhook logo após
+  `build_order` (antes de pedir char, fluxo AWAITING_CHAR); fail-open sem tabela.
+  `_fmt_coin_brl`. Preço continua congelado no pedido na criação (calc_price →
+  save_order). **Mojibake do nome do dono corrigido**: profiles agora `Lucas
+  "bapstyl3x" Cristianini Marca` (aspas ASCII, PATCH 204). Validado: py_compile
+  OK; **test_coins.py NOVO (23 testes, TODOS OK)** — painel (GET/POST,
+  permissões, CSRF, helpers de parse), bot (calc_price legado/dinâmico,
+  `_coins_check` pausado/limites, tabelas dinâmicas, persona dinâmica);
+  regressão test_qtd_coins (Playwright e2e) intacto. Pendente dono: (1) **aplicar
+  `supabase_migracao_v123.sql`** no SQL Editor; (2) **re-deploy no Render**
+  (v2.8.0 no /health); (3) validar ao vivo /admin/coins (pausado barra venda no
+  bot, limites, histórico, preço novo refletindo na tabela de preços). Commit +
+  push OK (bapzx e docs raiz).
 - **v2.7.12 (22/09, autocomplete Service)**: pedido do dono — no dashboard
   **Service**, os campos **Nome do cliente** e **WhatsApp do cliente** agora têm
   **autocomplete**: ao digitar (ex.: "Dout") aparecem os clientes já cadastrados
@@ -16,8 +57,7 @@
   segue 2.7.3). Validado: py_compile OK + test client real — `/admin/services` e
   `/admin/services/<sid>` 200 com datalists + SV_PAIRS; sugestões reais:
   "Doutor Odeioretro", "Milena Soares", "wak", +55 15 99814-7564... Observação:
-  nome "Lucas �bapstyl3x� Cristianini" tem **mojibake pré-existente** do profiles
-  (dado da origem, fora de escopo). Commit + push OK.
+  nome "Lucas �bapstyl3x� Cristianini" -> MOJIBAKE CORRIGIDO na v2.8.0: profiles agora com "Lucas \"bapstyl3x\" Cristianini Marca" (aspas ASCII, PATCH 204). Commit + push OK.
 - **v2.7.4 (19/09, Service form fix)**: corrigido bug em que **horas digitadas com vírgula ("2,5") viravam 0** ao salvar/editar. Causa: `float()` nos POSTs `/admin/services/novo` e `/admin/services/<sid>` quebrava com `ValueError` ao receber vírgula e o `except` zerava `horas` (e `valor_hora`/`desconto`). Criado helper **`_sv_num`** — aceita "2,5", "2.5" e formato BR "1.500,50" — aplicado aos 3 campos nos 2 POSTs. Removida a lógica **`svRecalc`** e todas as suas chamadas dos 2 forms; **`svCoinToggle`** foi mantida e elevada a função independente (no form novo estava aninhada DENTRO de `svRecalc`; no editar estava como `svfpToggle`). `forma_pagamento`, `qtd_coins_row`/campo Quantidade de COINS preservados (HTML não alterado). `sv_total` (valor cobrado persistido) continua exibido no editar, só não é mais recalculado ao vivo. **v2.7.6 (19/09, mesmo dia, +2 pedidos do dono)**: (1) KPI "Total Coins" e coluna Valor mostravam R$ (somavam `valor`, calculado em R$), mas devem mostrar COINS — agora somam a qtd extraída da observação (`_sv_qtd_from_obs`, prefixo `QTD COINS: N |`) e exibem "1000 Coins" e "500 Coins" por linha; registros COINS antigos sem prefixo mostram "0 Coins"; (2) horas saíam com ponto (3.0) — helper `_sv_fmt_hrs()` (`:g` → 3) na tabela e no input do form. VERSION painel.py **2.7.6** (bot.py segue 2.7.3). Validado: py_compile OK; test client c/mocks (KPI 1000 Coins, linha 500 Coins, PIX R$ 100,00, horas "3" e "2.5"). **Falta**: deploy no Render (o /health é do bot.py, que segue 2.7.3) e validar ao vivo digitar 2,5 no form de Service. **v2.7.7 (19/09, mesmo dia)**: removida a seção "Últimas ações do admin" do dashboard principal — ela duplicava a página Auditoria `/admin/audit` (busca, filtros, paginação, CSV, v2.5.0). Removidos o `_fetch("audit_log"...)`/`audit_rows` do `admin_index` e o bloco HTML; KPIs/gráfico/páginas visitadas/últimos pedidos intactos. VERSION painel.py **2.7.7**. Validado: py_compile OK; /admin 200 sem a seção, "Últimos pedidos" presente.
 - Onde paramos (17/09, v2.7.1): **área Service com cálculo automático do valor cobrado** (`valor = valor_hora × horas − desconto`, pré-cálculo ao vivo por JS, campo Desconto novo) e **bug do "valor absurdo" corrigido** (`_parse_brl` tratava string decimal do Supabase `"150.00"` como milhar → 15000; agora número sem vírgula é float direto, só formato BR `1.500,50` usa vírgula como decimal, linhas 518-529). **DEPLOY CONFIRMADO**: /health "bot ok v2.7.1". **MIGRATION v122 APLICADA pelo dono (17/09)** verificada no Supabase (colunas valor_hora/desconto presentes; registro id 1 com valor_hora 20). v121 também aplicada (Service testado). Resta só validação fina ao vivo (caso 1,5h e desconto). (cargos MASTER 100..CLIENTE 10, permissões padrão por cargo, permissões individuais jsonb substituindo padrão quando não-vazias, MASTER só via MASTER_EMAILS env com fallback ADMIN_EMAILS — .env não tem MASTER_EMAILS). **supabase_migracao_v118.sql** cria `users` (email pk, nome, cargo, permissoes, ativo) e `grupos` (Coroa/Rubinot/Pokepixel/PokeIdle, ordenados, links vazios) + seed item "Intermediação BAPZX" R$5. **painel.py v2.0.0**: `_require_perm`/`_require_any_perm` substituíram `_require_admin` em 18 rotas (mapeamento por permissão), rotas novas /admin/usuarios (listar/criar/editar c/ permissões), /admin/audit, /admin/grupos (CRUD) e /api/grupos (público, só ativos com link); sidebar `_page()` filtrada por permissão (novos itens Grupos/Usuários/Auditoria no grupo SISTEMA), sino/KPIs/botões condicionais, badge de cargo no chip do usuário. **bot.py v2.0.0**: OAuth resolve cargo/perms da tabela users (MASTER env → users ativo → CLIENTE), session armazena cargo/perms, /acesso usa cargo, AUTH_LAYOUT com footer legal+WhatsApp, avisos LGPD em /cliente/perfil e /cliente/suporte. **legais.py** novo: /privacidade /termos /reembolso (LGPD, 11 seções) + /privacidade/pdf (reportlab). **Portfólio v3.3**: seção "Nossos Grupos" no index + links legais/WhatsApp no footer das 7 páginas. Intermediação R$5 via /api/itens (seed).
 - Migration v118: **APLICADA pelo dono** (tabelas users/grupos no ar; /api/grupos vazio porque links ainda vazios).
@@ -40,7 +80,7 @@
 - Dias restantes: a pedido do dono (16/09) o prazo do bloco foi **estendido por +2 meses** — nova meta 16/11/2026 (o bloco original de 15 dias terminava em 24/09).
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-Versão atual do bot: 2.7.0.
+Versão atual do bot: 2.8.0.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 

@@ -12,6 +12,36 @@
   1 profile + 2 serviços concluidos/pago) → `/admin/analytics?per=7/14/30`
   todas 200, sem traceback; "Venda 100/250 coins" renderizam.
 
+## LOG v2.8.0 (22/09/2026) - Modulo COINS admin + preco dinamico + mojibake do nome corrigido
+- Pedido do dono: controlar manualmente estoque/preco/limites/status de Tibia
+  Coins no dashboard, com historico e permissao apenas para admins.
+- Migration `supabase_migracao_v123.sql` (PENDENTE do dono no SQL Editor):
+  `coins_config` (id=1 unico; estoque default 100000, preco_mil default 90,
+  min_compra 100, max_compra 50000, status ativo|pausado, atualizado_em/por) +
+  `coins_historico`.
+- rbac.py: `ver_coins`/`gerenciar_coins` (labels + PERM_TRACK "coins");
+  ADMINISTRADOR=ALL e MASTER cobrem automaticamente (nenhum outro por padrao).
+- painel.py (VERSION 2.8.0): sidebar COINS (Vendas, gated ver_coins); GET
+  `/admin/coins` (4 cards + aviso de migration pendente + form de edicao se
+  gerenciar_coins + calculadora JS + historico ate 100); POST
+  `/admin/coins/salvar` (CSRF, validacoes, diff -> historico, upsert id=1,
+  audit coins_salvar).
+- bot.py (VERSION 2.8.0): preco dinamico via `_coins_config()` (cache 120s,
+  fail-soft) em calc_price/price_table_text/price_table_compact/ask_ai/
+  load_persona (_persona_precos). `_coins_check(tc)` bloqueia pausado e tc
+  fora de [min,max] logo apos build_order (fail-open sem tabela). Preco
+  congelado no pedido na criacao.
+- Mojibake do nome do dono corrigido (PATCH 204 -> "Lucas \"bapstyl3x\"
+  Cristianini Marca", aspas ASCII).
+- VERSION bot.py + painel.py **2.8.0**.
+- Validado: py_compile OK (admin.py/painel.py/bot.py/rbac.py/storage.py);
+  `test_coins.py` NOVO com 23 testes — TODOS OK (painel GET/POST, permissao
+  negada 403, CSRF 403, helpers _coins_num/_coins_brl, bot calc_price legado/
+  dinamico, _coins_check pausado/limites, tabelas e persona dinamicas).
+- Pendente dono: aplicar v123 no Supabase; re-deploy no Render; validar ao vivo
+  `/admin/coins` (pausado barra venda, limites, historico, tabela de precos do
+  bot refletindo preco_mil novo).
+
 ## LOG v2.7.12 (22/09/2026) - Service: autocomplete de Cliente e WhatsApp
 - Pedido do dono no check-in: no dashboard Service, os campos "Nome do cliente"
   e "WhatsApp do cliente" devem auto-completar com os clientes já cadastrados
@@ -30,8 +60,9 @@
   200 com form novo + datalists + SV_PAIRS; `/admin/services/<sid>` 200 com
   datalist no editar; `_sv_sugestoes()` retornou clientes reais
   ("Doutor Odeioretro", "Milena Soares", "wak", +55 15 99814-7564 etc).
-- Observação (dado, fora de escopo): nome "Lucas �bapstyl3x� Cristianini"
-  tem mojibake pré-existente vindo do `profiles` (encoding na origem).
+- Observação: mojibake do nome "Lucas bapstyl3x Cristianini" (aspas curvas no
+  profiles) **CORRIGIDO na v2.8.0** — PATCH 204 normalizou para
+  "Lucas \"bapstyl3x\" Cristianini Marca" (aspas ASCII).
 
 # Memória de Pendências
 
