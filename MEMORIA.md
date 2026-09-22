@@ -4,6 +4,28 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.9.0 (22/09, redesign /cliente)**: pedido do dono — área do cliente
+  (`/cliente`, `/cliente/perfil`, `/cliente/suporte`, `/cliente/suporte/<id>`)
+  redesenhada como **dashboard profissional SaaS dark** (UI/UX apenas; backend/
+  rotas/auth/CSRF intactos). AUTH_LAYOUT reescrito (CSS Sora + gradiente verde→
+  azul, :root vars, header sticky com blur, nav do cliente com aba ativa,
+  dropdown do usuário, KPIs, painéis, tabelas, badges de status, empty state,
+  help-cards, alerts, fade-in, responsivo 900/640/480px); agora usa tokens
+  `@@TITLE@@/@@BRAND@@/@@TOP@@/@@BODY@@/@@WHATSAPP@@` via `.replace()` na nova
+  `_render_layout()` (NÃO usar `.format()` nesse template). Helpers novos:
+  `_title_initials`, `_cliente_header`, `_status_badge` (pendente/pago/entregue/
+  cancelado + aberto/respondido/encerrado), `_fmt_brl` (usa parse_brl; conserta
+  "22,50"), `_cliente_profile`, `_cliente_tickets`. `/cliente` = boas-vindas +
+  4 KPIs reais + tabela pedidos recentes (8) + card último pedido + empty state
+  → PORTFOLIO_URL + ajuda + perfil; `/cliente/suporte` ganhou âncoras
+  `#novo`/`#chamados`; detail ticket body trocado de `.format()` para `%`.
+  VERSION bot.py **2.9.0** (painel.py segue 2.8.1, sem mudança). Validado:
+  py_compile OK; test_coins.py **26 testes OK**; test client + Playwright —
+  rotas 200 (com e sem pedidos), 404 detail inexistente, sem sessão 302→/login,
+  valores R$ ("R$ 2.250,00"), badges, avatar iniciais, dark theme ativo e
+  responsividade (nav wrap/header colapsa/KPIs 4→3→2 cols). **Pendente dono:
+  deploy no Render e validar ao vivo; publish Google OAuth; aplicações de
+  migrações (v122/v123) e validações pendentes seguem as mesmas.**
 - **v2.8.1 (22/09, cache COINS instantâneo)**: pedido do dono — o cache de
   2 min de `coins_config` deixava o preço/status demorar para valer no bot.
   Agora o POST `/admin/coins/salvar` chama `_invalidate_coins_cache()` (gancho

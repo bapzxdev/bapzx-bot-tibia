@@ -88,6 +88,34 @@
 
 Lista única de pendências, observações e bloqueios do projeto BAPZX / RUBINI COINS.
 
+## LOG v2.9.0 (22/09/2026) - Redesign da área do cliente (dashboard SaaS dark)
+- Pedido do dono: "redesign /cliente" — visual profissional (tema dark, roxo,
+  verde #4ade80 positivo, azul ações), responsivo 1920→390px, acessível, SEM
+  tocar em backend/rotas/auth/CSRF/integrações.
+- bot.py (VERSION 2.9.0): AUTH_LAYOUT reescrito + `_render_layout()` (tokens
+  `@@TITLE@@/@@BRAND@@/@@TOP@@/@@BODY@@/@@WHATSAPP@@` via `.replace()` — NÃO
+  `.format()`, o CSS não tem mais chaves escapadas); helpers `_title_initials`,
+  `_cliente_header(user, active)`, `_status_badge(status)`, `_fmt_brl(value)`,
+  `_cliente_profile(email)`, `_cliente_tickets(email)`. Rotas: `/cliente`
+  (boas-vindas "Olá, {primeiro}! 👋" + 4 KPIs reais — total/em andamento/
+  concluídos/tickets — + tabela pedidos recentes com badges + card último
+  pedido + empty state com CTA → PORTFOLIO_URL + ajuda + card perfil + nota
+  sobre e-mail do pedido), `/cliente/perfil` e `/cliente/suporte` usam o novo
+  header; suporte com âncoras `#novo`/`#chamados`; detail ticket corrigido de
+  `.format()` para `%` (evita erro de chaves). `_status_badge` mapeia
+  entregue→Concluído, aberto→Pendente. `_fmt_brl` corrigido: particionava por
+  vírgula quando o format BR já dá ponto decimal ("22.50,") → agora
+  `f"{n:,.2f}".partition(".")` + milhar com ponto ("R$ 2.250,00").
+- Validado: py_compile OK (bot.py/painel.py); test_coins.py **26 testes OK**;
+  test client — `/cliente` `/cliente/suporte` `/cliente/perfil` `/acesso` 200;
+  `/cliente` sem sessão 302→/login; detail inexistente 404; detail com mock do
+  Supabase 200 (badge respondido + Resposta); respostas vazias sem bloco;
+  valores R$ corretos; avatar com iniciais; Playwright — dark theme ativo
+  (bg #0b0f1a, header sticky), responsividade: KPIs 4 cols → 3 cols (medium) →
+  2 cols (mobile), header colapsa <480px (brand-tag some), nav wrap.
+- Pendente dono: re-deploy no Render e validar ao vivo a área /cliente
+  (logado Google, com pedidos, sem pedidos, suporte, perfil, logout, mobile).
+
 ## LOG v2.7.8 (19/09/2026) - Analytics: corrigido NameError na tabela "Serviços mais vendidos"
 - Erro real-reportado no dashboard Analytics (`/admin/analytics`, v2.7.7): quando
   havia serviços no período (top_servicos não-vazio), o generator `serv_rows`

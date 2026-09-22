@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _csrf_token as _csrf_token, _csr
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.8.1"
+VERSION = "2.9.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -1514,74 +1514,273 @@ AUTH_LAYOUT = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BAPZX · {title}</title>
+<title>BAPZX · @@TITLE@@</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body {{ font-family: Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }}
-header {{ background: #1e293b; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }}
-header h1 {{ margin: 0; font-size: 18px; }}
-header a {{ color: #94a3b8; font-size: 13px; text-decoration: none; }}
-.brand {{ font-family: 'Sora', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 2px; color: #fff; }}
-.brand span {{ background: linear-gradient(135deg,#34d399 0%,#4ade80 35%,#60a5fa 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }}
-main {{ padding: 24px; max-width: 960px; margin: 0 auto; }}
-label {{ display: block; margin-top: 10px; color: #94a3b8; font-size: 13px; }}
-input, select, textarea {{ width: 100%; margin-top: 4px; padding: 9px 11px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; font-size: 14px; box-sizing: border-box; }}
-.btn {{ background: #4ade80; color: #052e16; border: 0; border-radius: 8px; padding: 10px 18px; font-weight: bold; cursor: pointer; font-size: 14px; }}
-.legal-note {{ font-size: 12px; color: #64748b; margin-top: 12px; }}
-footer {{ border-top: 1px solid #1e293b; margin-top: 34px; padding: 20px 24px; background: #0b1424; font-size: 12.5px; color: #64748b; text-align: center; }}
-footer a {{ color: #8ea0b8; text-decoration: none; margin: 0 8px; }}
-.size-note {{ font-size: 12px; color: #64748b; }}
-.cards {{ display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0; }}
-.card {{ background: #1e293b; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 150px; }}
-.card .num {{ font-size: 24px; font-weight: bold; color: #4ade80; }}
-.card .lbl {{ font-size: 12px; color: #94a3b8; }}
-section {{ background: #1e293b; border-radius: 10px; padding: 16px 20px; margin: 18px 0; }}
-section h2 {{ margin-top: 0; font-size: 15px; }}
-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-th, td {{ text-align: left; padding: 7px 8px; border-bottom: 1px solid #334155; vertical-align: middle; }}
-th {{ color: #94a3b8; font-weight: normal; }}
-.empty {{ text-align: center; color: #64748b; padding: 18px; }}
-.status {{ padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; }}
-.status.pendente {{ background: #78350f; color: #fbbf24; }}
-.status.pago {{ background: #064e3b; color: #4ade80; }}
-.status.entregue {{ background: #1e3a5f; color: #60a5fa; }}
-.status.cancelado {{ background: #7f1d1d; color: #f87171; }}
-.acts form {{ display: inline; }}
-.acts button {{ background: #334155; border: 0; color: #e2e8f0; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px; }}
-.acts button.pago {{ background: #064e3b; color: #4ade80; }}
-.acts button.entregue {{ background: #1e3a5f; color: #60a5fa; }}
-.note {{ font-size: 12.5px; color: #94a3b8; }}
-.big {{ display: inline-block; background: #4ade80; color: #052e16; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; }}
+:root {
+  --bg: #0b0f1a;
+  --panel: #111a2c;
+  --panel-2: #18233a;
+  --border: #22304a;
+  --border-2: #2c3d5e;
+  --text: #e6edf7;
+  --muted: #8ea0b8;
+  --green: #4ade80;
+  --purple: #a78bfa;
+  --blue: #60a5fa;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --grad: linear-gradient(135deg,#34d399 0%,#4ade80 35%,#60a5fa 100%);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', Arial, sans-serif; margin: 0;
+  background: radial-gradient(1100px 520px at 85% -10%, rgba(124,58,237,.14), transparent 60%),
+              radial-gradient(900px 460px at -10% 0%, rgba(52,211,153,.10), transparent 55%),
+              var(--bg);
+  color: var(--text); min-height: 100vh; line-height: 1.5;
+}
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--purple); outline-offset: 2px; border-radius: 8px;
+}
+header {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(11,15,26,.86); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+header h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+header a { color: var(--muted); font-size: 13px; text-decoration: none; }
+header a:hover { color: #fff; }
+.brand { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 2px; color: #fff; }
+.brand span { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.brand-tag { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .4px; }
+main { padding: 26px 24px 46px; max-width: 1080px; margin: 0 auto; }
+label { display: block; margin-top: 12px; color: var(--muted); font-size: 13px; font-weight: 600; }
+input, select, textarea {
+  width: 100%; margin-top: 5px; padding: 10px 12px;
+  border: 1px solid var(--border-2); border-radius: 10px;
+  background: var(--bg); color: var(--text); font-size: 14px; box-sizing: border-box;
+  transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--purple); outline: 2px solid transparent; }
+input:disabled { opacity: .55; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--grad); color: #04281a; border: 0; border-radius: 10px;
+  padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 14px; text-decoration: none;
+  transition: filter .15s, transform .05s;
+}
+.btn:hover { filter: brightness(1.08); text-decoration: none; }
+.btn:active { transform: scale(.98); }
+.btn.ghost { background: transparent; color: var(--blue); border: 1px solid var(--border-2); }
+.btn.ghost:hover { background: rgba(96,165,250,.10); }
+.btn.blue { background: linear-gradient(135deg,#3b82f6,#60a5fa); color: #fff; }
+.btn.small { padding: 7px 12px; font-size: 12.5px; border-radius: 8px; }
+.legal-note { font-size: 12px; color: var(--muted); margin-top: 12px; }
+.size-note { font-size: 12px; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); }
+footer {
+  border-top: 1px solid var(--border); margin-top: 40px; padding: 22px 24px;
+  background: #070b12; font-size: 12.5px; color: var(--muted); text-align: center;
+}
+footer a { color: #9db0cc; text-decoration: none; margin: 0 10px; }
+footer a:hover { color: #fff; }
+.foot-main { margin-bottom: 8px; }
+/* ---------- Header do cliente ---------- */
+.nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.nav-link {
+  padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.nav-link:hover { background: rgba(96,165,250,.12); color: #fff; text-decoration: none; }
+.nav-link.active { background: rgba(167,139,250,.18); color: var(--purple); }
+.user { position: relative; display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(17,26,44,.6); }
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%; background: var(--grad);
+  color: #04281a; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center;
+}
+.user .uname { font-size: 13px; color: #fff; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu {
+  position: absolute; right: 0; top: calc(100% + 10px); min-width: 190px;
+  background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 12px;
+  padding: 6px; box-shadow: 0 18px 40px rgba(0,0,0,.5); z-index: 50;
+  opacity: 0; visibility: hidden; transform: translateY(-6px); transition: .18s;
+}
+.user:hover .user-menu, .user:focus-within .user-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+.user-menu a {
+  display: block; padding: 9px 12px; border-radius: 8px; color: var(--text); font-size: 13.5px;
+}
+.user-menu a:hover { background: rgba(96,165,250,.12); color: #fff; text-decoration: none; }
+.user-menu a.danger:hover { background: rgba(248,113,113,.14); color: var(--red); }
+.user-menu .u-name { padding: 8px 12px; font-weight: 700; color: #fff; }
+.user-menu .u-mail { padding: 0 12px 8px; font-size: 12px; color: var(--muted); }
+.user-menu hr { border: 0; border-top: 1px solid var(--border-2); margin: 5px 8px; }
+/* ---------- Welcome ---------- */
+.welcome {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+  background: linear-gradient(120deg, rgba(124,58,237,.16), rgba(96,165,250,.10)), var(--panel);
+  border: 1px solid rgba(167,139,250,.35); border-radius: 16px; padding: 22px 24px; margin-bottom: 20px;
+}
+.welcome h2 { margin: 0 0 6px; font-size: 22px; font-family: 'Sora', sans-serif; }
+.welcome p { margin: 0; color: var(--muted); font-size: 14px; }
+/* ---------- KPIs ---------- */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 20px 0; }
+.kpi {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px; transition: border-color .15s, transform .1s;
+}
+.kpi:hover { border-color: var(--border-2); transform: translateY(-2px); }
+.kpi .ic {
+  width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.kpi .num { font-size: 24px; font-weight: 800; font-family: 'Sora', sans-serif; line-height: 1.1; }
+.kpi .lbl { font-size: 12.5px; color: var(--muted); }
+.kpi.green .ic { background: rgba(74,222,128,.14); }
+.kpi.green .num { color: var(--green); }
+.kpi.amber .ic { background: rgba(251,191,36,.14); }
+.kpi.amber .num { color: var(--amber); }
+.kpi.blue .ic { background: rgba(96,165,250,.14); }
+.kpi.blue .num { color: var(--blue); }
+.kpi.purple .ic { background: rgba(167,139,250,.16); }
+.kpi.purple .num { color: var(--purple); }
+/* ---------- Painéis ---------- */
+.panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px 22px; margin: 18px 0;
+}
+.panel h2 { margin: 0 0 14px; font-size: 16px; font-family: 'Sora', sans-serif; display: flex; align-items: center; gap: 10px; }
+.panel-hd { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.panel-hd h2 { margin: 0; }
+section { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px 22px; margin: 18px 0; }
+section h2 { margin-top: 0; font-size: 15px; font-family: 'Sora', sans-serif; }
+/* ---------- Tabelas ---------- */
+.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 640px; }
+th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; background: rgba(24,35,58,.5); }
+tbody tr:hover { background: rgba(96,165,250,.06); }
+.empty { text-align: center; color: var(--muted); padding: 20px; }
+/* ---------- Badges de status ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; border: 1px solid transparent;
+}
+.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge.pendente { background: rgba(251,191,36,.12); color: var(--amber); border-color: rgba(251,191,36,.3); }
+.badge.pago { background: rgba(74,222,128,.12); color: var(--green); border-color: rgba(74,222,128,.3); }
+.badge.entregue { background: rgba(96,165,250,.12); color: var(--blue); border-color: rgba(96,165,250,.3); }
+.badge.cancelado { background: rgba(248,113,113,.12); color: var(--red); border-color: rgba(248,113,113,.3); }
+.badge.aberto { background: rgba(251,191,36,.12); color: var(--amber); border-color: rgba(251,191,36,.3); }
+.badge.respondido { background: rgba(96,165,250,.12); color: var(--blue); border-color: rgba(96,165,250,.3); }
+.badge.encerrado { background: rgba(142,160,184,.14); color: var(--muted); border-color: rgba(142,160,184,.3); }
+/* compat (painel usa .status) */
+.status { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.status.pendente { background: #78350f; color: #fbbf24; }
+.status.pago { background: #064e3b; color: #4ade80; }
+.status.entregue { background: #1e3a5f; color: #60a5fa; }
+.status.cancelado { background: #7f1d1d; color: #f87171; }
+.acts form { display: inline; }
+.acts button { background: #334155; border: 0; color: #e2e8f0; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+.acts button.pago { background: #064e3b; color: #4ade80; }
+.acts button.entregue { background: #1e3a5f; color: #60a5fa; }
+.big { display: inline-block; background: var(--grad); color: #04281a; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 700; }
+/* ---------- Empty state ---------- */
+.empty-state {
+  text-align: center; padding: 40px 20px; border: 1px dashed var(--border-2); border-radius: 16px; background: rgba(17,26,44,.4);
+}
+.empty-state .em-ic { font-size: 42px; margin-bottom: 10px; }
+.empty-state h3 { margin: 0 0 6px; font-size: 17px; font-family: 'Sora', sans-serif; }
+.empty-state p { margin: 0 auto 16px; color: var(--muted); font-size: 13.5px; max-width: 420px; }
+/* ---------- Cartões de ajuda / perfil ---------- */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+.help-card, .field-card {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; text-decoration: none; transition: border-color .15s, transform .1s;
+}
+.help-card:hover { border-color: var(--purple); transform: translateY(-2px); text-decoration: none; }
+.help-card .h-ic { font-size: 22px; margin-bottom: 8px; }
+.help-card .h-t { font-weight: 700; color: var(--text); font-size: 14.5px; }
+.help-card .h-s { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+.field-card .f-lbl { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.field-card .f-val { font-size: 15px; font-weight: 600; margin-top: 2px; }
+/* ---------- Aviso / erro ---------- */
+.alert {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: rgba(248,113,113,.10); border: 1px solid rgba(248,113,113,.35); border-radius: 12px;
+  padding: 12px 16px; font-size: 13.5px; color: var(--red); margin-bottom: 16px;
+}
+.alert a { color: var(--red); font-weight: 700; }
+.alert.info { background: rgba(96,165,250,.10); border-color: rgba(96,165,250,.35); color: var(--blue); }
+.alert.info a { color: var(--blue); }
+.fade-in { animation: fadeUp .35s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .fade-in { animation: none; } }
+/* ---------- Responsivo ---------- */
+@media (max-width: 900px) {
+  header { flex-wrap: wrap; }
+  .user .uname { display: none; }
+}
+@media (max-width: 640px) {
+  main { padding: 18px 14px 36px; }
+  header { padding: 10px 14px; }
+  .welcome { padding: 16px 18px; }
+  .welcome h2 { font-size: 18px; }
+  .kpis { gap: 10px; }
+  .kpi .num { font-size: 20px; }
+  .panel, section { padding: 15px 16px; }
+  .nav { gap: 2px; }
+  .nav-link { padding: 6px 9px; font-size: 12px; }
+  .user { padding: 5px 8px; }
+  .foot-main a { display: inline-block; margin: 4px 6px; }
+}
+@media (max-width: 480px) {
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .brand-tag { display: none; }
+  .nav-link { padding: 5px 7px; font-size: 11px; }
+}
 </style>
 </head>
 <body>
-<header><h1><span class="brand">BAP<span>ZX</span></span> · {brand}</h1>{top}</header>
-<main>{body}</main>
+<header>
+  <h1><span class="brand">BAP<span>ZX</span></span> <span class="brand-tag">· @@BRAND@@</span></h1>
+  @@TOP@@
+</header>
+<main class="fade-in">@@BODY@@</main>
 <footer>
-  <span>© 2026 BAPZX · Vendas de RC no Tibia</span><br>
-  <a href="/privacidade">Política de Privacidade</a>
-  <a href="/termos">Termos de Uso</a>
-  <a href="/reembolso">Política de Reembolso</a>
-  <a href="{whatsapp}" rel="noopener">WhatsApp</a>
+  <div class="foot-main">
+    © 2026 BAPZX · Vendas de RC no Tibia
+  </div>
+  <div>
+    <a href="/privacidade">Política de Privacidade</a>
+    <a href="/termos">Termos de Uso</a>
+    <a href="/reembolso">Política de Reembolso</a>
+    <a href="@@WHATSAPP@@" rel="noopener" target="_blank">WhatsApp</a>
+  </div>
 </footer>
 </body>
 </html>"""
 
 
-def _page(title, brand, top, body):
+def _render_layout(title, brand, top, body):
     return (
-        AUTH_LAYOUT.format(
-            title=html.escape(title),
-            brand=html.escape(brand),
-            top=top,
-            body=body,
-            whatsapp=SERVICE_WHATSAPP_LINK,
-        ),
+        AUTH_LAYOUT.replace("@@TITLE@@", html.escape(title))
+        .replace("@@BRAND@@", html.escape(brand))
+        .replace("@@TOP@@", top)
+        .replace("@@BODY@@", body)
+        .replace("@@WHATSAPP@@", SERVICE_WHATSAPP_LINK),
         200,
         {"Content-Type": "text/html; charset=utf-8"},
     )
+
+
+def _page(title, brand, top, body):
+    return _render_layout(title, brand, top, body)
 
 
 def current_user():
@@ -1860,36 +2059,241 @@ def acesso():
     return _page("Escolha a área", "Escolha a área", top, body)
 
 
+def _title_initials(name):
+    parts = [p for p in re.split(r"[\s._-]+", name or "") if p]
+    base = (parts[0] if parts else "C")[:1] + (parts[-1] if len(parts) > 1 else "")[:1]
+    return html.escape(base.upper() or "C")
+
+
+def _cliente_header(user, active="visao"):
+    nav = (
+        "<nav class='nav' aria-label='Navegação do cliente'>"
+        "<a class='nav-link %s' href='/cliente'>Visão Geral</a>"
+        "<a class='nav-link %s' href='/cliente#pedidos'>Meus Pedidos</a>"
+        "<a class='nav-link %s' href='/cliente/suporte'>Suporte</a>"
+        "<a class='nav-link %s' href='/cliente/perfil'>Meu Perfil</a>"
+        "</nav>"
+    ) % (
+        "active" if active == "visao" else "",
+        "active" if active == "pedidos" else "",
+        "active" if active == "suporte" else "",
+        "active" if active == "perfil" else "",
+    )
+    nome = user["name"] if user.get("name") else user["email"]
+    inicial = _title_initials(nome)
+    drop = (
+        "<div class='user' tabindex='0' aria-label='Menu da conta'>"
+        f"<span class='avatar' aria-hidden='true'>{inicial}</span>"
+        f"<span class='uname'>{html.escape(str(nome))}</span>"
+        "<div class='user-menu'>"
+        f"<div class='u-name'>{html.escape(str(nome))}</div>"
+        f"<div class='u-mail'>{html.escape(user['email'])}</div>"
+        "<hr>"
+        "<a href='/cliente/perfil'>Meu perfil</a>"
+        "<a href='/cliente/suporte'>Suporte</a>"
+        "<a href='/acesso'>Trocar área</a>"
+        "<a class='danger' href='/logout'>Sair</a>"
+        "</div></div>"
+    )
+    return nav + drop
+
+
+def _status_badge(status):
+    status = (status or "pendente").lower()
+    label = {
+        "pendente": "Pendente",
+        "pago": "Pago",
+        "entregue": "Concluído",
+        "cancelado": "Cancelado",
+        "aberto": "Pendente",
+        "respondido": "Respondido",
+        "encerrado": "Encerrado",
+    }.get(status, status.capitalize())
+    cls = status if status in ("pendente", "pago", "entregue", "cancelado", "aberto", "respondido", "encerrado") else "aberto"
+    return f"<span class='badge {html.escape(cls)}'>{html.escape(label)}</span>"
+
+
+def _fmt_brl(value):
+    try:
+        numero = parse_brl(value)
+    except Exception:
+        return html.escape(str(value or "-"))
+    if numero == 0:
+        return html.escape(str(value or "-"))
+    inteiro, _, dec = f"{numero:,.2f}".partition(".")
+    inteiro = inteiro.replace(",", ".")
+    return f"R$ {inteiro},{dec}"
+
+
+def _cliente_profile(email):
+    if not (STORE.remote and email):
+        return {}
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/profiles?email=eq.{email}&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            profiles = response.json() or []
+            if profiles:
+                return profiles[0]
+    except Exception:
+        pass
+    return {}
+
+
+def _cliente_tickets(email):
+    if not (STORE.remote and email):
+        return []
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/tickets?email=eq.{email}&order=criado_em.desc&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            return response.json() or []
+    except Exception:
+        pass
+    return []
+
+
 @app.route("/cliente")
 def cliente():
     user = current_user()
     if not user:
         return redirect("/login")
-    mine = [
-        o
-        for o in STORE.list()
-        if (o.get("email") or "").strip().lower() == user["email"]
-    ]
-    rows = _orders_rows(mine)
-    top = (
-        "<a href='/cliente/perfil' style='padding:6px 12px;background:rgba(52,211,153,.12);border-radius:6px;text-decoration:none;color:#34d399;font-size:13px'>Meu perfil</a> "
-        "<a href='/cliente/suporte' style='padding:6px 12px;background:rgba(96,165,250,.12);border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Suporte</a> "
-        f"<span style='color:#94a3b8;font-size:12px;margin-left:12px'>{html.escape(user['name'])}</span> "
-        "<a href='/acesso' style='margin-left:8px'>Trocar área</a> "
-        "<a href='/logout' style='margin-left:8px'>Sair</a>"
-    )
-    body = (
-        "<div class='cards'>"
-        "<div class='card'><div class='num'>{n}</div><div class='lbl'>Meus pedidos</div></div>"
+    email = user["email"].lower()
+    try:
+        mine = [
+            o
+            for o in STORE.list()
+            if (o.get("email") or "").strip().lower() == email
+        ]
+    except Exception:
+        mine = []
+    profile = _cliente_profile(email)
+    tickets = _cliente_tickets(email)
+
+    total = len(mine)
+    em_andamento = sum(1 for o in mine if (o.get("status") or "pendente") in ("pendente", "pago"))
+    concluidos = sum(1 for o in mine if (o.get("status") or "pendente") == "entregue")
+
+    nome_parts = re.split(r"[\s]+", user["name"].strip()) if user.get("name") else [email.split("@")[0]]
+    primeiro = html.escape((nome_parts[0] if nome_parts else "Cliente").title())
+
+    kpis = (
+        "<div class='kpis'>"
+        f"<div class='kpi green'><div class='ic' aria-hidden='true'>&#128230;</div>"
+        f"<div><div class='num'>{total}</div><div class='lbl'>Total de pedidos</div></div></div>"
+        f"<div class='kpi amber'><div class='ic' aria-hidden='true'>&#9203;</div>"
+        f"<div><div class='num'>{em_andamento}</div><div class='lbl'>Em andamento</div></div></div>"
+        f"<div class='kpi blue'><div class='ic' aria-hidden='true'>&#9989;</div>"
+        f"<div><div class='num'>{concluidos}</div><div class='lbl'>Concluídos</div></div></div>"
+        f"<div class='kpi purple'><div class='ic' aria-hidden='true'>&#127903;</div>"
+        f"<div><div class='num'>{len(tickets)}</div><div class='lbl'>Tickets</div></div></div>"
         "</div>"
-    ).format(n=len(mine))
-    note = (
-        "Os pedidos aparecem aqui quando o pagamento foi solicitado com o "
-        "<b>mesmo e-mail</b> da sua conta Google. Se faltar algum pedido, finalize "
-        "a compra no Telegram usando esse e-mail no Pix."
     )
-    body += f"<section><h2>Meus pedidos</h2>{rows}</section><p class='note'>{note}</p>"
-    return _page("Minha conta", "Minha conta", top, body)
+
+    perfis = (
+        "<div class='grid2'>"
+        "<div class='field-card'><div class='f-lbl'>Nome</div>"
+        f"<div class='f-val'>{html.escape(user['name'])}</div></div>"
+        "<div class='field-card'><div class='f-lbl'>E-mail</div>"
+        f"<div class='f-val'>{html.escape(email)}</div></div>"
+        "<div class='field-card'><div class='f-lbl'>Personagem</div>"
+        f"<div class='f-val'>{html.escape(str(profile.get('personagem') or '—'))}</div></div>"
+        "<div class='field-card'><div class='f-lbl'>Mundo</div>"
+        f"<div class='f-val'>{html.escape(str(profile.get('mundo') or '—'))}</div></div>"
+        "</div>"
+    )
+
+    pedidos_panel = ""
+    if mine:
+        sorted_mine = sorted(mine, key=lambda o: o.get("data") or "", reverse=True)
+        ultimo = sorted_mine[0]
+        ultimo_b = (
+            "<div class='help-card' style='margin-top:12px'>"
+            "<div class='h-ic' aria-hidden='true'>&#127881;</div>"
+            "<div class='h-t'>Último pedido</div>"
+            "<div class='h-s' style='margin-top:8px'>"
+            f"<b>#{html.escape(str(ultimo.get('id') or '-'))}</b> · "
+            f"{html.escape(str(ultimo.get('tc') or '-'))} RC · "
+            f"<b>{_fmt_brl(ultimo.get('preco'))}</b><br>"
+            f"<span style='color:var(--muted)'>{html.escape(str(ultimo.get('data') or ''))[:16]} · "
+            f"{html.escape(str(ultimo.get('mundo') or '-'))}</span></div>"
+            "<div style='margin-top:10px'>" + _status_badge(ultimo.get("status")) + "</div>"
+            "</div>"
+        )
+        tabela = "".join(
+            "<tr>"
+            f"<td><b>#{html.escape(str(o.get('id') or '-'))}</b></td>"
+            f"<td>{html.escape(str(o.get('tc') or '-'))} RC · {html.escape(str(o.get('mundo') or '-'))}</td>"
+            f"<td>{html.escape(str(o.get('data') or ''))[:16]}</td>"
+            f"<td>{_fmt_brl(o.get('preco'))}</td>"
+            f"<td>{_status_badge(o.get('status'))}</td>"
+            "<td><a class='btn ghost small' href='/cliente/suporte'>Ajuda</a></td>"
+            "</tr>"
+            for o in sorted_mine[:8]
+        )
+        pedidos_panel = (
+            "<div class='panel' id='pedidos'>"
+            "<div class='panel-hd'><h2>&#128230; Pedidos recentes</h2>"
+            f"<a class='btn ghost small' href='/cliente'>Ver tudo</a></div>"
+            "<div class='table-wrap'><table>"
+            "<tr><th>Pedido</th><th>Produto</th><th>Data</th><th>Valor</th><th>Status</th><th>Ação</th></tr>"
+            + tabela
+            + "</table></div>"
+            + ultimo_b
+            + "</div>"
+        )
+    else:
+        pedidos_panel = (
+            "<div class='panel' id='pedidos'>"
+            "<div class='empty-state'>"
+            "<div class='em-ic' aria-hidden='true'>&#128232;</div>"
+            "<h3>Você ainda não possui pedidos</h3>"
+            "<p>Quando você fechar uma compra no Telegram com o mesmo e-mail da sua conta, "
+            "seus pedidos aparecem aqui.</p>"
+            "<a class='btn blue' target='_blank' rel='noopener' href='" + PORTFOLIO_URL + "'>Explorar serviços</a>"
+            "</div></div>"
+        )
+
+    ajuda = (
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#129309; Precisa de ajuda?</h2></div>"
+        "<div class='grid2'>"
+        "<a class='help-card' href='/cliente/suporte'>"
+        "<div class='h-ic' aria-hidden='true'>&#128172;</div>"
+        "<div><div class='h-t'>Novo atendimento</div>"
+        "<div class='h-s'>Abra um chamado com a equipe BAPZX</div></div></a>"
+        "<a class='help-card' href='/cliente/suporte#chamados'>"
+        "<div class='h-ic' aria-hidden='true'>&#128279;</div>"
+        "<div><div class='h-t'>Meus tickets</div>"
+        "<div class='h-s'>Acompanhe seus chamados abertos</div></div></a>"
+        "</div></div>"
+    )
+
+    body = (
+        "<div class='welcome'>"
+        f"<div><h2>Olá, {primeiro}! &#128075;</h2>"
+        "<p>Bem-vindo de volta à sua área do cliente BAPZX.</p></div>"
+        "<a class='btn' target='_blank' rel='noopener' href='" + PORTFOLIO_URL + "'>Fazer um novo pedido</a>"
+        "</div>"
+        + kpis
+        + pedidos_panel
+        + ajuda
+        + "<div class='panel'><div class='panel-hd'><h2>&#128100; Meu perfil</h2>"
+        "<a class='btn ghost small' href='/cliente/perfil'>Editar perfil</a></div>"
+        + perfis
+        + "</div>"
+        "<p class='note'>Os pedidos aparecem aqui quando o pagamento foi solicitado com o "
+        "<b>mesmo e-mail</b> da sua conta Google. Se faltar algum pedido, finalize "
+        "a compra no Telegram usando esse e-mail no Pix.</p>"
+    )
+    top = _cliente_header(user, "visao")
+    return _page("Minha conta", "Área do Cliente", top, body)
 
 
 @app.route("/cliente/perfil", methods=["GET", "POST"])
@@ -1898,19 +2302,7 @@ def cliente_perfil():
     if not user:
         return redirect("/login")
     email = user["email"].lower()
-    profiles = []
-    if STORE.remote:
-        try:
-            response = requests.get(
-                f"{STORE.url}/rest/v1/profiles?email=eq.{email}&select=*",
-                headers=STORE._headers(),
-                timeout=15,
-            )
-            if response.status_code == 200:
-                profiles = response.json()
-        except Exception:
-            profiles = []
-    profile = profiles[0] if profiles else {}
+    profile = _cliente_profile(email)
 
     if request.method == "POST":
         if not _csrf_ok():
@@ -1935,13 +2327,11 @@ def cliente_perfil():
                 pass
         return redirect("/cliente/perfil")
 
-    top = (
-        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
-        f"<a href='/logout'>Sair</a>"
-    )
+    top = _cliente_header(user, "perfil")
     body = (
-        "<section><h2>Meu perfil</h2>"
-        "<p style='color:#8ea0b8;font-size:13px'>"
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#128100; Meu perfil</h2></div>"
+        "<p class='note'>"
         "Informe seu personagem e mundo para agilizar seus próximos pedidos.</p>"
         "<form method='post'>"
         f"<label>E-mail</label><input value='{html.escape(email)}' disabled>"
@@ -1950,12 +2340,12 @@ def cliente_perfil():
         "placeholder='Nome do personagem'>"
         f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}' "
         "placeholder='Ex.: antica'>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar perfil</button></p>"
+        "<p style='margin-top:16px'><button class='btn' type='submit'>Salvar perfil</button></p>"
         "</form>"
         "<p class='legal-note'>Ao salvar seu perfil, seus dados (personagem e mundo) são usados "
         "apenas para agilizar seus pedidos. Consulte nossa "
-        "<a href='/privacidade' style='color:#60a5fa'>Política de Privacidade</a> (LGPD) para saber mais.</p>"
-        "</section>"
+        "<a href='/privacidade'>Política de Privacidade</a> (LGPD) para saber mais.</p>"
+        "</div>"
     )
     return _page("Meu perfil", "Meu perfil", top, body)
 
@@ -1965,10 +2355,7 @@ def cliente_suporte():
     user = current_user()
     if not user:
         return redirect("/login")
-    top = (
-        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
-        f"<a href='/logout'>Sair</a>"
-    )
+    top = _cliente_header(user, "suporte")
     email = user["email"].lower()
 
     if request.method == "POST":
@@ -1996,46 +2383,51 @@ def cliente_suporte():
                 pass
         return redirect("/cliente/suporte")
 
-    tickets = []
-    if STORE.remote:
-        try:
-            response = requests.get(
-                f"{STORE.url}/rest/v1/tickets?email=eq.{email}&order=criado_em.desc&select=*",
-                headers=STORE._headers(),
-                timeout=15,
-            )
-            if response.status_code == 200:
-                tickets = response.json()
-        except Exception:
-            tickets = []
-    rows = "".join(
-        "<tr>"
-        f"<td>{html.escape(str(t.get('id') or '-'))}</td>"
-        f"<td>{html.escape(str(t.get('criado_em') or ''))[:16]}</td>"
-        f"<td>{html.escape(str(t.get('assunto') or '-'))}</td>"
-        f"<td><span class='status {html.escape(t.get('status') or 'aberto')}'>{html.escape(t.get('status') or 'aberto')}</span></td>"
-        f"<td><a class='btn ghost' style='padding:4px 10px;font-size:12px' href='/cliente/suporte/{t.get('id')}'>Ver</a></td>"
-        "</tr>"
-        for t in tickets
-    ) or "<tr><td colspan='5' style='color:#64748b;text-align:center'>Nenhum chamado aberto.</td></tr>"
+    tickets = _cliente_tickets(email)
+    if tickets:
+        rows = "".join(
+            "<tr>"
+            f"<td><b>#{html.escape(str(t.get('id') or '-'))}</b></td>"
+            f"<td>{html.escape(str(t.get('criado_em') or ''))[:16]}</td>"
+            f"<td>{html.escape(str(t.get('assunto') or '-'))}</td>"
+            f"<td>{_status_badge(t.get('status'))}</td>"
+            f"<td><a class='btn ghost small' href='/cliente/suporte/{t.get('id')}'>Ver</a></td>"
+            "</tr>"
+            for t in tickets
+        )
+        chamados = (
+            "<div class='table-wrap'><table>"
+            "<tr><th>Chamado</th><th>Data</th><th>Assunto</th><th>Status</th><th></th></tr>"
+            + rows
+            + "</table></div>"
+        )
+    else:
+        chamados = (
+            "<div class='empty-state'>"
+            "<div class='em-ic' aria-hidden='true'>&#128279;</div>"
+            "<h3>Nenhum chamado aberto</h3>"
+            "<p>Quando você abrir um atendimento, ele aparece aqui para acompanhamento.</p>"
+            "</div>"
+        )
     body = (
-        "<section><h2>Abrir chamado</h2>"
+        "<div class='panel' id='novo'>"
+        "<div class='panel-hd'><h2>&#128172; Abrir chamado</h2></div>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         "<label>Assunto</label><input name='assunto' required placeholder='Resumo curto'>"
         "<label>Mensagem</label><textarea name='mensagem' rows='4' required></textarea>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Enviar chamado</button></p>"
+        "<p style='margin-top:16px'><button class='btn' type='submit'>Enviar chamado</button></p>"
         "</form>"
         "<p class='legal-note'>As mensagens enviadas aqui são tratadas em sigilo para atender seu "
-        "chamado. Consulte nossa <a href='/privacidade' style='color:#60a5fa'>Política de "
+        "chamado. Consulte nossa <a href='/privacidade'>Política de "
         "Privacidade</a> (LGPD).</p>"
-        "</section>"
-        "<section><h2>Meus chamados</h2><table>"
-        "<tr><th>Id</th><th>Data</th><th>Assunto</th><th>Status</th><th></th></tr>"
-        + rows
-        + "</table></section>"
+        "</div>"
+        "<div class='panel' id='chamados'>"
+        "<div class='panel-hd'><h2>&#128279; Meus chamados</h2></div>"
+        + chamados
+        + "</div>"
     )
-    return _page("Suporte", "Suporte", top, body)
+    return _page("Suporte", "Área do Cliente", top, body)
 
 
 @app.route("/cliente/suporte/<int:ticket_id>", methods=["GET"])
@@ -2059,34 +2451,32 @@ def cliente_suporte_detalhe(ticket_id):
     if not tickets:
         return "Chamado não encontrado.", 404
     ticket = tickets[0]
-    top = (
-        f"<span style='color:#94a3b8;font-size:12px'>{html.escape(user['name'])}</span> "
-        f"<a href='/logout'>Sair</a>"
-    )
+    top = _cliente_header(user, "suporte")
     resposta = ""
     if ticket.get("resposta"):
         resposta = (
-            "<p style='background:#0f2a22;border:1px solid #14532d;color:#4ade80;"
-            "border-radius:9px;padding:10px 14px'><b>Resposta:</b> "
-            f"{html.escape(str(ticket.get('resposta') or ''))}</p>"
+            "<div style='background:#0f2a22;border:1px solid #14532d;color:#4ade80;"
+            "border-radius:12px;padding:12px 16px'><b>Resposta:</b> "
+            f"{html.escape(str(ticket.get('resposta') or ''))}</div>"
         )
     body = (
-        "<section><h2>Chamado #{id} · {status}</h2>"
-        "<p style='color:#8ea0b8;font-size:13px'>Abertura: {criado}</p>"
-        "<p><b>{assunto}</b></p>"
-        "<p style='color:#e2e8f0'>{mensagem}</p>"
-        "{resposta}"
-        "</section>"
-        "<p><a class='btn ghost' href='/cliente/suporte'>Voltar aos chamados</a></p>"
-    ).format(
-        id=ticket.get("id"),
-        status=html.escape(ticket.get("status") or "aberto"),
-        criado=html.escape(str(ticket.get("criado_em") or ""))[:19],
-        assunto=html.escape(str(ticket.get("assunto") or "-")),
-        mensagem=html.escape(str(ticket.get("mensagem") or "-")),
-        resposta=resposta,
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>Chamado #%s&nbsp; %s</h2></div>"
+        "<p class='note'>Abertura: %s</p>"
+        "<p><b>%s</b></p>"
+        "<p style='color:#e2e8f0'>%s</p>"
+        "%s"
+        "</div>"
+        "<p><a class='btn ghost' href='/cliente/suporte#chamados'>Voltar aos chamados</a></p>"
+    ) % (
+        html.escape(str(ticket.get("id") or "-")),
+        _status_badge(ticket.get("status")),
+        html.escape(str(ticket.get("criado_em") or ""))[:19],
+        html.escape(str(ticket.get("assunto") or "-")),
+        html.escape(str(ticket.get("mensagem") or "-")),
+        resposta,
     )
-    return _page("Chamado", "Suporte", top, body)
+    return _page("Chamado", "Área do Cliente", top, body)
 
 
 def notify_owner(entry):
