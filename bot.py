@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _registra_invalidador_marketplac
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.10.3"
+VERSION = "2.10.4"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -355,12 +355,93 @@ _MK_MUNDOS = (
 
 _SPRITE_CACHE = {}
 
+_MK_CONECTIVOS = {
+    "a", "as", "ai", "ao", "aos", "com", "da", "das", "de", "desde", "do", "dos",
+    "e", "em", "entre", "na", "nas", "no", "nos", "o", "os", "para", "pela",
+    "pelas", "pelo", "pelos", "por", "um", "uma", "umas", "uns",
+    "the", "of", "and", "or", "to", "in", "on", "at", "for", "from", "with",
+    "into", "onto", "van", "von",
+}
+_MK_ITEM_CATEGORIAS = [
+    "Item", "House", "Soul Core", "Make Believe", "Rares", "Primal Ordeal",
+    "Fansite", "Soul War", "Rotten Blood",
+]
+_MK_CAT_WIKI = [
+    ("soul core", ["soul core"]),
+    ("make believe", ["make believe"]),
+    ("rares", ["rare"]),
+    ("primal ordeal", ["primal ordeal", "wrath"]),
+    ("fansite", ["fansite"]),
+    ("soul war", ["soul war"]),
+    ("rotten blood", ["rotten blood"]),
+    ("house", ["house", "guildhall", "apartment", "flat"]),
+]
+
+
+def _mk_title_case(text):
+    """Padroniza o nome do item: cada palavra começa com maiúscula e o resto
+    fica minúsculo, conectivos comuns ficam minúsculos.
+
+    Ex.: "WAR HAMMER" -> "War Hammer", "war hammer" -> "War Hammer",
+    "sword of the phoenix" -> "Sword of the Phoenix". Nunca derruba."""
+    palavras = (text or "").strip().split()
+    saida = []
+    for i, p in enumerate(palavras):
+        if not p:
+            continue
+        base = p[:1].upper() + p[1:].lower()
+        if i > 0 and base.lower() in _MK_CONECTIVOS:
+            base = base.lower()
+        saida.append(base)
+    return " ".join(saida)
+
+
+def _mk_itemcategory(item_name):
+    """Tenta descobrir a categoria do item no Wiki Tibia a partir do nome.
+
+    Consulta prop=categories da página do item e mapeia pelas categorias
+    conhecidas do MARKTRADE. Nunca derruba: sem resultado devolve ""."""
+    nome = (item_name or "").strip()
+    if not nome:
+        return ""
+    try:
+        from urllib.parse import quote
+
+        base = "https://www.tibiawiki.com.br/api.php"
+        headers = {"User-Agent": f"BAPZX-MARKTRADE/{VERSION}"}
+        qs = "&".join(f"{k}={quote(str(v))}" for k, v in {
+            "action": "query",
+            "format": "json",
+            "redirects": "1",
+            "prop": "categories",
+            "cllimit": "500",
+            "titles": _mk_title_case(nome),
+        }.items())
+        r = requests.get(f"{base}?{qs}", timeout=8, headers=headers)
+        r.raise_for_status()
+        dados = r.json() or {}
+        texto = " ".join(
+            (c.get("title") or "")
+            for page in ((dados.get("query") or {}).get("pages") or {}).values()
+            for c in (page.get("categories") or [])
+        ).lower()
+        for chave, termos in _MK_CAT_WIKI:
+            if any(t in texto for t in termos):
+                return next(
+                    (c for c in _MK_ITEM_CATEGORIAS if c.lower() == chave),
+                    chave,
+                )
+    except Exception:
+        pass
+    return ""
+
 
 def _mk_itemsprite(item_name):
     """Busca a imagem oficial do item no Wiki Tibia (tibiawiki.com.br).
 
     Fluxo: prop=images para achar "Arquivo:<Item>.gif/png" e depois imageinfo
-    com iiurlwidth=96 para gerar o thumb. Nunca derruba: em qualquer falha
+    com iiurlwidth=96 para gerar o thumb. Se a primeira tentativa não achar
+    nada, tenta de novo com o nome padronizado (title case). Nunca derruba:
     devolve "" (o anúncio fica sem sprite e o cliente pode mandar a URL)."""
     nome = (item_name or "").strip()
     if not nome:
@@ -421,6 +502,8 @@ def _mk_itemsprite(item_name):
                     break
     except Exception:
         resultado = ""
+    if not resultado and nome != _mk_title_case(nome):
+        resultado = _mk_itemsprite(_mk_title_case(nome))
     if len(_SPRITE_CACHE) > 800:
         _SPRITE_CACHE.clear()
     _SPRITE_CACHE[chave] = resultado
@@ -3090,9 +3173,16 @@ def cliente_troca():
             "<option value=''>Selecione o mundo...</option>"
             + "".join(f"<option value='{html.escape(m)}'>{html.escape(m)}</option>" for m in _MK_MUNDOS)
             + "</select></div>"
-            "<div><label>Contato (discord/telegram ou deixa vazio)</label>"
-            "<input name='contact' maxlength='200' placeholder='Ex.: @bapzx'></div>"
+            "<div><label>Categoria</label><select name='category'>"
+            "<option value=''>Automático (Wiki Tibia)</option>"
+            + "".join(f"<option value='{html.escape(c)}'>{html.escape(c)}</option>" for c in _MK_ITEM_CATEGORIAS)
+            + "</select></div>"
+            "<div><label>Contato * (discord/telegram/whypixels)</label>"
+            "<input name='contact' required maxlength='200' placeholder='Ex.: @bapzx'></div>"
             "</div>"
+            "<p class='note' style='margin-top:2px'>O nome do item é padronizado automaticamente "
+            "(ex.: WAR HAMMER vira <b>War Hammer</b>). Se não escolher a categoria, tentamos "
+            "descobrir a do item no Wiki Tibia.</p>"
             "<label>Tipo de anúncio</label><select name='tipo_anuncio'>"
             "<option value='venda'>Vendendo</option>"
             "<option value='compra'>Comprando</option>"
@@ -3210,7 +3300,7 @@ def cliente_troca_publicar():
         return redirect("/cliente/troca")
     email = user["email"].lower()
 
-    item_name = (request.form.get("item_name") or "").strip()[:120]
+    item_name = _mk_title_case((request.form.get("item_name") or "").strip())[:120]
     character_name = (request.form.get("character_name") or "").strip()[:60]
     world = (request.form.get("world") or "").strip()
     contact = (request.form.get("contact") or "").strip()[:200]
@@ -3225,9 +3315,18 @@ def cliente_troca_publicar():
     if not item_name or not character_name or not world:
         _mk_flash("erro", "Informe o item, o personagem e o mundo.")
         return redirect("/cliente/troca")
+    if not contact:
+        _mk_flash("erro", "Informe um contato para quem quiser negociar com você.")
+        return redirect("/cliente/troca")
     if world not in _MK_MUNDOS:
         _mk_flash("erro", "Selecione um mundo válido para o anúncio.")
         return redirect("/cliente/troca")
+    if category not in _MK_ITEM_CATEGORIAS:
+        categoria_detectada = _mk_itemcategory(item_name)
+        category = next(
+            (c for c in _MK_ITEM_CATEGORIAS if c.lower() == category.lower()),
+            categoria_detectada,
+        )
     if not sprite:
         sprite = _mk_itemsprite(item_name)
 

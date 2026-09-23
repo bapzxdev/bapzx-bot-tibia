@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.3"
+VERSION = "2.10.4"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3223,6 +3223,8 @@ def api_troca():
             "aceita_ofertas": bool(a.get("aceita_ofertas")),
             "world": a.get("world") or "",
             "jogador": a.get("character_name") or "",
+            "categoria": a.get("category") or "",
+            "contato": a.get("contact") or "",
             "verificado": bool(a.get("verificado")),
             "is_destaque": bool(a.get("is_destaque")),
             "destaque_until": a.get("destaque_until") or "",

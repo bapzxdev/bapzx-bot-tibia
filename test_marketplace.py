@@ -632,6 +632,9 @@ class TestMkBot(unittest.TestCase):
         self.assertIn("Você ainda não publicou nada", html)
         self.assertIn("MARKTRADE", html)
         self.assertIn("<select name='world'", html)
+        self.assertIn("<select name='category'", html)
+        self.assertIn("Automático (Wiki Tibia)", html)
+        self.assertIn("name='contact' required", html)
         self.assertIn(">Auroria<", html)
         self.assertIn(">Infernum I<", html)
         self.assertIn("Wiki Tibia", html)
@@ -652,6 +655,7 @@ class TestMkBot(unittest.TestCase):
                     "item_name": "War Hammer",
                     "character_name": "Bapz",
                     "world": "honbra",
+                    "contact": "@bapzx",
                 },
             )
         self.assertEqual(resp.status_code, 302)
@@ -683,6 +687,7 @@ class TestMkBot(unittest.TestCase):
                 "item_name": "War Hammer",
                 "character_name": "Bapz",
                 "world": "Auroria",
+                "contact": "@bapzx",
             })
         self.assertEqual(resp.status_code, 500)
         self.assertTrue(posts, "deve chegar ao Supabase")
@@ -702,9 +707,13 @@ class TestMkBot(unittest.TestCase):
         resp2.json = lambda: {
             "query": {"pages": {"1": {"imageinfo": [{"thumburl": "https://www.tibiawiki.com.br/t/War_Hammer.gif"}]}}}
         }
+        resp_cat = _FakeResp()
+        resp_cat.json = lambda: {"query": {"pages": {"1": {"categories": [{"title": "Category:Soul Core"}]}}}}
 
         def fakeget(url, **kw):
             calls.append(url)
+            if "prop=categories" in url:
+                return resp_cat
             return resp1 if "prop=images" in url else resp2
 
         def fakepost(url, **kw):
@@ -725,11 +734,96 @@ class TestMkBot(unittest.TestCase):
                 "item_name": "War Hammer",
                 "character_name": "Bapz",
                 "world": "Auroria",
+                "contact": "@bapzx",
             })
         self.assertEqual(resp.status_code, 500)
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
         self.assertTrue(posts)
         self.assertEqual(posts[0]["sprite"], "https://www.tibiawiki.com.br/t/War_Hammer.gif")
+        self.assertEqual(posts[0]["category"], "Soul Core")
+
+    def test_mk_title_case(self):
+        self.assertEqual(bot._mk_title_case("WAR HAMMER"), "War Hammer")
+        self.assertEqual(bot._mk_title_case("war hammer"), "War Hammer")
+        self.assertEqual(bot._mk_title_case("sword of the phoenix"), "Sword of the Phoenix")
+        self.assertEqual(bot._mk_title_case("War Hammer"), "War Hammer")
+        self.assertEqual(bot._mk_title_case(""), "")
+        self.assertEqual(bot._mk_title_case("blue robe"), "Blue Robe")
+
+    def test_mk_itemcategory_detecta(self):
+        resp = _FakeResp()
+        resp.json = lambda: {
+            "query": {"pages": {"1": {"categories": [
+                {"title": "Category:Itens"},
+                {"title": "Category:Soul Core",
+                 }]}}}
+        }
+        with mock.patch.object(bot.requests, "get", return_value=resp):
+            self.assertEqual(bot._mk_itemcategory("Exalted Core"), "Soul Core")
+
+    def test_mk_itemcategory_falha_e_vazio(self):
+        with mock.patch.object(bot.requests, "get", side_effect=Exception("boom")):
+            self.assertEqual(bot._mk_itemcategory("Algum Item"), "")
+        self.assertEqual(bot._mk_itemcategory(""), "")
+
+    def test_publicar_contato_obrigatorio(self):
+        c = bot.app.test_client()
+        posts = []
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+            })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
+        self.assertFalse(posts, "não deve publicar sem contato")
+
+    def test_publicar_normaliza_item_e_categoria_manual(self):
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        posts = []
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "WAR HAMMER",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "@bapzx",
+                "category": "rares",
+            })
+        self.assertEqual(resp.status_code, 500)
+        self.assertTrue(posts)
+        pl = posts[0]
+        self.assertEqual(pl["item_name"], "War Hammer")
+        self.assertEqual(pl["category"], "Rares")
+        self.assertEqual(pl["contact"], "@bapzx")
 
     def test_publicar_master_sem_qr_ativa_direto(self):
         # Modo teste do dono (email em MASTER_EMAILS): publica ATIVADO direto,
@@ -774,6 +868,8 @@ class TestMkBot(unittest.TestCase):
                 "item_name": "War Hammer",
                 "character_name": "Bapz",
                 "world": "Auroria",
+                "contact": "@bapzx",
+                "category": "Rares",
             })
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
@@ -826,6 +922,8 @@ class TestMkBot(unittest.TestCase):
                 "item_name": "War Hammer",
                 "character_name": "Bapz",
                 "world": "Auroria",
+                "contact": "@bapzx",
+                "category": "Rares",
                 "destaque": "1",
             })
         self.assertEqual(resp.status_code, 302)
