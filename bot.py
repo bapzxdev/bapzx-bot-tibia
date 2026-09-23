@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _registra_invalidador_marketplac
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.10.2"
+VERSION = "2.10.3"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -443,13 +443,17 @@ def _mk_parse_dt(value):
 
 
 def _mk_fmt_dt(value):
-    """dd/mm/aaaa hh:mm no fuso de São Paulo; cru se der erro."""
+    """dd/mm/aaaa hh:mm no fuso de São Paulo (UTC-3, sem DST desde 2019);
+    cru se der erro."""
     dt = _mk_parse_dt(value)
     if not dt:
         return "-"
     try:
-        from zoneinfo import ZoneInfo
-        br = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Sao_Paulo"))
+        try:
+            from zoneinfo import ZoneInfo
+            br = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Sao_Paulo"))
+        except Exception:
+            br = dt.replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=-3)))
         return br.strftime("%d/%m/%Y %H:%M")
     except Exception:
         return dt.strftime("%Y-%m-%d %H:%M")
@@ -3148,7 +3152,7 @@ def cliente_troca():
                     f"<td>{html.escape(_mk_tipo_lbl(l.get('tipo_anuncio')))}</td>"
                     f"<td>{preco_txt}</td>"
                     f"<td>{html.escape(str(l.get('world') or '-'))}</td>"
-                    f"<td>{html.escape(str(l.get('created_at') or ''))[:16].replace('T',' ')}</td>"
+                    f"<td>{html.escape(_mk_fmt_dt(l.get('created_at')))}</td>"
                     f"<td>{_mk_status_badge(l.get('status'))}</td>"
                     f"<td class='acts'>{''.join(acoes)}</td>"
                     "</tr>"

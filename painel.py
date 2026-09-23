@@ -1,4 +1,4 @@
-import html
+﻿import html
 import json
 import os
 import secrets
@@ -14,14 +14,14 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.1"
+VERSION = "2.10.3"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
 
 
 def _registra_invalidador_coins(fn):
-    """Permite o bot.py registrar a função que zera o cache de coins_config
+    """Permite o bot.py registrar a funÃ§Ã£o que zera o cache de coins_config
     (evita import circular)."""
     global _invalidate_coins_cache
     _invalidate_coins_cache = fn
@@ -31,7 +31,7 @@ _invalidate_marketplace_cache = lambda: None
 
 
 def _registra_invalidador_marketplace(fn):
-    """Permite o bot.py registrar a função que zera o cache de marketplace_config
+    """Permite o bot.py registrar a funÃ§Ã£o que zera o cache de marketplace_config
     (evita import circular)."""
     global _invalidate_marketplace_cache
     _invalidate_marketplace_cache = fn
@@ -165,8 +165,8 @@ _SID_CACHE = {}
 
 
 def _sessao_ativa(sid):
-    """Confere se a sessão atual não foi encerrada (área Segurança).
-    Sessões antigas, sem registro, continuam válidas. Cache de 60s."""
+    """Confere se a sessÃ£o atual nÃ£o foi encerrada (Ã¡rea SeguranÃ§a).
+    SessÃµes antigas, sem registro, continuam vÃ¡lidas. Cache de 60s."""
     if not sid:
         return True
     now = time.time()
@@ -248,21 +248,21 @@ def _fetch(table, select="*", order="", query="", range_="0-999"):
 
 
 def _fetch_soft(table, select="*", order="", query="", range_="0-999"):
-    """Como _fetch, mas retorna lista vazia se a tabela ainda não existir
-    (PGRST205) para não derrubar o painel antes da migration ser rodada."""
+    """Como _fetch, mas retorna lista vazia se a tabela ainda nÃ£o existir
+    (PGRST205) para nÃ£o derrubar o painel antes da migration ser rodada."""
     try:
         return _fetch(table, select=select, order=order, query=query, range_=range_)
     except Exception as error:
         if "PGRST205" in str(error):
-            print(f"[painel] tabela '{table}' ainda não existe (migration pendente)")
+            print(f"[painel] tabela '{table}' ainda nÃ£o existe (migration pendente)")
             return []
         raise
 
 
 def _fetch_public(table, select="*", order="", query="", range_="0-999"):
-    """Variante para endpoints PÚBLICOS (/api/* do portfólio): nunca derruba
-    em instabilidade momentânea do Supabase (conexão, timeout, 5xx) — loga e
-    devolve lista vazia. Erros de autenticação/permissão (401/403) continuam
+    """Variante para endpoints PÃšBLICOS (/api/* do portfÃ³lio): nunca derruba
+    em instabilidade momentÃ¢nea do Supabase (conexÃ£o, timeout, 5xx) â€” loga e
+    devolve lista vazia. Erros de autenticaÃ§Ã£o/permissÃ£o (401/403) continuam
     subindo para o log do erro 500."""
     try:
         return _fetch(table, select=select, order=order, query=query, range_=range_)
@@ -270,7 +270,7 @@ def _fetch_public(table, select="*", order="", query="", range_="0-999"):
         msg = str(error)
         if "401" in msg or "403" in msg or "PGRST301" in msg or "PGRST302" in msg:
             raise
-        print(f"[painel] /api/{table} indisponível (Supabase instável), retornando vazio: {msg[:200]}")
+        print(f"[painel] /api/{table} indisponÃ­vel (Supabase instÃ¡vel), retornando vazio: {msg[:200]}")
         return []
 
 
@@ -349,7 +349,7 @@ def _notificacoes(user):
                 add("venda", "Novas vendas (24h)", "cart", qtd_vendas, "/admin/pedidos")
             qtd_servicos = _count_servicos_recentes(d7)
             if qtd_servicos:
-                add("servico", "Serviços solicitados (7d)", "package", qtd_servicos, "/admin/pedidos")
+                add("servico", "ServiÃ§os solicitados (7d)", "package", qtd_servicos, "/admin/pedidos")
     except Exception:
         pass
     try:
@@ -382,7 +382,7 @@ def _notificacoes(user):
         if peut("ver_config"):
             cfg = _config_all()
             if not (cfg.get("site_nome") or "").strip():
-                sistema.append(("Preencha as configurações do site", "/admin/config"))
+                sistema.append(("Preencha as configuraÃ§Ãµes do site", "/admin/config"))
             try:
                 _count("cupons")
             except Exception:
@@ -437,7 +437,7 @@ def _precos_texto():
 
 
 # ---------------------------------------------------------------------------
-# Configurações (item 11) — abas Site / Conta / Pagamentos / Notificações
+# ConfiguraÃ§Ãµes (item 11) â€” abas Site / Conta / Pagamentos / NotificaÃ§Ãµes
 # ---------------------------------------------------------------------------
 _CONFIG_PUBLICAS = (
     "site_nome", "site_logo", "site_banner", "site_slogan",
@@ -446,7 +446,7 @@ _CONFIG_PUBLICAS = (
     "link_instagram", "link_youtube", "link_discord", "link_tiktok",
 )
 
-_CONT_NOTA = "Ainda não configurado. Depois de salvar, aparece aqui e no site."
+_CONT_NOTA = "Ainda nÃ£o configurado. Depois de salvar, aparece aqui e no site."
 
 # tipo: texto | url | texto_livre | bool
 _CONFIG_CAMPOS = {
@@ -506,7 +506,7 @@ def _config_bool(label, chave, valor, help_=""):
     return (
         f"<label>{html.escape(label)}</label>"
         f"<select name='{chave}'><option value='1'{on}>Sim</option>"
-        f"<option value='0'>Não</option></select>{h}"
+        f"<option value='0'>NÃ£o</option></select>{h}"
     )
 
 
@@ -515,7 +515,7 @@ def _config_tabs(aba):
         ("site", "Site"),
         ("conta", "Conta"),
         ("pagamentos", "Pagamentos"),
-        ("notificacoes", "Notificações"),
+        ("notificacoes", "NotificaÃ§Ãµes"),
     )
     tabs = "".join(
         f"<a class='tab{' active' if key == aba else ''}' href='/admin/config?aba={key}'>{html.escape(lbl)}</a>"
@@ -605,7 +605,7 @@ def _ua_resumo(ua):
         nav = "Safari"
     else:
         nav = "Navegador"
-    return f"{nav} · {so}"
+    return f"{nav} Â· {so}"
 
 
 def _storage_upload(file_storage, folder="itens"):
@@ -921,7 +921,7 @@ def _page(user, title, body, active=""):
     if peut("ver_servicos_manuais"):
         principal.append(("/admin/services", "Service", "services", "dollar"))
     if peut("ver_dashboard"):
-        principal.append(("/admin/notificacoes", "Notificações", "notificacoes", "bell"))
+        principal.append(("/admin/notificacoes", "NotificaÃ§Ãµes", "notificacoes", "bell"))
     if principal:
         groups.append(("Principal", principal))
     vendas = []
@@ -950,13 +950,13 @@ def _page(user, title, body, active=""):
     if peut("ver_grupos"):
         sistema.append(("/admin/grupos", "Grupos", "grupos", "brands"))
     if peut("ver_usuarios"):
-        sistema.append(("/admin/usuarios", "Usuários", "usuarios", "shield"))
+        sistema.append(("/admin/usuarios", "UsuÃ¡rios", "usuarios", "shield"))
     if peut("ver_seguranca"):
-        sistema.append(("/admin/seguranca", "Segurança", "seguranca", "lock"))
+        sistema.append(("/admin/seguranca", "SeguranÃ§a", "seguranca", "lock"))
     if peut("ver_audit"):
         sistema.append(("/admin/audit", "Auditoria", "audit", "clipboard"))
     if peut("ver_config"):
-        sistema.append(("/admin/config", "Configurações", "config", "gear"))
+        sistema.append(("/admin/config", "ConfiguraÃ§Ãµes", "config", "gear"))
     if sistema:
         groups.append(("Sistema", sistema))
     side_links = ""
@@ -973,7 +973,7 @@ def _page(user, title, body, active=""):
         f"<a class='side-item' href='{PORTFOLIO_URL}'>"
         + _icon("external")
         + "<span>Ver site</span></a>"
-        "<a class='side-item' href='/acesso'>" + _icon("swap") + "<span>Trocar área</span></a>"
+        "<a class='side-item' href='/acesso'>" + _icon("swap") + "<span>Trocar Ã¡rea</span></a>"
         "<a class='side-item' href='/logout'>" + _icon("logout") + "<span>Sair</span></a>"
     )
 
@@ -1014,14 +1014,14 @@ def _page(user, title, body, active=""):
         "<header class='topbar'>"
         "<button class='hamburger' id='hamburger' aria-label='Menu'>" + _icon("menu") + "</button>"
         "<div class='top-title'>"
-        f"<div class='crumb'>Administração / <b>{html.escape(title)}</b></div>"
+        f"<div class='crumb'>AdministraÃ§Ã£o / <b>{html.escape(title)}</b></div>"
         f"<h1>{html.escape(title)}</h1>"
         "</div>"
         "<div class='top-search'>" + _icon("search")
-        + "<input id='globalsearch' type='search' placeholder='Buscar na página...'></div>"
+        + "<input id='globalsearch' type='search' placeholder='Buscar na pÃ¡gina...'></div>"
         "<div class='top-actions'>"
         "<div class='dropdown'>"
-        "<button class='icon-btn' data-dd='bellmenu' aria-label='Notificações'>"
+        "<button class='icon-btn' data-dd='bellmenu' aria-label='NotificaÃ§Ãµes'>"
         + _icon("bell")
         + (f"<span class='badge'>{total_badge}</span>" if total_badge else "")
         + "</button>"
@@ -1037,7 +1037,7 @@ def _page(user, title, body, active=""):
         f"<div class='menu-head'><b>{html.escape(name)}</b><span>{html.escape(email)}</span>"
         f"<span style='color:#60a5fa;font-size:12px'>{html.escape(rbac.cargo_label(role))}</span></div>"
         f"<a href='{PORTFOLIO_URL}'>" + _icon("external") + "Ver site</a>"
-        "<a href='/acesso'>" + _icon("swap") + "Trocar área</a>"
+        "<a href='/acesso'>" + _icon("swap") + "Trocar Ã¡rea</a>"
         "<a href='/logout' class='danger'>" + _icon("logout") + "Sair</a>"
         "</div></div></div></header>"
         f"<main class='content'>{body}</main>"
@@ -1080,23 +1080,28 @@ def _admin_page(user, title, body, active=""):
 
 
 def _fmt_dt_amigavel(value):
-    """Converte ISO (UTC) -> dd/mm/aaaa · hh:mm no fuso do Brasil. Se der erro, devolve cru."""
+    """Converte ISO (UTC) -> dd/mm/aaaa Â· hh:mm no fuso do Brasil. Se der erro, devolve cru."""
     try:
-        from zoneinfo import ZoneInfo
-        from_zone = ZoneInfo("America/Sao_Paulo")
+        from datetime import timezone as _tz
+        from datetime import timedelta as _td
+        try:
+            from zoneinfo import ZoneInfo
+            from_zone = ZoneInfo("America/Sao_Paulo")
+        except Exception:
+            from_zone = _tz(_td(hours=-3))
         txt = str(value or "").strip().replace("Z", "+00:00")
         if not txt:
             return "-"
         dt = datetime.fromisoformat(txt)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
-        return dt.astimezone(from_zone).strftime("%d/%m/%Y · %H:%M")
+            dt = dt.replace(tzinfo=_tz.utc)
+        return dt.astimezone(from_zone).strftime("%d/%m/%Y Â· %H:%M")
     except Exception:
         return str(value or "-")
 
 
 def _pedido_pagamento(order):
-    """Rótulo real de PAGAMENTO (independe do rótulo de entrega)."""
+    """RÃ³tulo real de PAGAMENTO (independe do rÃ³tulo de entrega)."""
     if (order.get("pix_confirmado_em") or order.get("pix_confirmado") or
             str(order.get("status") or "") in ("pago", "entregue")):
         return "pago"
@@ -1104,7 +1109,7 @@ def _pedido_pagamento(order):
 
 
 def _pedido_entrega(order):
-    """Rótulo real de ENTREGA (independe do rótulo de pagamento)."""
+    """RÃ³tulo real de ENTREGA (independe do rÃ³tulo de pagamento)."""
     if (order.get("entregue_em") or str(order.get("status") or "") == "entregue"):
         return "entregue"
     return "nao entregue"
@@ -1295,7 +1300,7 @@ def admin_dashboard():
         dias.append((dia.isoformat(), por_dia.get(dia.isoformat(), 0)))
     max_dia = max((c for _, c in dias), default=0) or 1
 
-    sub = "<p class='page-sub'>Visão geral do sistema e indicadores recentes.</p>"
+    sub = "<p class='page-sub'>VisÃ£o geral do sistema e indicadores recentes.</p>"
 
     pode_ver_finan = rbac.tem_perm(user["role"], user["perms"], "ver_pagamentos")
     kpis = "<div class='kpis'>"
@@ -1319,7 +1324,7 @@ def admin_dashboard():
         "<div class='kpi'><div class='k-top'><span class='k-lbl'>Clientes</span>"
         "<span class='k-ico'>" + _icon("users") + "</span></div>"
         f"<div class='k-num'>{len(clientes)}</div>"
-        "<div class='k-sub'>Contas únicas</div></div>"
+        "<div class='k-sub'>Contas Ãºnicas</div></div>"
         "</div>"
     )
 
@@ -1330,14 +1335,14 @@ def admin_dashboard():
     for iso, c in dias:
         pct = int(c / max_dia * 100) if c else 3
         colunas += (
-            f"<div class='bar-col' title='{iso} — {c} pedido(s)'>"
+            f"<div class='bar-col' title='{iso} â€” {c} pedido(s)'>"
             f"<span class='bar-val'>{c}</span>"
             f"<span class='bar' style='height:{pct}%'></span>"
             f"<span class='bar-lbl'>{iso[8:10]}</span></div>"
         )
     chart = (
         "<div class='chart-card'>"
-        "<div class='chart-head'><h2>Pedidos nos últimos 14 dias</h2>"
+        "<div class='chart-head'><h2>Pedidos nos Ãºltimos 14 dias</h2>"
         f"<span class='chart-period'>{periodo}</span></div>"
         f"<div class='barchart'>{colunas}</div></div>"
     )
@@ -1350,17 +1355,17 @@ def admin_dashboard():
     )
     pages = (
         "<div class='chart-card'>"
-        "<div class='chart-head'><h2>Páginas mais visitadas</h2></div>"
+        "<div class='chart-head'><h2>PÃ¡ginas mais visitadas</h2></div>"
         + chips
-        + "<table><tr><th>Página</th><th>Visitas</th></tr>" + top_rows + "</table></div>"
+        + "<table><tr><th>PÃ¡gina</th><th>Visitas</th></tr>" + top_rows + "</table></div>"
     )
 
     body = sub + kpis + f"<div class='charts'>{chart}{pages}</div>"
     pode_marcar = rbac.tem_qualquer_perm(user["role"], user["perms"], "marcar_pagamento", "marcar_entrega")
     body += (
-        "<section><h2>Últimos pedidos</h2><table>"
+        "<section><h2>Ãšltimos pedidos</h2><table>"
         "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
-        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
+        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + _orders_rows(orders[:10], with_actions=pode_marcar, csrf=_csrf_token())
         + "</table></section>"
     )
@@ -1510,7 +1515,7 @@ def admin_analytics():
             pct_v = int(vis_d / maxima * 100)
             pct_p = int(vend / maxima * 100)
             colunas += (
-                f"<div class='bar-col' title='{d} — {vis_d} visitas, {vend} pedido(s)'>"
+                f"<div class='bar-col' title='{d} â€” {vis_d} visitas, {vend} pedido(s)'>"
                 f"<div class='dual'><span class='bar' style='height:{pct_v}%'></span>"
                 f"<span class='bar bar-alt' style='height:{pct_p}%'></span></div>"
                 f"<span class='bar-lbl'>{d[8:10]}/{d[5:7]}</span></div>"
@@ -1519,12 +1524,12 @@ def admin_analytics():
     serv_rows = "".join(
         f"<tr><td>{html.escape(nome)}</td><td>{d['qtd']}</td><td>{_fmt_brl(d['total'])}</td></tr>"
         for nome, d in top_servicos
-    ) or "<tr><td colspan='3' style='color:#64748b;text-align:center'>Sem vendas no período</td></tr>"
+    ) or "<tr><td colspan='3' style='color:#64748b;text-align:center'>Sem vendas no perÃ­odo</td></tr>"
 
     top_rows = "".join(
         f"<tr><td>{html.escape(pg)}</td><td>{n}</td></tr>"
         for pg, n in top_produtos
-    ) or "<tr><td colspan='2' style='color:#64748b;text-align:center'>Sem dados de produto no período</td></tr>"
+    ) or "<tr><td colspan='2' style='color:#64748b;text-align:center'>Sem dados de produto no perÃ­odo</td></tr>"
 
     fat_antes = sum(
         _parse_brl(o.get("preco"))
@@ -1563,18 +1568,18 @@ def admin_analytics():
         f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Faturamento {dias_n}d</span>"
         f"<span class='k-ico'>{_icon('wallet')}</span></div><div class='k-num'>{_fmt_brl(fat_periodo)}</div>"
         f"<div class='k-sub'>Acumulado: {_fmt_brl(fat)}</div></div>"
-        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Conversão</span>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>ConversÃ£o</span>"
         f"<span class='k-ico'>{_icon('swap')}</span></div><div class='k-num'>{conversao:.1f}%</div>"
         "<div class='k-sub'>Pedidos por visita</div></div>"
-        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>Usuários</span>"
+        f"<div class='kpi'><div class='k-top'><span class='k-lbl'>UsuÃ¡rios</span>"
         f"<span class='k-ico'>{_icon('users')}</span></div><div class='k-num'>{usr_total}</div>"
         f"<div class='k-sub'>Novos: {usr_novos}</div></div>"
         "</div>"
     )
 
     comparar = (
-        "<section><h2>Comparação de períodos</h2><table>"
-        "<tr><th>Métrica</th><th>" + str(dias_n) + " dias</th><th>Período anterior</th><th>Variação</th></tr>"
+        "<section><h2>ComparaÃ§Ã£o de perÃ­odos</h2><table>"
+        "<tr><th>MÃ©trica</th><th>" + str(dias_n) + " dias</th><th>PerÃ­odo anterior</th><th>VariaÃ§Ã£o</th></tr>"
         f"<tr><td>Visitas</td><td>{visitas_periodo}</td><td>{vis_antes}</td><td>{'+' if delta(visitas_periodo, vis_antes) >= 0 else ''}{delta(visitas_periodo, vis_antes)}%</td></tr>"
         f"<tr><td>Pedidos</td><td>{vendas_periodo}</td><td>{vend_antes}</td><td>{'+' if delta(vendas_periodo, vend_antes) >= 0 else ''}{delta(vendas_periodo, vend_antes)}%</td></tr>"
         f"<tr><td>Faturamento</td><td>{_fmt_brl(fat_periodo)}</td><td>{_fmt_brl(fat_antes)}</td><td>{'+' if delta(fat_periodo, fat_antes) >= 0 else ''}{delta(fat_periodo, fat_antes)}%</td></tr>"
@@ -1590,21 +1595,21 @@ def admin_analytics():
     body = (
         kpis
         + comparar
-        + "<section><div class='chart-head'><h2>Tráfego e vendas — diário</h2>"
+        + "<section><div class='chart-head'><h2>TrÃ¡fego e vendas â€” diÃ¡rio</h2>"
         + "<div class='period-switch'>" + period_btns + "</div></div>"
         + f"<div class='barchart'>{colunas}</div>"
         + "<p style='color:#64748b;font-size:.82rem;margin-top:.5rem'>"
         "Barras: visitas (azul) e pedidos (verde). Passe o mouse para detalhes.</p></section>"
         + "<div class='charts'>"
-        + "<section><h2>Páginas de produto mais acessadas</h2>"
-        + "<table><tr><th>Página</th><th>Acessos</th></tr>" + top_rows + "</table></section>"
-        + "<section><h2>Serviços/produtos mais vendidos</h2>"
+        + "<section><h2>PÃ¡ginas de produto mais acessadas</h2>"
+        + "<table><tr><th>PÃ¡gina</th><th>Acessos</th></tr>" + top_rows + "</table></section>"
+        + "<section><h2>ServiÃ§os/produtos mais vendidos</h2>"
         + "<table><tr><th>Produto</th><th>Qtd</th><th>Receita</th></tr>" + serv_rows + "</table></section>"
         + "</div>"
         + "<div class='charts'>"
         + "<section><h2>Origem dos visitantes</h2>"
         + "<table><tr><th>Origem</th><th>Visitas</th><th>%</th></tr>" + origem_rows + "</table></section>"
-        + "<section><h2>Resumo</h2><table><tr><th>Métrica</th><th>Valor</th></tr>"
+        + "<section><h2>Resumo</h2><table><tr><th>MÃ©trica</th><th>Valor</th></tr>"
         f"<tr><td>Visitas totais</td><td>{total_visitas}</td></tr>"
         f"<tr><td>Pedidos totais</td><td>{vendas_total}</td></tr>"
         f"<tr><td>Faturamento total</td><td>{_fmt_brl(fat)}</td></tr>"
@@ -1690,7 +1695,7 @@ def admin_pedidos():
 
 
 def _ultimos_acessos():
-    """Mapa e-mail -> data do último login conhecido (tabela sessoes)."""
+    """Mapa e-mail -> data do Ãºltimo login conhecido (tabela sessoes)."""
     acessos = {}
     try:
         rows = _fetch_soft("sessoes", select="email,criado_em", order="criado_em.desc", range_="0-499")
@@ -1778,7 +1783,7 @@ def admin_clientes():
     body += (
         "<section><h2>Clientes</h2><table>"
         "<tr><th>E-mail</th><th>Nome</th><th>WhatsApp</th><th>Cadastro</th><th>Papel</th>"
-        "<th>Pedidos</th><th>Gasto total</th><th>Último acesso</th><th>Status</th><th>Ações</th></tr>"
+        "<th>Pedidos</th><th>Gasto total</th><th>Ãšltimo acesso</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + _clientes_rows(profiles, orders, acessos, pode_gerenciar)
         + "</table></section>"
     )
@@ -1834,10 +1839,10 @@ def admin_cliente_detalhe(email):
         f"<div class='cards'><div class='card'><div class='num'>{html.escape(email_decoded)}</div><div class='lbl'>E-mail</div></div>"
         f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
         + form
-        + "<section><h2>Ações</h2>" + acoes + "</section>"
+        + "<section><h2>AÃ§Ãµes</h2>" + acoes + "</section>"
         + "<section><h2>Pedidos do cliente</h2><table>"
         + "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
-        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
+        "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + rows
         + "</table></section>"
     )
@@ -1850,7 +1855,7 @@ def admin_cliente_editar(email):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     from urllib.parse import unquote
     email_decoded = unquote(email).lower()
     payload = {
@@ -1920,7 +1925,7 @@ def admin_pagamentos():
         v=_fmt_brl(soma(pagos) + soma(entregues)),
     )
     tabs = (
-        "<section><h2>Pendentes (aguardando confirmação)</h2><table>"
+        "<section><h2>Pendentes (aguardando confirmaÃ§Ã£o)</h2><table>"
         "<tr><th>Id</th><th>Data</th><th>Cliente</th><th>Qtd</th><th>Valor</th><th>E-mail</th><th>Status</th></tr>"
         + rows(pendentes)
         + "</table></section>"
@@ -1946,7 +1951,7 @@ def admin_cliente_bloquear(email):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     from urllib.parse import unquote
     email_decoded = unquote(email).lower()
     profiles = _fetch("profiles", select="bloqueado", query=f"email=eq.{email_decoded}")
@@ -1970,13 +1975,13 @@ def admin_marcar():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     if _rate_limited("admin_post", _RATE_LIMIT_ADMIN_PER_MIN):
         return "Muitas requisicoes. Aguarde um instante.", 429
     order_id_text = (request.form.get("order_id") or "").strip()
     status = (request.form.get("status") or "").strip()
     if not order_id_text.isdigit() or status not in ("pago", "entregue"):
-        return "Parâmetros inválidos.", 400
+        return "ParÃ¢metros invÃ¡lidos.", 400
     if status == "pago" and not rbac.tem_perm(user["cargo"], user["perms"], "marcar_pagamento"):
         return "Acesso restrito.", 403
     if status == "entregue" and not rbac.tem_perm(user["cargo"], user["perms"], "marcar_entrega"):
@@ -2027,7 +2032,7 @@ def admin_tickets():
     try:
         tickets = _fetch("tickets", order="criado_em.desc", range_="0-499")
     except Exception as error:
-        print(f"[painel] tickets indisponível: {error}")
+        print(f"[painel] tickets indisponÃ­vel: {error}")
     abertos = [t for t in tickets if (t.get("status") or "aberto") == "aberto"]
     respondidos = [t for t in tickets if (t.get("status") or "") == "respondido"]
     encerrados = [t for t in tickets if (t.get("status") or "") == "encerrado"]
@@ -2054,12 +2059,12 @@ def admin_ticket_detalhe(ticket_id):
         return redirect("/login")
     tickets = _fetch("tickets", query=f"id=eq.{ticket_id}")
     if not tickets:
-        return "Ticket não encontrado.", 404
+        return "Ticket nÃ£o encontrado.", 404
     ticket = tickets[0]
 
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         acao = (request.form.get("acao") or "").strip()
         if acao == "responder":
             if not rbac.tem_perm(user["cargo"], user["perms"], "responder_tickets"):
@@ -2109,9 +2114,9 @@ def admin_ticket_detalhe(ticket_id):
 
     top = (f"<a class='btn ghost' style='padding:6px 12px;font-size:12px' href='/admin/tickets'>Voltar</a>")
     body = (
-        "<section><h2>Ticket #{id} · {status}</h2>"
+        "<section><h2>Ticket #{id} Â· {status}</h2>"
         "<p style='color:#8ea0b8;font-size:13px'>"
-        "De: <b>{email}</b> · Abertura: {criado} · "
+        "De: <b>{email}</b> Â· Abertura: {criado} Â· "
         "Assunto: <b>{assunto}</b></p>"
         "<p style='color:#e2e8f0'>{mensagem}</p>"
         "{resposta_html}"
@@ -2143,7 +2148,7 @@ def admin_ticket_detalhe(ticket_id):
             else ""
         ),
         acoes_html=(
-            "<section><h2>Ações</h2>"
+            "<section><h2>AÃ§Ãµes</h2>"
             "<form method='post' action='' style='display:inline'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<input type='hidden' name='acao' value='prioridade'>"
@@ -2171,7 +2176,7 @@ def admin_ticket_excluir(ticket_id):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     try:
         requests.delete(
             f"{SUPA_URL}/rest/v1/tickets?id=eq.{ticket_id}",
@@ -2192,7 +2197,7 @@ def _item_card(item):
     return (
         f"<div class='card'>"
         f"{img}"
-        f"<div class='kicker'>{html.escape(item.get('categoria') or 'geral')} · "
+        f"<div class='kicker'>{html.escape(item.get('categoria') or 'geral')} Â· "
         f"{'publicado' if ativo else 'rascunho'}</div>"
         f"<h3 style='margin:6px 0 2px'>{html.escape(item.get('nome') or '-')}</h3>"
         f"<div class='num' style='font-size:18px'>{preco}</div>"
@@ -2224,24 +2229,24 @@ def admin_itens():
         "<form method='post' action='/admin/itens/novo' enctype='multipart/form-data'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         "<label>Nome</label><input name='nome' required>"
-        "<label>Preço</label><input name='preco' placeholder='R$ 20,00'>"
+        "<label>PreÃ§o</label><input name='preco' placeholder='R$ 20,00'>"
         "<label>Categoria</label><input name='categoria' placeholder='geral'>"
-        "<label>Descrição</label><textarea name='descricao' rows='3'></textarea>"
+        "<label>DescriÃ§Ã£o</label><textarea name='descricao' rows='3'></textarea>"
         "<label>Imagem</label><input type='file' name='imagem' accept='image/png,image/jpeg,image/webp,image/gif'>"
         "<label>Publicado</label>"
-        "<select name='ativo'><option value='1'>Sim</option><option value='0'>Não (rascunho)</option></select>"
+        "<select name='ativo'><option value='1'>Sim</option><option value='0'>NÃ£o (rascunho)</option></select>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Criar item</button></p>"
         "</form></section>"
     )
     order_form = (
-        "<section><h2>Ordem de exibição</h2>"
-        "<p style='color:#8ea0b8;font-size:13px'>A ordem é controlada pela coluna 'ordem' "
+        "<section><h2>Ordem de exibiÃ§Ã£o</h2>"
+        "<p style='color:#8ea0b8;font-size:13px'>A ordem Ã© controlada pela coluna 'ordem' "
         "(menor aparece primeiro). Los itens com 'ordem' igual seguem por nome.</p>"
         "</section>"
     )
     body = (
         "<div class='kicker'>Loja do site</div>"
-        "<h2 style='margin:6px 0 14px'>Itens à venda</h2>"
+        "<h2 style='margin:6px 0 14px'>Itens Ã  venda</h2>"
         + order_form
         + f"<div class='cards'>{cards}</div>"
         + form
@@ -2255,10 +2260,10 @@ def admin_item_novo():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     nome = (request.form.get("nome") or "").strip()[:200]
     if not nome:
-        return "Nome obrigatório.", 400
+        return "Nome obrigatÃ³rio.", 400
     preco = (request.form.get("preco") or "").strip()[:60]
     categoria = (request.form.get("categoria") or "geral").strip()[:60]
     descricao = (request.form.get("descricao") or "").strip()[:2000]
@@ -2295,12 +2300,12 @@ def admin_item_editar(item_id):
         return redirect("/login")
     itens = _fetch("itens", select="*", query=f"id=eq.{item_id}")
     if not itens:
-        return "Item não encontrado.", 404
+        return "Item nÃ£o encontrado.", 404
     item = itens[0]
 
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         payload = {
             "nome": (request.form.get("nome") or "").strip()[:200],
             "preco": (request.form.get("preco") or "").strip()[:60],
@@ -2339,13 +2344,13 @@ def admin_item_editar(item_id):
         f"<form method='post' enctype='multipart/form-data'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         f"<label>Nome</label><input name='nome' required value='{html.escape(item.get('nome') or '')}'>"
-        f"<label>Preço</label><input name='preco' value='{html.escape(item.get('preco') or '')}'>"
+        f"<label>PreÃ§o</label><input name='preco' value='{html.escape(item.get('preco') or '')}'>"
         f"<label>Categoria</label><input name='categoria' value='{html.escape(item.get('categoria') or '')}'>"
-        f"<label>Descrição</label><textarea name='descricao' rows='3'>{html.escape(item.get('descricao') or '')}</textarea>"
+        f"<label>DescriÃ§Ã£o</label><textarea name='descricao' rows='3'>{html.escape(item.get('descricao') or '')}</textarea>"
         f"<label>Nova imagem (opcional)</label><input type='file' name='imagem' accept='image/png,image/jpeg,image/webp,image/gif'>"
         f"<label>Publicado</label>"
         f"<select name='ativo'><option value='1' {'selected' if item.get('ativo') else ''}>Sim</option>"
-        f"<option value='0' {'' if item.get('ativo') else 'selected'}>Não (rascunho)</option></select>"
+        f"<option value='0' {'' if item.get('ativo') else 'selected'}>NÃ£o (rascunho)</option></select>"
         f"<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
         f"<a class='btn ghost' href='/admin/itens'>Voltar</a></p>"
         f"</form></section>"
@@ -2359,7 +2364,7 @@ def admin_item_toggle(item_id):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     itens = _fetch("itens", select="ativo", query=f"id=eq.{item_id}")
     if itens:
         novo = not itens[0].get("ativo")
@@ -2384,7 +2389,7 @@ def admin_item_excluir(item_id):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     try:
         requests.delete(
             f"{SUPA_URL}/rest/v1/itens?id=eq.{item_id}",
@@ -2413,16 +2418,16 @@ def admin_config():
         form = (
             _config_grupo_html("Identidade do site", csrf, "site",
                 _config_field("Nome do site", "site_nome", cfg.get("site_nome"), "Ex.: BAPZX", maxlen=60) +
-                _config_field("Logo (URL da imagem)", "site_logo", cfg.get("site_logo"), "Endereço da imagem do logo (http/https).", placeholder="https://") +
+                _config_field("Logo (URL da imagem)", "site_logo", cfg.get("site_logo"), "EndereÃ§o da imagem do logo (http/https).", placeholder="https://") +
                 _config_field("Banner (URL da imagem)", "site_banner", cfg.get("site_banner"), "Imagem de destaque do topo.", placeholder="https://") +
-                _config_field("Slogan / chamada", "site_slogan", cfg.get("site_slogan"), "Frase curta de apresentação.")
+                _config_field("Slogan / chamada", "site_slogan", cfg.get("site_slogan"), "Frase curta de apresentaÃ§Ã£o.")
             ) +
             _config_grupo_html("Textos", csrf, "site",
                 _config_textarea("Texto do topo", "site_texto_topo", cfg.get("site_texto_topo"), "Mensagem principal exibida no site.", rows=4) +
-                _config_field("Texto do rodapé", "site_texto_rodape", cfg.get("site_texto_rodape"), "Ex.: © 2026 BAPZX · Vendas de RC no Tibia.", maxlen=500)
+                _config_field("Texto do rodapÃ©", "site_texto_rodape", cfg.get("site_texto_rodape"), "Ex.: Â© 2026 BAPZX Â· Vendas de RC no Tibia.", maxlen=500)
             ) +
             _config_grupo_html("Links e redes sociais", csrf, "site",
-                _config_field("Link do portfólio/site", "link_portfolio", cfg.get("link_portfolio"), placeholder="https://") +
+                _config_field("Link do portfÃ³lio/site", "link_portfolio", cfg.get("link_portfolio"), placeholder="https://") +
                 _config_field("Link do WhatsApp", "link_whatsapp", cfg.get("link_whatsapp"), placeholder="https://wa.me/") +
                 _config_field("Link do Telegram", "link_telegram", cfg.get("link_telegram"), placeholder="https://t.me/") +
                 "<div class='two-col'>"
@@ -2439,7 +2444,7 @@ def admin_config():
         form = (
             _config_grupo_html("Conta", "", "conta",
                 "<p style='color:#8ea0b8;font-size:13px'>Seu perfil de acesso ao painel. "
-                "O login é feito com sua conta do Google.</p>"
+                "O login Ã© feito com sua conta do Google.</p>"
                 "<label>E-mail (login Google)</label>"
                 f"<input type='text' value='{email}' disabled>"
             )
@@ -2454,9 +2459,9 @@ def admin_config():
             )
             + (
                 "<section><h2>Senha e 2FA</h2>"
-                "<p style='color:#8ea0b8;font-size:13px'>Não existe senha separada: o acesso usa "
-                "<b>Login do Google</b>. A autenticação em dois fatores (2FA) é a da própria conta "
-                "Google — ative-a em <i>myaccount.google.com/security</i>.</p>"
+                "<p style='color:#8ea0b8;font-size:13px'>NÃ£o existe senha separada: o acesso usa "
+                "<b>Login do Google</b>. A autenticaÃ§Ã£o em dois fatores (2FA) Ã© a da prÃ³pria conta "
+                "Google â€” ative-a em <i>myaccount.google.com/security</i>.</p>"
                 "</section>"
             )
         )
@@ -2465,35 +2470,35 @@ def admin_config():
         mp_status = (
             "<span class='status pago'>Ativo (Mercado Pago)</span>"
             if mp_ok else
-            "<span class='status cancelado'>Não configurado</span>"
+            "<span class='status cancelado'>NÃ£o configurado</span>"
         )
         form = (
             _config_grupo_html("Pix", csrf, "pagamentos",
                 _config_field("Chave Pix", "pix_chave", cfg.get("pix_chave"), "Chave alternativa mostrada no pagamento (se vazia, usa a env PIX_KEY do Render).", maxlen=200) +
-                _config_field("Beneficiário", "pix_beneficiario", cfg.get("pix_beneficiario"), "Nome que aparece no recebimento.", maxlen=200)
+                _config_field("BeneficiÃ¡rio", "pix_beneficiario", cfg.get("pix_beneficiario"), "Nome que aparece no recebimento.", maxlen=200)
             )
             + (
                 "<section><h2>Gateway (Mercado Pago)</h2>"
                 f"<label>Status do gateway</label><p>{mp_status}</p>"
-                "<p style='color:#5b6b82;font-size:12px'>O token de acesso é gerenciado na env "
-                "<code>MP_ACCESS_TOKEN</code> do Render (não fica salvo no painel por segurança). "
+                "<p style='color:#5b6b82;font-size:12px'>O token de acesso Ã© gerenciado na env "
+                "<code>MP_ACCESS_TOKEN</code> do Render (nÃ£o fica salvo no painel por seguranÃ§a). "
                 "</p></section>"
             )
-            + _config_grupo_html("Preços por pacote (RC → R$)", csrf, "precos",
+            + _config_grupo_html("PreÃ§os por pacote (RC â†’ R$)", csrf, "precos",
                 "<p style='color:#8ea0b8;font-size:13px'>Uma linha por pacote no formato "
-                "<b>quantia=preço</b>. Ex.: <code>100=R$ 9,00</code>. Usado no cálculo do Pix.</p>"
+                "<b>quantia=preÃ§o</b>. Ex.: <code>100=R$ 9,00</code>. Usado no cÃ¡lculo do Pix.</p>"
                 f"<textarea name='valor' rows='6'>{html.escape(cfg.get('precos') or _precos_texto())}</textarea>"
             )
         )
     else:  # notificacoes
-        form = _config_grupo_html("Notificações", csrf, "notificacoes",
-            "<p style='color:#8ea0b8;font-size:13px'>Onde o bot avisa você (no Telegram do dono).</p>" +
-            _config_bool("Avisar novo pedido", "notificar_pedido", cfg.get("notificar_pedido"), "Mensagem \"🛒 NOVO PEDIDO\" quando o cliente fecha um pedido.") +
-            _config_bool("Avisar quando o Pix é gerado", "notificar_pix", cfg.get("notificar_pix"), "Mensagem \"🧾 PIX GERADO\" após criar a cobrança.") +
-            _config_bool("Avisar erros do bot", "notificar_erro", cfg.get("notificar_erro"), "Mensagem \"⚠️ ERRO 500\" quando o bot falhar.")
+        form = _config_grupo_html("NotificaÃ§Ãµes", csrf, "notificacoes",
+            "<p style='color:#8ea0b8;font-size:13px'>Onde o bot avisa vocÃª (no Telegram do dono).</p>" +
+            _config_bool("Avisar novo pedido", "notificar_pedido", cfg.get("notificar_pedido"), "Mensagem \"ðŸ›’ NOVO PEDIDO\" quando o cliente fecha um pedido.") +
+            _config_bool("Avisar quando o Pix Ã© gerado", "notificar_pix", cfg.get("notificar_pix"), "Mensagem \"ðŸ§¾ PIX GERADO\" apÃ³s criar a cobranÃ§a.") +
+            _config_bool("Avisar erros do bot", "notificar_erro", cfg.get("notificar_erro"), "Mensagem \"âš ï¸ ERRO 500\" quando o bot falhar.")
         )
 
-    return _admin_page(user, "Configurações", tabs + form, "config")
+    return _admin_page(user, "ConfiguraÃ§Ãµes", tabs + form, "config")
 
 
 def _config_grupo_html(titulo, csrf, secao, campos):
@@ -2521,7 +2526,7 @@ def admin_config_salvar():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     secao = request.form.get("secao")
 
     if secao == "precos":
@@ -2538,7 +2543,7 @@ def admin_config_salvar():
                     return f"Linha sem '=': {html.escape(linha)}", 400
                 k = k.strip()
                 if not k.isdigit():
-                    return f"Pacote inválido: {html.escape(k)}", 400
+                    return f"Pacote invÃ¡lido: {html.escape(k)}", 400
                 novo[k] = v.strip() or f"R$ {k}"
             valor = json.dumps(novo, ensure_ascii=False)
         except Exception as exc:
@@ -2551,14 +2556,14 @@ def admin_config_salvar():
         return redirect("/admin/config?aba=pagamentos")
 
     if not secao or secao not in _CONFIG_SECOES:
-        return "Seção inválida.", 400
+        return "SeÃ§Ã£o invÃ¡lida.", 400
     try:
         presentes = [k for k in _CONFIG_SECOES[secao] if k in request.form]
         for chave in presentes:
             tipo, limite, _padrao = _CONFIG_CAMPOS.get(chave, ("texto", 200, ""))
             valor = (request.form.get(chave) or "").strip()
             if tipo == "url" and valor and not valor.startswith(("http://", "https://")):
-                return f"Campo {html.escape(chave)}: informe uma URL começando com http(s).", 400
+                return f"Campo {html.escape(chave)}: informe uma URL comeÃ§ando com http(s).", 400
             if tipo == "bool":
                 valor = "1" if valor == "1" else "0"
             _config_set(chave, (valor[:limite] if limite else valor))
@@ -2574,10 +2579,10 @@ def admin_config_conta():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     nome = (request.form.get("nome") or "").strip()[:100]
     if not nome:
-        return "Nome obrigatório.", 400
+        return "Nome obrigatÃ³rio.", 400
     email = (user.get("email") or "").lower()
     try:
         requests.patch(
@@ -2595,7 +2600,7 @@ def admin_config_conta():
 
 
 # --------------------------------------------------------------------------
-# ROTAS DE USUÁRIOS (RBAC)
+# ROTAS DE USUÃRIOS (RBAC)
 # --------------------------------------------------------------------------
 def _usuarios_rows(usuarios):
     rows = ""
@@ -2615,7 +2620,7 @@ def _usuarios_rows(usuarios):
             "</tr>"
         )
     return rows or (
-        "<tr><td colspan='6' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum usuário.</td></tr>"
+        "<tr><td colspan='6' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum usuÃ¡rio.</td></tr>"
     )
 
 
@@ -2625,14 +2630,14 @@ def admin_usuarios():
     if not user:
         return redirect("/login")
     usuarios = _fetch_soft("users", order="criado_em.desc", range_="0-999")
-    body = f"<div class='cards'><div class='card'><div class='num'>{len(usuarios)}</div><div class='lbl'>Usuários</div></div></div>"
+    body = f"<div class='cards'><div class='card'><div class='num'>{len(usuarios)}</div><div class='lbl'>UsuÃ¡rios</div></div></div>"
     body += (
-        "<section><h2>Usuários da equipe</h2><table>"
-        "<tr><th>E-mail</th><th>Nome</th><th>Cargo</th><th>Status</th><th>Criado</th><th>Ações</th></tr>"
+        "<section><h2>UsuÃ¡rios da equipe</h2><table>"
+        "<tr><th>E-mail</th><th>Nome</th><th>Cargo</th><th>Status</th><th>Criado</th><th>AÃ§Ãµes</th></tr>"
         + _usuarios_rows(usuarios)
         + "</table></section>"
     )
-    return _admin_page(user, "Usuários", body, "usuarios")
+    return _admin_page(user, "UsuÃ¡rios", body, "usuarios")
 
 
 def _cargos_desc_html():
@@ -2649,16 +2654,16 @@ def admin_usuario_novo():
         return redirect("/login")
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         email = (request.form.get("email") or "").strip().lower()
         nome = (request.form.get("nome") or "").strip()[:100]
         cargo = (request.form.get("cargo") or "CLIENTE").strip().upper()
         if not email or "@" not in email:
-            return "E-mail inválido.", 400
+            return "E-mail invÃ¡lido.", 400
         if cargo == "MASTER":
-            return "Não é possível criar usuários MASTER.", 400
+            return "NÃ£o Ã© possÃ­vel criar usuÃ¡rios MASTER.", 400
         if not rbac.cargo_valido(cargo):
-            return "Cargo inválido.", 400
+            return "Cargo invÃ¡lido.", 400
         now = datetime.utcnow().isoformat()
         payload = {"email": email, "nome": nome, "cargo": cargo, "ativo": True, "criado_em": now}
         try:
@@ -2677,17 +2682,17 @@ def admin_usuario_novo():
         f"<option value='{c}'>{html.escape(lbl)}</option>" for c, lbl in cargos
     )
     form = (
-        "<section><h2>Novo usuário</h2>"
+        "<section><h2>Novo usuÃ¡rio</h2>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         "<label>E-mail</label><input name='email' type='email' required placeholder='usuario@email.com'>"
         "<label>Nome</label><input name='nome' type='text' placeholder='Nome completo'>"
         "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
         "<p style='color:#8ea0b8;font-size:12px;margin-top:6px'>" + _cargos_desc_html() + "</p>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Criar usuário</button></p>"
+        "<p style='margin-top:14px'><button class='btn' type='submit'>Criar usuÃ¡rio</button></p>"
         "</form></section>"
     )
-    return _admin_page(user, "Novo usuário", form, "usuarios")
+    return _admin_page(user, "Novo usuÃ¡rio", form, "usuarios")
 
 
 @bp.route("/admin/usuarios/<path:email>", methods=["GET", "POST"])
@@ -2698,18 +2703,18 @@ def admin_usuario_detalhe(email):
     email = email.strip().lower()
     usuarios = _fetch_soft("users", query=f"email=eq.{email}")
     if not usuarios:
-        return "Usuário não encontrado.", 404
+        return "UsuÃ¡rio nÃ£o encontrado.", 404
     u = usuarios[0]
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         nome = (request.form.get("nome") or "").strip()[:100]
         cargo = (request.form.get("cargo") or "CLIENTE").strip().upper()
         ativo = request.form.get("ativo") == "on"
         if cargo == "MASTER":
-            return "Cargo MASTER não permitido.", 400
+            return "Cargo MASTER nÃ£o permitido.", 400
         if not rbac.cargo_valido(cargo):
-            return "Cargo inválido.", 400
+            return "Cargo invÃ¡lido.", 400
         now = datetime.utcnow().isoformat()
         patch = {"nome": nome, "cargo": cargo, "ativo": ativo, "atualizado_em": now}
         try:
@@ -2732,7 +2737,7 @@ def admin_usuario_detalhe(email):
     checked = "checked" if u.get("ativo") else ""
     nome_val = html.escape(str(u.get("nome") or ""))
     form = (
-        "<section><h2>Editar usuário</h2>"
+        "<section><h2>Editar usuÃ¡rio</h2>"
         f"<p style='color:#8ea0b8;font-size:13px'>E-mail: <b>{html.escape(email)}</b></p>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
@@ -2743,7 +2748,7 @@ def admin_usuario_detalhe(email):
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
         "</form></section>"
     )
-    return _admin_page(user, "Editar usuário", form, "usuarios")
+    return _admin_page(user, "Editar usuÃ¡rio", form, "usuarios")
 
 
 # --------------------------------------------------------------------------
@@ -2761,34 +2766,34 @@ _ACOES_AUDIT = {
     "cliente_bloquear": ("Cliente bloqueado", "#7f1d1d", "#f87171"),
     "cliente_desbloquear": ("Cliente desbloqueado", "#064e3b", "#4ade80"),
     "ticket_responder": ("Ticket respondido", "#1e293b", "#94a3b8"),
-    "ticket_excluir": ("Ticket excluído", "#7f1d1d", "#f87171"),
+    "ticket_excluir": ("Ticket excluÃ­do", "#7f1d1d", "#f87171"),
     "item_criar": ("Item adicionado", "#1e293b", "#94a3b8"),
     "item_editar": ("Item editado", "#1e293b", "#94a3b8"),
     "item_toggle": ("Item publicado/oculto", "#1e293b", "#94a3b8"),
-    "item_excluir": ("Item excluído", "#7f1d1d", "#f87171"),
-    "config_salvar": ("Configuração salva", "#164e63", "#22d3ee"),
+    "item_excluir": ("Item excluÃ­do", "#7f1d1d", "#f87171"),
+    "config_salvar": ("ConfiguraÃ§Ã£o salva", "#164e63", "#22d3ee"),
     "config_conta_nome": ("Nome da conta alterado", "#164e63", "#22d3ee"),
-    "usuario_criar": ("Usuário adicionado", "#1e293b", "#94a3b8"),
-    "usuario_editar": ("Usuário editado", "#1e293b", "#94a3b8"),
+    "usuario_criar": ("UsuÃ¡rio adicionado", "#1e293b", "#94a3b8"),
+    "usuario_editar": ("UsuÃ¡rio editado", "#1e293b", "#94a3b8"),
     "grupo_editar": ("Grupo editado", "#14532d", "#4ade80"),
     "grupo_ordenar": ("Grupo reordenado", "#14532d", "#4ade80"),
-    "grupo_excluir": ("Grupo excluído", "#7f1d1d", "#f87171"),
+    "grupo_excluir": ("Grupo excluÃ­do", "#7f1d1d", "#f87171"),
     "cupom_criar": ("Cupom criado", "#78350f", "#fbbf24"),
     "cupom_editar": ("Cupom editado", "#78350f", "#fbbf24"),
     "cupom_ativar": ("Cupom ativado/inativo", "#78350f", "#fbbf24"),
-    "cupom_excluir": ("Cupom excluído", "#7f1d1d", "#f87171"),
+    "cupom_excluir": ("Cupom excluÃ­do", "#7f1d1d", "#f87171"),
     "erro_pagamento": ("Erro de pagamento", "#7f1d1d", "#f87171"),
     "login": ("Login realizado", "#164e63", "#22d3ee"),
     "logout": ("Logout", "#1e293b", "#94a3b8"),
-    "sessao_encerrar": ("Sessão encerrada", "#7f1d1d", "#f87171"),
-    "servico_criar": ("Serviço lançado", "#064e3b", "#4ade80"),
-    "servico_editar": ("Serviço editado", "#1e293b", "#94a3b8"),
-    "servico_concluir": ("Serviço concluído", "#064e3b", "#4ade80"),
-    "servico_reabrir": ("Serviço reaberto", "#78350f", "#fbbf24"),
-    "servico_excluir": ("Serviço excluído", "#7f1d1d", "#f87171"),
+    "sessao_encerrar": ("SessÃ£o encerrada", "#7f1d1d", "#f87171"),
+    "servico_criar": ("ServiÃ§o lanÃ§ado", "#064e3b", "#4ade80"),
+    "servico_editar": ("ServiÃ§o editado", "#1e293b", "#94a3b8"),
+    "servico_concluir": ("ServiÃ§o concluÃ­do", "#064e3b", "#4ade80"),
+    "servico_reabrir": ("ServiÃ§o reaberto", "#78350f", "#fbbf24"),
+    "servico_excluir": ("ServiÃ§o excluÃ­do", "#7f1d1d", "#f87171"),
     "coins_salvar": ("COINS editado", "#065f46", "#34d399"),
     "marketplace_config": ("MARKTRADE config", "#78350f", "#fbbf24"),
-    "marketplace_acao": ("Anúncio alterado", "#78350f", "#fbbf24"),
+    "marketplace_acao": ("AnÃºncio alterado", "#78350f", "#fbbf24"),
     "marketplace_vip": ("VIP alterado", "#064e3b", "#4ade80"),
 }
 
@@ -2880,11 +2885,11 @@ def admin_audit():
     if total_paginas > 1:
         def _pag_href(n):
             return f"{base}&p={n}" if base else f"/admin/audit?p={n}"
-        ant = f"<a href='{_pag_href(max(1, page - 1))}'>← anterior</a>" if page > 1 else ""
-        prox = f"<a href='{_pag_href(min(total_paginas, page + 1))}'>próxima →</a>" if page < total_paginas else ""
+        ant = f"<a href='{_pag_href(max(1, page - 1))}'>â† anterior</a>" if page > 1 else ""
+        prox = f"<a href='{_pag_href(min(total_paginas, page + 1))}'>prÃ³xima â†’</a>" if page < total_paginas else ""
         pager = (
             "<div class='pager'>"
-            f"{ant}<span class='page-info'>Página {page} de {total_paginas} ({total} registros)</span>{prox}"
+            f"{ant}<span class='page-info'>PÃ¡gina {page} de {total_paginas} ({total} registros)</span>{prox}"
             "</div>"
         )
 
@@ -2892,14 +2897,14 @@ def admin_audit():
         "<section><h2>Log de auditoria</h2>"
         "<div class='audit-bar'>"
         "<form method='get' style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%'>"
-        f"<input name='q' type='search' value='{html.escape(q)}' placeholder='Buscar ação ou detalhe...' style='width:200px'>"
-        f"<select name='ata' style='width:auto'><option value=''>Todas as ações</option>{opcoes}</select>"
+        f"<input name='q' type='search' value='{html.escape(q)}' placeholder='Buscar aÃ§Ã£o ou detalhe...' style='width:200px'>"
+        f"<select name='ata' style='width:auto'><option value=''>Todas as aÃ§Ãµes</option>{opcoes}</select>"
         f"<input name='quem' value='{html.escape(quem)}' placeholder='Filtrar por e-mail' style='width:210px'>"
         "<button class='btn' type='submit'>Filtrar</button>"
-        f"<a class='btn ghost' href='{csv_href}' title='Exportar até 2000 registros filtrados'>Exportar CSV</a>"
+        f"<a class='btn ghost' href='{csv_href}' title='Exportar atÃ© 2000 registros filtrados'>Exportar CSV</a>"
         "</form></div>"
         "<table>"
-        "<tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhes</th><th>IP</th></tr>"
+        "<tr><th>Quando</th><th>Quem</th><th>AÃ§Ã£o</th><th>Detalhes</th><th>IP</th></tr>"
         + rows
         + "</table>"
         + pager
@@ -2920,7 +2925,7 @@ def _grupos_rows(grupos):
         link = g.get("link") or ""
         ativo_lbl = "ativo" if g.get("ativo") else "inativo"
         ordem = g.get("ordem") or 0
-        link_lbl = f"<a href='{html.escape(link)}' rel='noopener'>{html.escape(link[:40])}</a>" if link else "<span style='color:#64748b'>—</span>"
+        link_lbl = f"<a href='{html.escape(link)}' rel='noopener'>{html.escape(link[:40])}</a>" if link else "<span style='color:#64748b'>â€”</span>"
         rows += (
             "<tr>"
             f"<td>{html.escape(str(gid))}</td>"
@@ -2932,11 +2937,11 @@ def _grupos_rows(grupos):
             f"<form method='post' action='/admin/grupos/{gid}/mover' style='display:inline'>"
             f"<input type='hidden' name='_csrf' value='{csrf}'>"
             f"<input type='hidden' name='direcao' value='cima'>"
-            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px' title='Subir'>↑</button></form>"
+            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px' title='Subir'>â†‘</button></form>"
             f"<form method='post' action='/admin/grupos/{gid}/mover' style='display:inline'>"
             f"<input type='hidden' name='_csrf' value='{csrf}'>"
             f"<input type='hidden' name='direcao' value='baixo'>"
-            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;margin-left:4px' title='Descer'>↓</button></form> "
+            f"<button style='background:#1e2c40;border:0;color:#e6edf5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;margin-left:4px' title='Descer'>â†“</button></form> "
             f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' href='/admin/grupos/{gid}'>Editar</a>"
             f"<form method='post' action='/admin/grupos/{gid}/excluir' style='display:inline' "
             f"onsubmit=\"return confirm('Excluir o grupo \\'" + nome + "\\'?')\">"
@@ -2970,7 +2975,7 @@ def admin_grupos():
             "<div><label>Link do WhatsApp</label><input name='link' type='url' placeholder='https://chat.whatsapp.com/...'></div>"
             "</div>"
             "<div class='box'>"
-            "<div><label>Ordem (número)</label><input name='ordem' type='number' min='0' step='1' "
+            "<div><label>Ordem (nÃºmero)</label><input name='ordem' type='number' min='0' step='1' "
             f"value='{len(grupos) + 1}'></div>"
             "<div style='display:flex;align-items:center'><label style='margin:0 8px 0 0'>Ativo</label>"
             "<input name='ativo' type='checkbox' checked></div>"
@@ -2981,7 +2986,7 @@ def admin_grupos():
         )
     body += (
         "<section><h2>Grupos do WhatsApp</h2><table>"
-        "<tr><th>ID</th><th>Nome</th><th>Link</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>"
+        "<tr><th>ID</th><th>Nome</th><th>Link</th><th>Ordem</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + _grupos_rows(grupos)
         + "</table></section>"
     )
@@ -2994,10 +2999,10 @@ def admin_grupo_novo():
     if not user:
         return redirect("/login")
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     nome = (request.form.get("nome") or "").strip()[:100]
     if not nome:
-        return "O nome do grupo é obrigatório.", 400
+        return "O nome do grupo Ã© obrigatÃ³rio.", 400
     link = (request.form.get("link") or "").strip()
     ativo = request.form.get("ativo") == "on"
     try:
@@ -3027,11 +3032,11 @@ def admin_grupo_detalhe(gid):
         return redirect("/login")
     grupos = _fetch_soft("grupos", query=f"id=eq.{gid}")
     if not grupos:
-        return "Grupo não encontrado.", 404
+        return "Grupo nÃ£o encontrado.", 404
     g = grupos[0]
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         nome = (request.form.get("nome") or "").strip()[:100]
         link = (request.form.get("link") or "").strip()
         ativo = request.form.get("ativo") == "on"
@@ -3076,14 +3081,14 @@ def admin_grupo_mover(gid):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     direcao = request.form.get("direcao")
     if direcao not in ("cima", "baixo"):
-        return "Direção inválida.", 400
+        return "DireÃ§Ã£o invÃ¡lida.", 400
     grupos = _fetch_soft("grupos", order="ordem.asc,id.asc")
     ids = [g.get("id") for g in grupos]
     if gid not in ids:
-        return "Grupo não encontrado.", 404
+        return "Grupo nÃ£o encontrado.", 404
     i = ids.index(gid)
     j = i - 1 if direcao == "cima" else i + 1
     if j < 0 or j >= len(ids):
@@ -3111,7 +3116,7 @@ def admin_grupo_excluir(gid):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     grupos = _fetch_soft("grupos", query=f"id=eq.{gid}")
     nome = grupos[0].get("nome") if grupos else str(gid)
     try:
@@ -3312,7 +3317,7 @@ def _cupom_escopo(c, itens, servicos, grupos):
     if pid:
         partes.append("Item: " + html.escape(str(next((i.get("nome") for i in itens if str(i.get("id")) == str(pid)), pid))))
     if sid:
-        partes.append("Serviço: " + html.escape(str(next((s.get("nome") for s in servicos if str(s.get("id")) == str(sid)), sid))))
+        partes.append("ServiÃ§o: " + html.escape(str(next((s.get("nome") for s in servicos if str(s.get("id")) == str(sid)), sid))))
     if gid:
         partes.append("Grupo: " + html.escape(str(next((g.get("nome") for g in grupos if str(g.get("id")) == str(gid)), gid))))
     return "; ".join(partes) or "Todos"
@@ -3329,7 +3334,7 @@ def _cupons_rows(cupons, itens, servicos, grupos):
         validade = _cupom_validade_texto(c)
         limite = c.get("limite_usos")
         usos = c.get("usos") or 0
-        limite_lbl = str(limite) if limite else "∞"
+        limite_lbl = str(limite) if limite else "âˆž"
         ultimos = html.escape(_cupom_escopo(c, itens, servicos, grupos))
         rows += (
             "<tr>"
@@ -3385,7 +3390,7 @@ def _cupon_payload_form():
     grupo_id = (request.form.get("grupo_id") or "").strip() or None
     ativo = request.form.get("ativo") == "on"
     if not codigo:
-        return None, "Código do cupom é obrigatório."
+        return None, "CÃ³digo do cupom Ã© obrigatÃ³rio."
     if valor <= 0:
         return None, "Valor do desconto deve ser maior que zero."
     return {
@@ -3425,8 +3430,8 @@ def admin_cupons():
     body = cards
     body += (
         "<section><h2>Cupons de desconto</h2><table>"
-        "<tr><th>ID</th><th>Código</th><th>Desconto</th><th>Validade</th>"
-        "<th>Usos/Limite</th><th>Escopo</th><th>Status</th><th>Ações</th></tr>"
+        "<tr><th>ID</th><th>CÃ³digo</th><th>Desconto</th><th>Validade</th>"
+        "<th>Usos/Limite</th><th>Escopo</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + _cupons_rows(cupons, itens, servicos, grupos)
         + "</table></section>"
     )
@@ -3435,7 +3440,7 @@ def admin_cupons():
             "<section><h2>Novo cupom</h2>"
             "<form method='post' action='/admin/cupons/novo'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-            "<label>Código (fica automático em MAIÚSCULAS)</label>"
+            "<label>CÃ³digo (fica automÃ¡tico em MAIÃšSCULAS)</label>"
             "<input name='codigo' required placeholder='BAPZVESPERIA'>"
             "<div class='box'>"
             "<div><label>Tipo</label><select name='tipo'>"
@@ -3451,9 +3456,9 @@ def admin_cupons():
             "<div><label>Limite de usos (0 = ilimitado)</label>"
             "<input name='limite_usos' type='number' min='0' value='0'></div>"
             "</div>"
-            f"<label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, None, 'Qualquer item')}</select>"
-            f"<label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, None, 'Qualquer serviço')}</select>"
-            f"<label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, None, 'Qualquer grupo')}</select>"
+            f"<label>Produto especÃ­fico (opcional)</label><select name='produto_id'>{_cupons_select(itens, None, 'Qualquer item')}</select>"
+            f"<label>ServiÃ§o especÃ­fico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, None, 'Qualquer serviÃ§o')}</select>"
+            f"<label>Grupo especÃ­fico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, None, 'Qualquer grupo')}</select>"
             "<label style='display:flex;gap:8px;align-items:center;margin-top:8px'>"
             "<input type='checkbox' name='ativo' checked> Ativo</label>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Criar cupom</button></p>"
@@ -3469,7 +3474,7 @@ def admin_cupom_novo():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     payload, error = _cupon_payload_form()
     if error:
         return error, 400
@@ -3482,7 +3487,7 @@ def admin_cupom_novo():
         )
         if response.status_code not in (200, 201):
             if "duplicate" in (response.text or "").lower():
-                return f"Já existe um cupom com o código '{payload['codigo']}'.", 400
+                return f"JÃ¡ existe um cupom com o cÃ³digo '{payload['codigo']}'.", 400
             return f"Falha ao criar ({response.status_code}): {response.text[:200]}", 400
         _audit(user, "cupom_criar", f"{payload['codigo']} ({payload['tipo']} {payload['valor']})")
     except Exception as exc:
@@ -3497,11 +3502,11 @@ def admin_cupom_detalhe(cupom_id):
         return redirect("/login")
     cupons = _fetch_soft("cupons", query=f"id=eq.{cupom_id}")
     if not cupons:
-        return "Cupom não encontrado.", 404
+        return "Cupom nÃ£o encontrado.", 404
     c = cupons[0]
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         payload, error = _cupon_payload_form()
         if error:
             return error, 400
@@ -3515,7 +3520,7 @@ def admin_cupom_detalhe(cupom_id):
             )
             if response.status_code not in (200, 204):
                 if "duplicate" in (response.text or "").lower():
-                    return f"Já existe um cupom com o código '{payload['codigo']}'.", 400
+                    return f"JÃ¡ existe um cupom com o cÃ³digo '{payload['codigo']}'.", 400
                 return f"Falha ao atualizar ({response.status_code}): {response.text[:200]}", 400
             _audit(user, "cupom_editar", f"{payload['codigo']} ({payload['tipo']} {payload['valor']})")
         except Exception as exc:
@@ -3539,7 +3544,7 @@ def admin_cupom_detalhe(cupom_id):
         "<section><h2>Editar cupom</h2>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>Código (fica automático em MAIÚSCULAS)</label>"
+        "<label>CÃ³digo (fica automÃ¡tico em MAIÃšSCULAS)</label>"
         f"<input name='codigo' required value='{codigo}'>"
         "<div class='box'>"
         "<div><label>Tipo</label><select name='tipo'>"
@@ -3555,9 +3560,9 @@ def admin_cupom_detalhe(cupom_id):
         "<div><label>Limite de usos (0 = ilimitado)</label>"
         f"<input name='limite_usos' type='number' min='0' value='{limite}'></div>"
         "</div>"
-        f"<label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, c.get('produto_id'), 'Qualquer item')}</select>"
-        f"<label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, c.get('servico_id'), 'Qualquer serviço')}</select>"
-        f"<label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, c.get('grupo_id'), 'Qualquer grupo')}</select>"
+        f"<label>Produto especÃ­fico (opcional)</label><select name='produto_id'>{_cupons_select(itens, c.get('produto_id'), 'Qualquer item')}</select>"
+        f"<label>ServiÃ§o especÃ­fico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, c.get('servico_id'), 'Qualquer serviÃ§o')}</select>"
+        f"<label>Grupo especÃ­fico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, c.get('grupo_id'), 'Qualquer grupo')}</select>"
         f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'>"
         f"<input type='checkbox' name='ativo' {checked}> Ativo</label>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
@@ -3573,10 +3578,10 @@ def admin_cupom_ativar(cupom_id):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     cupons = _fetch_soft("cupons", query=f"id=eq.{cupom_id}")
     if not cupons:
-        return "Cupom não encontrado.", 404
+        return "Cupom nÃ£o encontrado.", 404
     c = cupons[0]
     novo_estado = not bool(c.get("ativo"))
     try:
@@ -3598,7 +3603,7 @@ def admin_cupom_excluir(cupom_id):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     cupons = _fetch_soft("cupons", query=f"id=eq.{cupom_id}")
     codigo = cupons[0].get("codigo") if cupons else str(cupom_id)
     try:
@@ -3635,7 +3640,7 @@ def admin_notificacoes():
             "</div></div>"
         )
     if not cards:
-        cards = "<div class='menu-empty'>Nenhuma ocorrência por enquanto. Tudo em dia.</div>"
+        cards = "<div class='menu-empty'>Nenhuma ocorrÃªncia por enquanto. Tudo em dia.</div>"
     alerts = ""
     for label, link in sistema:
         alerts += (
@@ -3650,20 +3655,20 @@ def admin_notificacoes():
     if not alerts:
         alerts = "<div class='menu-empty'>Sem alertas administrativos.</div>"
     resumo = (
-        f"<b>{total}</b> notificação(ões) em aberto no momento"
+        f"<b>{total}</b> notificaÃ§Ã£o(Ãµes) em aberto no momento"
         if total else "Nada em aberto no momento"
     )
     body = (
         "<div class='page-sub'>Acompanhe vendas, pagamentos, clientes e avisos de sistema.</div>"
         "<div class='notice'>" + resumo + "</div>"
-        "<h2 style='font-size:15px;margin:18px 0 10px'>Ocorrências</h2>"
+        "<h2 style='font-size:15px;margin:18px 0 10px'>OcorrÃªncias</h2>"
         f"<div class='n-grid'>{cards}</div>"
         "<h2 style='font-size:15px;margin:22px 0 10px'>Alertas administrativos</h2>"
         f"<div class='n-grid'>{alerts}</div>"
-        "<p class='page-sub'>Contadores de vendas, serviços, pagamentos e clientes "
-        "atualizam sozinhos durante a sessão.</p>"
+        "<p class='page-sub'>Contadores de vendas, serviÃ§os, pagamentos e clientes "
+        "atualizam sozinhos durante a sessÃ£o.</p>"
     )
-    return _page(user, "Notificações", body, active="notificacoes")
+    return _page(user, "NotificaÃ§Ãµes", body, active="notificacoes")
 
 
 @bp.route("/admin/services", methods=["GET"])
@@ -3691,8 +3696,8 @@ def admin_services():
             pass
     cards = (
         "<div class='cards'>"
-        f"<div class='card'><div class='num'>{total}</div><div class='lbl'>Serviços</div></div>"
-        f"<div class='card'><div class='num'>{concluidos}</div><div class='lbl'>Concluídos</div></div>"
+        f"<div class='card'><div class='num'>{total}</div><div class='lbl'>ServiÃ§os</div></div>"
+        f"<div class='card'><div class='num'>{concluidos}</div><div class='lbl'>ConcluÃ­dos</div></div>"
         f"<div class='card'><div class='num'>{_fmt_brl(soma['pix'])}</div><div class='lbl'>Total Pix</div></div>"
         f"<div class='card'><div class='num'>{soma['coins']:g} Coins</div><div class='lbl'>Total Coins</div></div>"
         f"<div class='card'><div class='num'>{horas:g}h</div><div class='lbl'>Horas</div></div>"
@@ -3701,14 +3706,14 @@ def admin_services():
     body = cards
     if pode_gerenciar:
         form = (
-            "<section><h2>Novo serviço</h2>"
+            "<section><h2>Novo serviÃ§o</h2>"
             "<form method='post' action='/admin/services/novo'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='box'>"
             "<div><label>Data</label><input name='data' type='date' required></div>"
             "<div><label>Hora</label><input name='hora' type='time'></div>"
             "</div>"
-            "<label>Serviço</label><input name='servico' required placeholder='Ex.: Farm de XP, Raid, Build...'>"
+            "<label>ServiÃ§o</label><input name='servico' required placeholder='Ex.: Farm de XP, Raid, Build...'>"
             "<div class='box'>"
             "<div><label>Nome do cliente</label><input name='nome_cliente' id='sv_nome_input' list='sv_nomes' placeholder='Nick / nome'></div>"
             "<div><label>WhatsApp do cliente</label><input name='whatsapp' id='sv_wpp_input' list='sv_whats' placeholder='(11) 99999-9999'></div>"
@@ -3724,8 +3729,8 @@ def admin_services():
             "<div id='qtd_coins_row' style='display:none'><label>Quantidade de COINS</label>"
             "<input name='qtd_coins' type='number' min='0' step='1' placeholder='Ex.: 50'></div>"
             "</div>"
-            "<label>Observação</label><textarea name='observacao' rows='2' placeholder='Detalhes do que foi feito...'></textarea>"
-            "<p style='margin-top:14px'><button class='btn' type='submit'>Lançar serviço</button></p>"
+            "<label>ObservaÃ§Ã£o</label><textarea name='observacao' rows='2' placeholder='Detalhes do que foi feito...'></textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>LanÃ§ar serviÃ§o</button></p>"
             "</form>"
             "<script>"
             "function svCoinToggle(){"
@@ -3775,9 +3780,9 @@ def admin_services():
             "</tr>"
         )
     body += (
-        "<section><h2>Todos os serviços</h2><table>"
-        "<tr><th>Quando</th><th>Serviço</th><th>Cliente</th><th>WhatsApp</th>"
-        "<th>Valor</th><th>Forma</th><th>Horas</th><th>Status</th><th>Ações</th></tr>"
+        "<section><h2>Todos os serviÃ§os</h2><table>"
+        "<tr><th>Quando</th><th>ServiÃ§o</th><th>Cliente</th><th>WhatsApp</th>"
+        "<th>Valor</th><th>Forma</th><th>Horas</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + rows
         + "</table></section>"
     )
@@ -3833,9 +3838,9 @@ def _sv_qtd_from_obs(obs):
 
 
 def _sv_sugestoes():
-    """Clientes já cadastrados (nome + whatsapp) para o autocomplete do
+    """Clientes jÃ¡ cadastrados (nome + whatsapp) para o autocomplete do
     Service: junta os registros de servicos_manuais com os perfis (profiles).
-    Retorna (nomes, whats, pares) — pares mapeia nome->whatsapp e o inverso."""
+    Retorna (nomes, whats, pares) â€” pares mapeia nome->whatsapp e o inverso."""
     pares = {}
     nomes_raw, whats_raw = [], []
     try:
@@ -3899,7 +3904,7 @@ def admin_service_novo():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     valor_hora = _sv_num(request.form.get("valor_hora"))
     horas = _sv_num(request.form.get("horas"))
     desconto = _sv_num(request.form.get("desconto"))
@@ -3927,7 +3932,7 @@ def admin_service_novo():
             timeout=15,
         )
         if response.status_code not in (200, 201):
-            return f"Falha ao lançar ({response.status_code}): {response.text[:200]}", 400
+            return f"Falha ao lanÃ§ar ({response.status_code}): {response.text[:200]}", 400
         _audit(user, "servico_criar", f"{payload['servico']} | {payload['nome_cliente']} | {payload['forma_pagamento']} {payload['valor']}")
     except Exception as exc:
         return f"Falha: {exc}", 500
@@ -3941,11 +3946,11 @@ def admin_service_detalhe(sid):
         return redirect("/login")
     rows = _fetch_soft("servicos_manuais", query=f"id=eq.{sid}")
     if not rows:
-        return "Serviço não encontrado.", 404
+        return "ServiÃ§o nÃ£o encontrado.", 404
     s = rows[0]
     if request.method == "POST":
         if not _csrf_ok():
-            return "Requisição inválida (CSRF).", 403
+            return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
         valor_hora = _sv_num(request.form.get("valor_hora"))
         horas = _sv_num(request.form.get("horas"))
         desconto = _sv_num(request.form.get("desconto"))
@@ -3978,14 +3983,14 @@ def admin_service_detalhe(sid):
     status = "concluido" if (s.get("status") or "") == "concluido" else "pendente"
     sugs = _sv_sugestoes()
     form = (
-        "<section><h2>Editar serviço</h2>"
+        "<section><h2>Editar serviÃ§o</h2>"
         f"<form method='post' action='/admin/services/{html.escape(sid)}'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         "<div class='box'>"
         f"<div><label>Data</label><input name='data' type='date' value='{html.escape(str(s.get('data') or ''))}' required></div>"
         f"<div><label>Hora</label><input name='hora' type='time' value='{html.escape(str(s.get('hora') or ''))}'></div>"
         "</div>"
-        f"<label>Serviço</label><input name='servico' required value='{html.escape(str(s.get('servico') or ''))}'>"
+        f"<label>ServiÃ§o</label><input name='servico' required value='{html.escape(str(s.get('servico') or ''))}'>"
         "<div class='box'>"
         f"<div><label>Nome do cliente</label><input name='nome_cliente' id='sv_nome_input' list='sv_nomes' value='{html.escape(str(s.get('nome_cliente') or ''))}'></div>"
         f"<div><label>WhatsApp</label><input name='whatsapp' id='sv_wpp_input' list='sv_whats' value='{html.escape(str(s.get('whatsapp') or ''))}'></div>"
@@ -4003,7 +4008,7 @@ def admin_service_detalhe(sid):
         f"<input name='qtd_coins' type='number' min='0' step='1' value='{html.escape(str(_sv_qtd_from_obs(s.get('observacao'))[0] or 0))}'></div>"
         f"<div><label>Valor cobrado (calculado)</label><span id='sv_total' style='font-weight:700;font-size:18px'>{_fmt_brl(_parse_brl(s.get('valor')))}</span></div>"
         "</div>"
-        f"<label>Observação</label><textarea name='observacao' rows='2'>{html.escape(str(s.get('observacao') or ''))}</textarea>"
+        f"<label>ObservaÃ§Ã£o</label><textarea name='observacao' rows='2'>{html.escape(str(s.get('observacao') or ''))}</textarea>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
         "<a class='btn ghost' href='/admin/services'>Voltar</a></p>"
         "</form>"
@@ -4022,12 +4027,12 @@ def admin_service_detalhe(sid):
     status_badge = "<span class='status pago'>concluido</span>" if status == "concluido" else "<span class='status pendente'>pendente</span>"
     body = (
         "<div class='cards'>"
-        f"<div class='card'><div class='num'>{html.escape(str(s.get('servico') or '-'))}</div><div class='lbl'>Serviço</div></div>"
+        f"<div class='card'><div class='num'>{html.escape(str(s.get('servico') or '-'))}</div><div class='lbl'>ServiÃ§o</div></div>"
         f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
         + form
         + (_sv_autocomplete_html(*sugs) if (sugs[0] or sugs[1]) else "")
     )
-    return _admin_page(user, "Serviço", body, "services")
+    return _admin_page(user, "ServiÃ§o", body, "services")
 
 
 @bp.route("/admin/services/<sid>/toggle", methods=["POST"])
@@ -4036,7 +4041,7 @@ def admin_service_toggle(sid):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     rows = _fetch_soft("servicos_manuais", select="status", query=f"id=eq.{sid}")
     novo = "pendente" if rows and (rows[0].get("status") or "") == "concluido" else "concluido"
     try:
@@ -4046,7 +4051,7 @@ def admin_service_toggle(sid):
             json={"status": novo, "atualizado_em": datetime.utcnow().isoformat()},
             timeout=15,
         )
-        _audit(user, "servico_concluir" if novo == "concluido" else "servico_reabrir", f"serviço #{sid}")
+        _audit(user, "servico_concluir" if novo == "concluido" else "servico_reabrir", f"serviÃ§o #{sid}")
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/services")
@@ -4058,23 +4063,23 @@ def admin_service_excluir(sid):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     try:
         requests.delete(
             f"{SUPA_URL}/rest/v1/servicos_manuais?id=eq.{sid}",
             headers=_headers(),
             timeout=15,
         )
-        _audit(user, "servico_excluir", f"serviço #{sid}")
+        _audit(user, "servico_excluir", f"serviÃ§o #{sid}")
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/services")
 
 
 def _coins_num(value):
-    """Número a partir de texto BR (aceita '2.500,50', '2500.5', '90' e '200.000').
-    Sem vírgula, só há vírgula quando tem decimais; ponto antes de 1-2 dígitos
-    finais com até 3 dígitos antes é decimal (89.5), caso contrário é milhar (1.500)."""
+    """NÃºmero a partir de texto BR (aceita '2.500,50', '2500.5', '90' e '200.000').
+    Sem vÃ­rgula, sÃ³ hÃ¡ vÃ­rgula quando tem decimais; ponto antes de 1-2 dÃ­gitos
+    finais com atÃ© 3 dÃ­gitos antes Ã© decimal (89.5), caso contrÃ¡rio Ã© milhar (1.500)."""
     if value is None:
         return 0.0
     s = str(value).strip().replace(" ", "")
@@ -4093,7 +4098,7 @@ def _coins_num(value):
 
 
 def _coins_int(value):
-    """Quantidade inteira formatada no padrão BR (ex.: 1.000 / 50.000)."""
+    """Quantidade inteira formatada no padrÃ£o BR (ex.: 1.000 / 50.000)."""
     n = int(_coins_num(value) or 0)
     if n < 1000:
         return str(n)
@@ -4111,7 +4116,7 @@ def _coins_dec(value):
 
 
 def _coins_linha():
-    """Linha única (id=1) da config de COINS, ou {} se a tabela faltar."""
+    """Linha Ãºnica (id=1) da config de COINS, ou {} se a tabela faltar."""
     try:
         rows = _fetch_soft("coins_config", query="id=eq.1", range_="0-0")
     except Exception:
@@ -4144,18 +4149,18 @@ def admin_coins():
 
     cards = (
         "<div class='cards'>"
-        f"<div class='card'><div class='num'>{_coins_int(estoque)}</div><div class='lbl'>COINS disponíveis</div></div>"
-        f"<div class='card'><div class='num'>{_coins_dec(preco_base)}</div><div class='lbl'>Preço por 1.000 (R$)</div></div>"
+        f"<div class='card'><div class='num'>{_coins_int(estoque)}</div><div class='lbl'>COINS disponÃ­veis</div></div>"
+        f"<div class='card'><div class='num'>{_coins_dec(preco_base)}</div><div class='lbl'>PreÃ§o por 1.000 (R$)</div></div>"
         + (
             "<div class='card'><div class='num' style='color:#bbf7d0'>ATIVO</div><div class='lbl'>Vendas liberadas</div></div>"
             if status_ativo
             else "<div class='card'><div class='num' style='color:#fecaca'>PAUSADO</div><div class='lbl'>Vendas pausadas</div></div>"
         )
         + (
-            "<div class='card'><div class='num' style='font-size:16px'>-</div><div class='lbl'>Última atualização</div></div>"
+            "<div class='card'><div class='num' style='font-size:16px'>-</div><div class='lbl'>Ãšltima atualizaÃ§Ã£o</div></div>"
             if sem_tabela
             else f"<div class='card'><div class='num' style='font-size:16px'>{html.escape(_fmt_dt_amigavel(cfg.get('atualizado_em')))}</div>"
-                 f"<div class='lbl'>Última atualização · {html.escape(cfg.get('atualizado_por') or '—')}</div></div>"
+                 f"<div class='lbl'>Ãšltima atualizaÃ§Ã£o Â· {html.escape(cfg.get('atualizado_por') or 'â€”')}</div></div>"
         )
         + "</div>"
     )
@@ -4163,9 +4168,9 @@ def admin_coins():
     aviso = ""
     if sem_tabela:
         aviso = (
-            "<div class='notice'><b>A tabela coins_config ainda não existe.</b> "
+            "<div class='notice'><b>A tabela coins_config ainda nÃ£o existe.</b> "
             "Rode o script <code>supabase_migracao_v123.sql</code> (em C:\\DEV\\Supabase) no SQL Editor do Supabase "
-            "para ativar os valores e o histórico de COINS.</div>"
+            "para ativar os valores e o histÃ³rico de COINS.</div>"
         )
 
     body = cards + aviso
@@ -4175,21 +4180,21 @@ def admin_coins():
     if pode_gerenciar:
         f_min = mx_lbl = ""
         form = (
-            "<section><h2>Editar configurações</h2>"
+            "<section><h2>Editar configuraÃ§Ãµes</h2>"
             "<form method='post' action='/admin/coins/salvar'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='box'>"
-            f"<div><label>COINS disponíveis</label><input name='estoque' type='text' value='{_coins_int(estoque) if not sem_tabela else '100000'}' required></div>"
-            f"<div><label>Preço por 1.000 (R$)</label><input name='preco_mil' type='text' value='{_coins_dec(preco_base)}' required></div>"
-            f"<div><label>Compra mínima</label><input name='min_compra' type='text' value='{_coins_int(mn) if not sem_tabela else '100'}'></div>"
-            f"<div><label>Compra máxima</label><input name='max_compra' type='text' value='{_coins_int(mx) if not sem_tabela else '50000'}'></div>"
+            f"<div><label>COINS disponÃ­veis</label><input name='estoque' type='text' value='{_coins_int(estoque) if not sem_tabela else '100000'}' required></div>"
+            f"<div><label>PreÃ§o por 1.000 (R$)</label><input name='preco_mil' type='text' value='{_coins_dec(preco_base)}' required></div>"
+            f"<div><label>Compra mÃ­nima</label><input name='min_compra' type='text' value='{_coins_int(mn) if not sem_tabela else '100'}'></div>"
+            f"<div><label>Compra mÃ¡xima</label><input name='max_compra' type='text' value='{_coins_int(mx) if not sem_tabela else '50000'}'></div>"
             "<div><label>Status da venda</label><select name='status'>"
             f"<option value='ativo'{' selected' if status_ativo else ''}>ATIVO</option>"
             f"<option value='pausado'{' selected' if not status_ativo else ''}>PAUSADO</option>"
             "</select></div></div>"
-            "<label>Observação interna</label>"
-            f"<textarea name='observacao' rows='2' placeholder='Nota visível só para administradores...'>{html.escape(obs)}</textarea>"
-            "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar alterações</button></p>"
+            "<label>ObservaÃ§Ã£o interna</label>"
+            f"<textarea name='observacao' rows='2' placeholder='Nota visÃ­vel sÃ³ para administradores...'>{html.escape(obs)}</textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar alteraÃ§Ãµes</button></p>"
             "</form></section>"
         )
         body += form
@@ -4200,7 +4205,7 @@ def admin_coins():
         "<div><label>Quantidade de COINS</label><input id='coins_qtd' type='text' placeholder='Ex.: 2.500'></div>"
         "<div><label>Valor total (Pix)</label><input id='coins_valor' type='text' value='R$ 0,00' readonly></div>"
         "</div>"
-        f"<p class='page-sub'>Referência: 1.000 COINS = {_coins_brl(1000, preco_base)} · 2.500 = {_coins_brl(2500, preco_base)} · 5.000 = {_coins_brl(5000, preco_base)}</p>"
+        f"<p class='page-sub'>ReferÃªncia: 1.000 COINS = {_coins_brl(1000, preco_base)} Â· 2.500 = {_coins_brl(2500, preco_base)} Â· 5.000 = {_coins_brl(5000, preco_base)}</p>"
         "<script>"
         "function coinsCalc(){"
         "var raw=document.getElementById('coins_qtd').value||'';"
@@ -4223,9 +4228,9 @@ def admin_coins():
     for h in hist:
         q_ant, q_nov = h.get("qtd_anterior"), h.get("qtd_nova")
         p_ant, p_nov = h.get("preco_anterior"), h.get("preco_novo")
-        qd = (f"{_coins_int(q_ant)} → {_coins_int(q_nov)}"
+        qd = (f"{_coins_int(q_ant)} â†’ {_coins_int(q_nov)}"
               if q_ant is not None or q_nov is not None else "-")
-        pd = (f"{_fmt_brl(_coins_num(p_ant))} → {_fmt_brl(_coins_num(p_nov))}"
+        pd = (f"{_fmt_brl(_coins_num(p_ant))} â†’ {_fmt_brl(_coins_num(p_nov))}"
               if p_ant is not None or p_nov is not None else "-")
         rows += (
             "<tr>"
@@ -4236,9 +4241,9 @@ def admin_coins():
             "</tr>"
         )
     body += (
-        "<section><h2>Histórico de alterações</h2><table>"
-        "<tr><th>Quando</th><th>Administrador</th><th>Quantidade</th><th>Preço (R$/1.000)</th><th>Alteração realizada</th></tr>"
-        + (rows or "<tr><td colspan='5' style='color:#5b6b82'>Nenhuma alteração registrada ainda.</td></tr>")
+        "<section><h2>HistÃ³rico de alteraÃ§Ãµes</h2><table>"
+        "<tr><th>Quando</th><th>Administrador</th><th>Quantidade</th><th>PreÃ§o (R$/1.000)</th><th>AlteraÃ§Ã£o realizada</th></tr>"
+        + (rows or "<tr><td colspan='5' style='color:#5b6b82'>Nenhuma alteraÃ§Ã£o registrada ainda.</td></tr>")
         + "</table></section>"
     )
     return _admin_page(user, "COINS", body, "coins")
@@ -4250,7 +4255,7 @@ def admin_coins_salvar():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     estoque = _coins_num(request.form.get("estoque"))
     preco_mil = _coins_num(request.form.get("preco_mil"))
     mn = _coins_num(request.form.get("min_compra"))
@@ -4258,15 +4263,15 @@ def admin_coins_salvar():
     status = (request.form.get("status") or "ativo").strip().lower()
     obs = (request.form.get("observacao") or "").strip()[:1000]
     if estoque < 0:
-        return "COINS disponíveis não podem ser negativos.", 400
+        return "COINS disponÃ­veis nÃ£o podem ser negativos.", 400
     if preco_mil <= 0:
-        return "O preço por 1.000 COINS deve ser maior que zero.", 400
+        return "O preÃ§o por 1.000 COINS deve ser maior que zero.", 400
     if mn < 0 or mx < 0:
-        return "Os limites de compra não podem ser negativos.", 400
+        return "Os limites de compra nÃ£o podem ser negativos.", 400
     if mn > 0 and mx > 0 and mn > mx:
-        return "A compra mínima não pode ser maior que a máxima.", 400
+        return "A compra mÃ­nima nÃ£o pode ser maior que a mÃ¡xima.", 400
     if status not in ("ativo", "pausado"):
-        return "Status inválido.", 400
+        return "Status invÃ¡lido.", 400
 
     atual = _coins_linha()
     a_est = _coins_num(atual.get("estoque"))
@@ -4279,20 +4284,20 @@ def admin_coins_salvar():
     muda = []
     q_ant = q_nov = p_ant = p_nov = None
     if a_est != estoque:
-        muda.append(f"estoque {_coins_int(a_est)} → {_coins_int(estoque)}")
+        muda.append(f"estoque {_coins_int(a_est)} â†’ {_coins_int(estoque)}")
         q_ant, q_nov = a_est, estoque
     if a_prc != preco_mil:
-        muda.append(f"preço {_coins_dec(a_prc)} → {_coins_dec(preco_mil)} por 1.000")
+        muda.append(f"preÃ§o {_coins_dec(a_prc)} â†’ {_coins_dec(preco_mil)} por 1.000")
         p_ant, p_nov = a_prc, preco_mil
     if a_mn != mn:
-        muda.append(f"mínima {_coins_int(a_mn)} → {_coins_int(mn)}")
+        muda.append(f"mÃ­nima {_coins_int(a_mn)} â†’ {_coins_int(mn)}")
     if a_mx != mx:
-        muda.append(f"máxima {_coins_int(a_mx)} → {_coins_int(mx)}")
+        muda.append(f"mÃ¡xima {_coins_int(a_mx)} â†’ {_coins_int(mx)}")
     if a_status != status:
-        muda.append(f"status {a_status.upper()} → {status.upper()}")
+        muda.append(f"status {a_status.upper()} â†’ {status.upper()}")
     if a_obs != obs:
-        muda.append("observação")
-    descricao = "; ".join(muda) if muda else "sem mudanças"
+        muda.append("observaÃ§Ã£o")
+    descricao = "; ".join(muda) if muda else "sem mudanÃ§as"
 
     payload = {
         "estoque": estoque,
@@ -4330,13 +4335,13 @@ def admin_coins_salvar():
                 timeout=15,
             )
         except Exception as exc:
-            return f"Configuração salva, mas o histórico falhou: {exc}", 500
+            return f"ConfiguraÃ§Ã£o salva, mas o histÃ³rico falhou: {exc}", 500
     _audit(user, "coins_salvar", descricao)
     return redirect("/admin/coins")
 
 
 def _mk_linha():
-    """Linha única (id=1) da config do MARKTRADE, ou {} se a tabela faltar."""
+    """Linha Ãºnica (id=1) da config do MARKTRADE, ou {} se a tabela faltar."""
     try:
         rows = _fetch_soft("marketplace_config", query="id=eq.1", range_="0-0")
     except Exception:
@@ -4387,7 +4392,7 @@ def _mk_status_badge(status, kind="listing"):
 
 
 def _mk_gp_admin(value):
-    """Preço em gp sem moeda inventada."""
+    """PreÃ§o em gp sem moeda inventada."""
     if value is None or str(value).strip() == "":
         return "Aceita ofertas"
     v = _coins_num(value)
@@ -4415,14 +4420,14 @@ def admin_marketplace():
 
     cards = (
         "<div class='cards'>"
-        f"<div class='card'><div class='num'>{len(ativas)}</div><div class='lbl'>Anúncios ativos</div></div>"
-        f"<div class='card'><div class='num'>{_fmt_brl(preco_pub)}</div><div class='lbl'>Publicação</div></div>"
+        f"<div class='card'><div class='num'>{len(ativas)}</div><div class='lbl'>AnÃºncios ativos</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(preco_pub)}</div><div class='lbl'>PublicaÃ§Ã£o</div></div>"
         f"<div class='card'><div class='num'>{_fmt_brl(preco_des)}</div><div class='lbl'>Destaque (+)</div></div>"
-        f"<div class='card'><div class='num'>{_fmt_brl(preco_vip)}</div><div class='lbl'>VIP / mês</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(preco_vip)}</div><div class='lbl'>VIP / mÃªs</div></div>"
         + (
-            "<div class='card'><div class='num' style='color:#bbf7d0'>ATIVO</div><div class='lbl'>Publicações liberadas</div></div>"
+            "<div class='card'><div class='num' style='color:#bbf7d0'>ATIVO</div><div class='lbl'>PublicaÃ§Ãµes liberadas</div></div>"
             if ativo
-            else "<div class='card'><div class='num' style='color:#fecaca'>PAUSADO</div><div class='lbl'>Publicações pausadas</div></div>"
+            else "<div class='card'><div class='num' style='color:#fecaca'>PAUSADO</div><div class='lbl'>PublicaÃ§Ãµes pausadas</div></div>"
         )
         + "</div>"
     )
@@ -4430,9 +4435,9 @@ def admin_marketplace():
     aviso = ""
     if sem_tabela:
         aviso = (
-            "<div class='notice'><b>As tabelas do MARKTRADE ainda não existem.</b> "
+            "<div class='notice'><b>As tabelas do MARKTRADE ainda nÃ£o existem.</b> "
             "Rode o script <code>supabase_migracao_v124.sql</code> (em C:\\DEV\\Supabase) no SQL Editor do Supabase "
-            "para ativar o marketplace (config, anúncios, pagamentos e VIP).</div>"
+            "para ativar o marketplace (config, anÃºncios, pagamentos e VIP).</div>"
         )
 
     body = cards + aviso
@@ -4444,20 +4449,20 @@ def admin_marketplace():
             f"<option value='pausado'{' selected' if not ativo else ''}>PAUSADO</option>"
         )
         body += (
-            "<section><h2>Editar configurações</h2>"
+            "<section><h2>Editar configuraÃ§Ãµes</h2>"
             "<form method='post' action='/admin/marketplace/salvar'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='box'>"
-            f"<div><label>Preço da publicação (R$)</label><input name='preco_publicacao' type='text' value='{_coins_dec(preco_pub) if not sem_tabela else '2,99'}' required></div>"
-            f"<div><label>Preço do destaque (R$)</label><input name='preco_destaque' type='text' value='{_coins_dec(preco_des) if not sem_tabela else '5,00'}' required></div>"
-            f"<div><label>Preço do VIP mensal (R$)</label><input name='preco_vip' type='text' value='{_coins_dec(preco_vip) if not sem_tabela else '12,99'}' required></div>"
-            f"<div><label>Limite de anúncios por cliente</label><input name='limite_publicacoes' type='text' value='{_coins_int(limite) if not sem_tabela else '3'}' required></div>"
-            f"<div><label>Duração do anúncio (dias)</label><input name='duracao_publicacao_dias' type='text' value='{_coins_int(_mk_preco('duracao_publicacao_dias', 30))}'></div>"
-            f"<div><label>Duração do VIP (dias)</label><input name='duracao_vip_dias' type='text' value='{_coins_int(_mk_preco('duracao_vip_dias', 30))}'></div>"
-            "<div><label>Status das publicações</label><select name='status'>" + status_opts + "</select></div></div>"
-            "<label>Observação interna</label>"
-            f"<textarea name='observacao' rows='2' placeholder='Nota visível só para administradores...'>{html.escape(cfg.get('observacao') or '')}</textarea>"
-            "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar alterações</button></p>"
+            f"<div><label>PreÃ§o da publicaÃ§Ã£o (R$)</label><input name='preco_publicacao' type='text' value='{_coins_dec(preco_pub) if not sem_tabela else '2,99'}' required></div>"
+            f"<div><label>PreÃ§o do destaque (R$)</label><input name='preco_destaque' type='text' value='{_coins_dec(preco_des) if not sem_tabela else '5,00'}' required></div>"
+            f"<div><label>PreÃ§o do VIP mensal (R$)</label><input name='preco_vip' type='text' value='{_coins_dec(preco_vip) if not sem_tabela else '12,99'}' required></div>"
+            f"<div><label>Limite de anÃºncios por cliente</label><input name='limite_publicacoes' type='text' value='{_coins_int(limite) if not sem_tabela else '3'}' required></div>"
+            f"<div><label>DuraÃ§Ã£o do anÃºncio (dias)</label><input name='duracao_publicacao_dias' type='text' value='{_coins_int(_mk_preco('duracao_publicacao_dias', 30))}'></div>"
+            f"<div><label>DuraÃ§Ã£o do VIP (dias)</label><input name='duracao_vip_dias' type='text' value='{_coins_int(_mk_preco('duracao_vip_dias', 30))}'></div>"
+            "<div><label>Status das publicaÃ§Ãµes</label><select name='status'>" + status_opts + "</select></div></div>"
+            "<label>ObservaÃ§Ã£o interna</label>"
+            f"<textarea name='observacao' rows='2' placeholder='Nota visÃ­vel sÃ³ para administradores...'>{html.escape(cfg.get('observacao') or '')}</textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar alteraÃ§Ãµes</button></p>"
             "</form></section>"
         )
 
@@ -4482,7 +4487,7 @@ def admin_marketplace():
             if status == "pendente":
                 acoes += [_acao(lid, "ativar", "Ativar", False), _acao(lid, "encerrar", "Encerrar", True)]
             elif status == "ativa":
-                acoes += [_acao(lid, "bloquear", "Bloquear", True), _acao(lid, "verificar", "Verif. ✓" if not l.get("verificado") else "Remover ✓", True), _acao(lid, "encerrar", "Encerrar", True)]
+                acoes += [_acao(lid, "bloquear", "Bloquear", True), _acao(lid, "verificar", "Verif. âœ“" if not l.get("verificado") else "Remover âœ“", True), _acao(lid, "encerrar", "Encerrar", True)]
             elif status == "bloqueada":
                 acoes += [_acao(lid, "desbloquear", "Liberar", False)]
         rows += (
@@ -4499,10 +4504,10 @@ def admin_marketplace():
             "</tr>"
         )
     body += (
-        "<section><h2>Anúncios</h2><table>"
-        "<tr><th>#</th><th>Anunciante</th><th>Item</th><th>Tipo</th><th>Mundo</th><th>Preço</th>"
-        "<th>Destaque</th><th>Verif.</th><th>Status</th><th>Personagem</th><th>Ações</th></tr>"
-        + (rows or "<tr><td colspan='11' style='color:#5b6b82'>Nenhum anúncio publicado ainda.</td></tr>")
+        "<section><h2>AnÃºncios</h2><table>"
+        "<tr><th>#</th><th>Anunciante</th><th>Item</th><th>Tipo</th><th>Mundo</th><th>PreÃ§o</th>"
+        "<th>Destaque</th><th>Verif.</th><th>Status</th><th>Personagem</th><th>AÃ§Ãµes</th></tr>"
+        + (rows or "<tr><td colspan='11' style='color:#5b6b82'>Nenhum anÃºncio publicado ainda.</td></tr>")
         + "</table></section>"
     )
 
@@ -4515,17 +4520,17 @@ def admin_marketplace():
         prow += (
             "<tr>"
             f"<td>{html.escape(str(p.get('reference') or '-'))}</td>"
-            f"<td>{_mk_tipo_lbl(str(p.get('tipo') or 'publicacao'), low=False)}{' · anuncio #' + str(p.get('listing_id') or '-') if p.get('listing_id') else ''}</td>"
+            f"<td>{_mk_tipo_lbl(str(p.get('tipo') or 'publicacao'), low=False)}{' Â· anuncio #' + str(p.get('listing_id') or '-') if p.get('listing_id') else ''}</td>"
             f"<td>{html.escape(str(p.get('user_id') or '-'))}</td>"
             f"<td>{_fmt_brl(_coins_num(p.get('valor')))}</td>"
             f"<td>{_mk_status_badge(p.get('status'), 'payment')}</td>"
             f"<td>{html.escape(str(p.get('mp_id') or '-'))}</td>"
-            f"<td>{html.escape(_fmt_dt(p.get('criado_em'), 16))}</td>"
+            f"<td>{html.escape(_fmt_dt_amigavel(p.get('criado_em')))}</td>"
             "</tr>"
         )
     body += (
         "<section><h2>Pagamentos (PIX)</h2><table>"
-        "<tr><th>Referência</th><th>Tipo</th><th>Cliente</th><th>Valor</th><th>Status</th><th>Mercado Pago</th><th>Criado</th></tr>"
+        "<tr><th>ReferÃªncia</th><th>Tipo</th><th>Cliente</th><th>Valor</th><th>Status</th><th>Mercado Pago</th><th>Criado</th></tr>"
         + (prow or "<tr><td colspan='7' style='color:#5b6b82'>Nenhum pagamento ainda.</td></tr>")
         + "</table></section>"
     )
@@ -4537,7 +4542,7 @@ def admin_marketplace():
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='box'>"
             "<div><label>E-mail do cliente</label><input name='email' type='email' required placeholder='cliente@email.com'></div>"
-            f"<div><label>Dias (padrão {_coins_int(_mk_preco('duracao_vip_dias', 30))})</label><input name='dias' type='text' placeholder='30'></div></div>"
+            f"<div><label>Dias (padrÃ£o {_coins_int(_mk_preco('duracao_vip_dias', 30))})</label><input name='dias' type='text' placeholder='30'></div></div>"
             "<p style='margin-top:14px'><button class='btn' type='submit' name='acao' value='ativar'>Ativar VIP</button> "
             "<button class='btn ghost' type='submit' name='acao' value='remover'>Remover VIP</button></p>"
             "</form></section>"
@@ -4551,7 +4556,7 @@ def admin_marketplace_salvar():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     preco_pub = _coins_num(request.form.get("preco_publicacao"))
     preco_des = _coins_num(request.form.get("preco_destaque"))
     preco_vip = _coins_num(request.form.get("preco_vip"))
@@ -4561,11 +4566,11 @@ def admin_marketplace_salvar():
     status = (request.form.get("status") or "ativo").strip().lower()
     obs = (request.form.get("observacao") or "").strip()[:1000]
     if min(preco_pub, preco_des, preco_vip) < 0:
-        return "Os preços não podem ser negativos.", 400
+        return "Os preÃ§os nÃ£o podem ser negativos.", 400
     if preco_pub == 0 and preco_des == 0 and preco_vip == 0:
-        return "Informe ao menos um preço maior que zero.", 400
+        return "Informe ao menos um preÃ§o maior que zero.", 400
     if status not in ("ativo", "pausado"):
-        return "Status inválido.", 400
+        return "Status invÃ¡lido.", 400
 
     payload = {
         "preco_publicacao": preco_pub,
@@ -4590,8 +4595,8 @@ def admin_marketplace_salvar():
         return f"Falha ao salvar: {exc}", 500
     _invalidate_marketplace_cache()
     descricao = (
-        f"publicação {_fmt_brl(preco_pub)} | destaque {_fmt_brl(preco_des)} | VIP {_fmt_brl(preco_vip)} | "
-        f"limite {limite} | anúncio {dup_dias}d | entrou em status {status.upper()}"
+        f"publicaÃ§Ã£o {_fmt_brl(preco_pub)} | destaque {_fmt_brl(preco_des)} | VIP {_fmt_brl(preco_vip)} | "
+        f"limite {limite} | anÃºncio {dup_dias}d | entrou em status {status.upper()}"
     )
     _audit(user, "marketplace_config", f"{descricao} (por {user['email']})")
     return redirect("/admin/marketplace")
@@ -4603,14 +4608,14 @@ def admin_marketplace_acao(lid):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     acao = (request.form.get("acao") or "").strip()
     try:
         rows = _fetch_soft("marketplace_listings", query=f"id=eq.{lid}", range_="0-0")
     except Exception:
         rows = []
     if not rows:
-        return "Anúncio não encontrado.", 404
+        return "AnÃºncio nÃ£o encontrado.", 404
     listing = rows[0]
 
     patch = {}
@@ -4626,7 +4631,7 @@ def admin_marketplace_acao(lid):
     elif acao == "verificar":
         patch["verificado"] = not bool(listing.get("verificado"))
     else:
-        return "Ação inválida.", 400
+        return "AÃ§Ã£o invÃ¡lida.", 400
     if not patch:
         return redirect("/admin/marketplace")
     try:
@@ -4640,7 +4645,7 @@ def admin_marketplace_acao(lid):
         return f"Falha: {exc}", 500
     _invalidate_marketplace_cache()
     item = str(listing.get("item_name") or lid)
-    _audit(user, "marketplace_acao", f"#{lid} {item} → {acao}")
+    _audit(user, "marketplace_acao", f"#{lid} {item} â†’ {acao}")
     return redirect("/admin/marketplace")
 
 
@@ -4650,11 +4655,11 @@ def admin_marketplace_vip_testar():
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     email = (request.form.get("email") or "").strip().lower()
     acao = (request.form.get("acao") or "ativar").strip().lower()
     if "@" not in email:
-        return "E-mail inválido.", 400
+        return "E-mail invÃ¡lido.", 400
     if acao == "remover":
         patch = {"vip_until": None}
         rotulo = "removido"
@@ -4672,7 +4677,7 @@ def admin_marketplace_vip_testar():
     except Exception as exc:
         return f"Falha: {exc}", 500
     _invalidate_marketplace_cache()
-    _audit(user, "marketplace_vip", f"{email} → VIP {rotulo}")
+    _audit(user, "marketplace_vip", f"{email} â†’ VIP {rotulo}")
     return redirect("/admin/marketplace")
 
 
@@ -4690,7 +4695,7 @@ def admin_seguranca():
     pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_seguranca")
     cards = (
         "<div class='cards'>"
-        f"<div class='card'><div class='num'>{len(ativas)}</div><div class='lbl'>Sessões ativas</div></div>"
+        f"<div class='card'><div class='num'>{len(ativas)}</div><div class='lbl'>SessÃµes ativas</div></div>"
         f"<div class='card'><div class='num'>{logins_hoje}</div><div class='lbl'>Logins hoje</div></div>"
         f"<div class='card'><div class='num'>{logins_30d}</div><div class='lbl'>Logins em 30 dias</div></div>"
         "</div>"
@@ -4723,21 +4728,21 @@ def admin_seguranca():
             "</tr>"
         )
     body = cards + (
-        "<section><h2>Histórico de sessões e logins</h2><table>"
-        "<tr><th>Início</th><th>E-mail</th><th>IP</th><th>Dispositivo</th>"
-        "<th>Último acesso</th><th>Encerramento</th><th>Status</th><th>Ações</th></tr>"
+        "<section><h2>HistÃ³rico de sessÃµes e logins</h2><table>"
+        "<tr><th>InÃ­cio</th><th>E-mail</th><th>IP</th><th>Dispositivo</th>"
+        "<th>Ãšltimo acesso</th><th>Encerramento</th><th>Status</th><th>AÃ§Ãµes</th></tr>"
         + rows
         + "</table></section>"
     )
     body += (
-        "<div class='notice'>Senha e verificação em dois fatores (2FA) são gerenciados "
+        "<div class='notice'>Senha e verificaÃ§Ã£o em dois fatores (2FA) sÃ£o gerenciados "
         "<a href='https://myaccount.google.com/security' target='_blank' rel='noopener'>pela conta Google</a>. "
-        "Use também a <a href='https://security.google.com/settings/security/activity' target='_blank' rel='noopener'>"
-        "Verificação de segurança</a> para revisar dispositivos. "
-        "Aqui você encerra sessões ativas a distância — ao encerrar, o acesso é perdido na próxima navegação."
+        "Use tambÃ©m a <a href='https://security.google.com/settings/security/activity' target='_blank' rel='noopener'>"
+        "VerificaÃ§Ã£o de seguranÃ§a</a> para revisar dispositivos. "
+        "Aqui vocÃª encerra sessÃµes ativas a distÃ¢ncia â€” ao encerrar, o acesso Ã© perdido na prÃ³xima navegaÃ§Ã£o."
         "</div>"
     )
-    return _admin_page(user, "Segurança", body, "seguranca")
+    return _admin_page(user, "SeguranÃ§a", body, "seguranca")
 
 
 @bp.route("/admin/seguranca/sessoes/<sid>/encerrar", methods=["POST"])
@@ -4746,7 +4751,7 @@ def admin_seguranca_encerrar(sid):
     if not user:
         return "Acesso restrito.", 403
     if not _csrf_ok():
-        return "Requisição inválida (CSRF).", 403
+        return "RequisiÃ§Ã£o invÃ¡lida (CSRF).", 403
     sid_decoded = (sid or "").strip()
     try:
         requests.patch(
