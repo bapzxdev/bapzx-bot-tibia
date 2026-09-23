@@ -7,23 +7,23 @@
 - **v2.10.4 (23/09, troca.html dark + VIP no topo)**: página `troca.html` do
   portfolio reescrita seguindo o padrão visual dark da Área do Cliente (tokens
   do AUTH_LAYOUT do bot.py: --bg #0b0f1a, --panel #111a2c, etc.), com menu
-  lateral de filtros à esquerda (Categoria Item/House, Ocultar aceito ofertas
-  como única opção liga/desliga do topo, Mundo 16 mundos, BattlEye
-  Yellow/Green, Tipo de anúncio Venda/Compra, Categoria do item 7 categorias,
-  Vocação 5 vocações, Tier 0–10; Tipo de PvP e Continente foram **removidos
-  por pedido do dono** em 23/09), anúncios VIP no topo (badge ⭐ + header
-  "Destaques (VIP)" + divisória "— Anúncios recentes —", usando `is_destaque`
-  exposto no /api/troca), contador de anúncios, estados loading/erro/vazio e
+  lateral de filtros à esquerda (Categoria Item/House, Hide taking offers como
+  única opção switch do topo, Mundo 16 mundos, Tipo de anúncio Venda/Compra,
+  Categoria do item 7 categorias, Vocação 5 vocações, Tier 0–10; **removidos
+  por pedido do dono**: Tipo de PvP, Continente e BattlEye; filtros ficaram
+  sempre abertos com balões de 2 em 2 (sem accordion) que filtram na hora ao
+  clicar), anúncios VIP no topo (badge ⭐ fora do título? não: badge em flow
+  acima do tipo/data, não sobrepõe mais a data; header "Destaques (VIP)" e
+  barra "Anúncios recentes" com a mesma estrutura; preço com símbolo de moeda
+  do jogo 💰 gold coins), contador de anúncios, estados loading/erro/vazio e
   drawer de filtros no mobile. Filtros sem campo no payload (/api/troca só
   tem aceita_ofertas, world, tipo, preço, história) ficam como UI por enquanto
   (filtram para vazio quando ativos) até o backend prover os campos. VERSION
   bot+painel **2.10.3** (v2.10.4 sem bump de versão, só dados). 66 testes OK
   (marketplace+coins), py_compile OK, JS check OK.
-  Commits: portfolio `ca7a808`+`97aa254`, bot `dd8b964` (todos pushados).
-  **Próximo passo: re-deploy no Render (v2.10.4 no /api/troca com is_destaque)
-  e testar ao vivo a troca.html com VIP no topo.**
-  [ATUALIZAÇÃO: Render já re-deployado — /api/troca retorna is_destaque e 2
-  anúncios (WAR AXE, war hammer) exibidos no topo como VIP ao vivo.]
+  Commits: portfolio `ca7a808`+`97aa254`+`08c784d`+`513f387`, bot `dd8b964`
+  (todos pushados). Render já re-deployado — /api/troca retorna is_destaque e
+  2 anúncios (WAR AXE, war hammer) exibidos como VIP ao vivo.
 
 - **v2.10.3 (23/09, data/hora BR no MARKTRADE)**: coluna "Publicado" de
   "Meus anúncios" (bot.py `cliente_troca`) agora usa `_mk_fmt_dt` (dd/mm/aaaa
