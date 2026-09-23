@@ -88,6 +88,103 @@
 
 Lista única de pendências, observações e bloqueios do projeto BAPZX / RUBINI COINS.
 
+## LOG v2.10.1 (23/09/2026) - MARKTRADE: mundo em select (16 mundos), remoção do tipo de PvP e sprite automático do Wiki Tibia
+- Pedido do dono (ajustes sobre o marketplace da v2.10.0).
+- bot.py (VERSION 2.10.1): campo **Mundo** virou `<select>` com os **16 mundos**
+  (`_MK_MUNDOS`, logo após `_mk_ativo`): Auroria, Belaria, Bellum, Drakaria,
+  Eldrian, Elysian, Infernum I, Infernum II, Infernum III, Lunarian, Malveria,
+  Mystian, Obsidian, Solarian, Tenebrium, Vesperia. POST valida o mundo
+  (`world not in _MK_MUNDOS` → flash "Selecione um mundo válido para o
+  anúncio." + redirect) e NÃO valida mais "existe" (mundo já é select).
+- Campo **"Tipo de PvP" removido** do form e do payload (POST não envia mais
+  `tipo_pvp`); coluna `tipo_pvp` da v124 fica no banco (default vazia), sem
+  migration nova. painel.py (VERSION 2.10.1): `/api/troca` não devolve mais
+  `pvp`. Vitrine troca.html (bapzx-portfolio): removidos `pvpDot`, `.dot` e
+  CSS `.pvp`; `SERVER_COLORS` mapeia os 16 mundos (verde/âmbar/azul/roxo/slate);
+  serverHtml só com `<b>world</b>`.
+- **Sprite automático do Wiki Tibia**: novo helper `_mk_itemsprite(item_name)`
+  (bot.py) — mediawiki API `prop=images` e `imageinfo iiurlwidth=96` em
+  `https://www.tibiawiki.com.br/w/api.php`, User-Agent `BAPZX-MARKTRADE/VERSION`,
+  timeout 8s, cache `_SPRITE_CACHE` (cap 800; entrada é sempre um `tuple`
+  `(timestamp, url)`, evita colisão cache-hit vs cache-miss). Chamado no POST
+  quando `sprite` vazio; falha nunca derruba (retorna ""). Validado ao vivo no
+  navegador/requests: "War Hammer" → `https://www.tibiawiki.com.br/images/2/25/War_Hammer.gif`, "Guardian Axe" → `images/6/67/Guardian_Axe.gif`, item
+  inexistente → "". Hint: "Deixe em branco para buscar a imagem automaticamente
+  no Wiki Tibia".
+- Correção de arquivo corrompido: linha 1 do bot.py estava `ja subimport base64`
+  (corrompida) → restaurada para `import base64`.
+- Testes: regressão **test_marketplace.py AGORA COM 37 testes (37 OK)** (novos:
+  `test_mk_mundos`, `test_mk_itemsprite_sucesso`, `test_mk_itemsprite_cache`,
+  `test_mk_itemsprite_falha_e_vazio`, `test_publicar_mundo_invalido_rejeita`
+  (302), `test_publicar_mundo_ok_nao_valida_mundo` (payload sem `tipo_pvp`),
+  `test_publicar_sprite_vazio_busca_auto` — busca automática e sprite vai no
+  payload); `test_coins.py` **26 OK**; `py_compile` OK (bot.py, painel.py,
+  test_marketplace.py). Ajustes de teste: `_FakeResp.raise_for_status()`
+  adicionado; `TestMkBot.setUpClass` ganhou `TESTING=True`,
+  `PROPAGATE_EXCEPTIONS=True` e `secret_key="teste-marketplace"` (necessário
+  com o novo populate antes de dar `app.secret_key = wandb.KEY_SECRET`, pois o
+  secret default já não vale mais — ver bot.py ~linha 102). Fixture LISTING
+  (linha 44) ainda imita linha real do banco com `tipo_pvp` = "" e `world`
+  "honbra"→"Auroria"; asserts negativos de pvp nas linhas 638/692.
+- **Migração v124 APLICADA pelo dono** em 23/09/2026 (confirmado); arquivo
+  `C:\DEV\Supabase\supabase_migracao_v124.sql`. Sem migration nova nesta
+  versão.
+- **PENDENTE (dono)**: re-deploy no Render com v2.10.1 (conferir "2.10.1" no
+  /health) e RE-deploy do bapzx-portfolio (troca.html) no GitHub Pages, depois
+  validar ao vivo o fluxo completo: publicar anúncio com mundo do select →
+  sprite automático no anúncio → PIX → webhook ativa → selo VIP →
+  /admin/marketplace → vitrine troca.html. Sexta-feira = auditoria de
+  segurança leve (agenda recorrente).
+
+## LOG v2.10.0 (23/09/2026) - MARKTRADE: marketplace de anuncios (bot + painel + RBAC)
+- Pedido do dono: os grupos de trade pediam um espaco para anuncios; feito o
+  modulo `MARKTRADE` (v2.10.0).
+- bot.py (VERSION 2.10.0): area do cliente `/cliente/troca` (publicar
+  anuncio: jogo, categoria, titulo, descricao, preco em GP por vidro flexivel,
+  imagens), `/cliente/troca/<aid>` (detail com selo VERIFICADO/SELLER# e
+  botao PIX), listagem com filtros; `_mk_gp` (formata GP, 2 decimais;
+  None/vazio -> "Aceita ofertas"); `preco_txt` usa `_mk_gp` sem sufixo " gp".
+  PIX Mercado Pago com `external_reference` prefixado `PUB-<listing>` /
+  `DES-<listing>` (publicacao+destaque num PIX so) / `VIP-<email>`; selo VIP e
+  ativacao de anuncio SOMENTE via webhook/query real no MP (nunca ao abrir o
+  QR). `_marketplace_confirm` cobre PUB/DES/VIP; branch do webhook fica ANTES
+  do gate `reference.isdigit()`. Limpeza de construcoes fragieis em
+  `cliente_troca`: removidos `if False else`, walrus `vip_until` e mistura
+  `%`-format com f-string (form e corpo de `cliente_troca_pagar` agora puros
+  f-string).
+- painel.py (VERSION 2.10.0): modulo ADM `/admin/marketplace` (no meio do
+  admin, entre COINS e Seguranca): config de precos/limites/duracoes
+  (default: R$ 2,99 publicacao / +R$ 5,00 destaque / R$ 12,99 VIP / limite 3
+  anuncios / duracao 30 dias), lista de anuncios com status e botoes
+  ativar/bloquear/desbloquear/encerrar/verificar + teste VIP; coluna correta
+  `limite_publicacoes` no helper `_mk_limite`, no form e no handler POST;
+  sidebar item MARKTRADE (Vendas, icone "tag") + `_ICONS["tag"]`; auditoria
+  `marketplace_config`/`marketplace_acao`/`marketplace_vip`.
+  Helpers novos: `_mk_linha`, `_mk_preco`, `_mk_limite`, `_mk_mkt_status`,
+  `_mk_tipo_lbl`, `_mk_status_badge`, `_mk_gp_admin`.
+- rbac.py: perms `ver_marketplace` e `gerenciar_marketplace` (labels +
+  PERM_TRACK "marketplace"); ADMINISTRADOR/MASTER cobrem via ALL.
+- Migration `supabase_migracao_v124.sql` (C:\DEV\Supabase) - PENDENTE do dono
+  no SQL Editor: `marketplace_config` (linha unica id=1: preco_publicacao R$
+  2,99, preco_destaque R$ 5,00, preco_vip R$ 12,99, limite_publicacoes 3,
+  duracao_*_dias 30, status), `marketplace_listings` (anuncios: user_id,
+  item_name, description, character_name, world, contact, category,
+  tipo_anuncio venda|compra|troca, status pendente|ativa|expirada|encerrada|
+  bloqueada, is_destaque, destaque_until, expires_at, preco, aceita_ofertas,
+  sprite, tipo_pvp, verificado + indices), `marketplace_pagamentos`
+  (external_reference unico no formato PUB-<listing>/DES-<listing>/
+  VIP-<email>, tipo, listing_id, user_id, valor, status, mp_id, qr_code) e
+  `profiles.vip_until`. Admin mostra aviso com o caminho do arquivo quando a
+  tabela falta.
+- Vitrine publica no portfolio (`troca.html`) pronta para consumir os
+  anuncios publicados.
+- Validado: py_compile OK (bot.py/painel.py/rbac.py);
+  `test_marketplace.py` NOVO com 30 testes - TODOS OK (helpers do painel,
+  GET/POST admin com mocks, webhook VIP, `_marketplace_confirm` PUB/DES/VIP,
+  render `/cliente/troca` com mocks); regressao `test_coins.py` 26 OK.
+- Pendente dono: aplicar v124 no Supabase; re-deploy no Render; validar ao
+  vivo (publicar anuncio, PIX, webhook confirmando, selo VIP, /admin/marketplace).
+
 ## LOG v2.9.0 (22/09/2026) - Redesign da área do cliente (dashboard SaaS dark)
 - Pedido do dono: "redesign /cliente" — visual profissional (tema dark, roxo,
   verde #4ade80 positivo, azul ações), responsivo 1920→390px, acessível, SEM

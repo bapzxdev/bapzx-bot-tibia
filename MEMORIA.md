@@ -4,6 +4,56 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.10.1 (23/09, MARKTRADE — ajustes pedidos pelo dono)**: (1) **Mundo**
+  virou `<select>` com os **16 mundos** (`_MK_MUNDOS` em bot.py: Auroria,
+  Belaria, Bellum, Drakaria, Eldrian, Elysian, Infernum I/II/III, Lunarian,
+  Malveria, Mystian, Obsidian, Solarian, Tenebrium, Vesperia) — validado no
+  POST (`world not in _MK_MUNDOS` → flash "Selecione um mundo válido"). (2)
+  **Campo "Tipo de PvP" removido** do form e do payload; coluna `tipo_pvp`
+  da v124 segue no banco (default vazia; sem migration nova). `/api/troca`
+  não devolve mais `pvp` (painel.py); vitrine `troca.html` sem dot/texto de
+  pvp e cores `SERVER_COLORS` mapeadas para os 16 mundos. (3) **Imagem
+  automática do Wiki Tibia**: novo `_mk_itemsprite(item_name)` (bot.py) —
+  mediawiki API `prop=images` + `imageinfo iiurlwidth=96`, cache `_SPRITE_
+  CACHE` (cap 800), timeout 8s, User-Agent BAPZX-MARKTRADE, nunca derruba;
+  chamado no POST quando `sprite` vazio. Validado ao vivo: "War Hammer" →
+  `tibiawiki.com.br/images/2/25/War_Hammer.gif`, "Guardian Axe" → OK,
+  item inexistente → "". Migration **v124 APLICADA pelo dono**.
+  bot.py+painel.py VERSION **2.10.1**. Testes: test_marketplace.py **37 OK**
+  (novos: _MK_MUNDOS, _mk_itemsprite sucesso/cache/falha, publish com mundo
+  inválido rejeita, mundo válido chega ao supabase sem tipo_pvp, sprite vazio
+  busca automático e vai no payload), regressão test_coins.py **26 OK**;
+  py_compile OK. Também: linha 1 do bot.py estava corrompida
+  (`ja subimport base64`) → restaurada para `import base64`. **Próximo passo
+  (dono): re-deploy no Render (v2.10.1 no /health) e validar ao vivo
+  (publicar com mundo, sprite do Wiki Tibia no anúncio, vitrine troca.html).**
+- **v2.10.0 (23/09, MARKTRADE — marketplace de anúncios)**: pedido do dono.
+  bot.py (VERSION 2.10.0): rotas `/cliente/troca` (publicar anúncio: jogo,
+  categoria, título, descrição, preço em GP por vidro flexível, imagens),
+  `/cliente/troca/<aid>` (detail com selo VERIFICADO/SELLER# e PIX com
+  prefixos), listagem com filtros; `_mk_gp` (formata GP; None/vazio → "Aceita
+  ofertas"); PIX via Mercado Pago com `external_reference` `PUB-<listing>`
+  (publicação+destaque num PIX só), `DES-<listing>`, `VIP-<email>` — selo VIP e
+  ativação de anúncio SÓ via webhook/query real no MP, nunca ao abrir o QR.
+  `_marketplace_confirm` cobre PUB/DES/VIP; branch do webhook ANTES do gate
+  `reference.isdigit()`. Limpeza de construções frágeis no `cliente_troca`
+  (`if False else`, walrus `vip_until`, mistura `%`-format com f-string).
+  painel.py (VERSION 2.10.0): módulo ADM `/admin/marketplace` — config de
+  preços/limites/durações (INSIDE o admin, entre COINS e Segurança; default
+  R$ 2,99 publicação / +R$ 5,00 destaque / R$ 12,99 VIP / limite 3 anúncios /
+  30 dias), lista de anúncios com status e ações
+  ativar/bloquear/desbloquear/encerrar/verificar + teste VIP; coluna correta
+  `limite_publicacoes` (não `limite_ativas`) no helper, form e handler POST;
+  sidebar item **MARKTRADE** (Vendas, ícone "tag"), entradas de audit
+  `marketplace_config`/`marketplace_acao`/`marketplace_vip`. rbac.py: perms
+  `ver_marketplace` e `gerenciar_marketplace` (ADMINISTRADOR/MASTER via ALL).
+  Vitrine pública no portfólio (troca.html) pronta para consumir os anúncios.
+  Migration `supabase_migracao_v124.sql` criada — APLICADA pelo dono no SQL
+  Editor (arquivo em `C:\DEV\Supabase\`). Validado: py_compile OK; **test_marketplace.py NOVO (30 testes OK)** (helpers, GET/POST admin com mocks,
+  webhook VIP, `_marketplace_confirm` PUB/DES/VIP, render `/cliente/troca`);
+  regressão test_coins.py **26 OK**. **Próximo passo (dono): re-deploy no
+  Render e validar ao vivo (publicar anúncio, PIX, webhook, selo VIP,
+  /admin/marketplace).**
 - **v2.9.0 (22/09, redesign /cliente)**: pedido do dono — área do cliente
   (`/cliente`, `/cliente/perfil`, `/cliente/suporte`, `/cliente/suporte/<id>`)
   redesenhada como **dashboard profissional SaaS dark** (UI/UX apenas; backend/
@@ -113,7 +163,7 @@
 - Dias restantes: a pedido do dono (16/09) o prazo do bloco foi **estendido por +2 meses** — nova meta 16/11/2026 (o bloco original de 15 dias terminava em 24/09).
 
 Atendente IA de venda de Tibia Coins via Telegram (Flask webhook + Google Gemini).
-Versão atual do bot: 2.8.0.
+Versão atual do bot: 2.10.0.
 
 ## Leitura obrigatÃ³ria antes de alterar (memÃ³rias do projeto)
 

@@ -1,4 +1,4 @@
-# Testes do módulo MARKTRADE (marketplace) — v2.10.0.
+# Testes do módulo MARKTRADE (marketplace) — v2.10.1.
 # Painel /admin/marketplace + integração no bot (client, webhook, confirm).
 # Padrão: test client do painel com mocks, igual ao test_coins.py.
 # Rodar: .venv\Scripts\python.exe test_marketplace.py
@@ -32,7 +32,7 @@ LISTING = {
     "item_name": "War Hammer",
     "description": "topo",
     "character_name": "Bapz",
-    "world": "honbra",
+    "world": "Auroria",
     "contact": "@bapzx",
     "category": "",
     "tipo_anuncio": "venda",
@@ -89,6 +89,10 @@ class _FakeResp:
 
     def json(self):
         return []
+
+    def raise_for_status(self):
+        if self.status_code and self.status_code >= 400:
+            raise Exception(f"HTTP {self.status_code}")
 
 
 class TestMkPainel(unittest.TestCase):
@@ -366,10 +370,83 @@ class TestMkPainel(unittest.TestCase):
 
 
 class TestMkBot(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        bot.app.config["TESTING"] = True
+        bot.app.config["PROPAGATE_EXCEPTIONS"] = True
+        bot.app.secret_key = "teste-marketplace"
+
     def setUp(self):
         bot._MK_CACHE["ts"] = 0.0
         bot._MK_CACHE["dados"] = None
         bot._MK_VIP_CACHE.clear()
+        bot._SPRITE_CACHE.clear()
+
+    # ---------- helpers ----------
+
+    def test_mk_mundos(self):
+        self.assertEqual(len(bot._MK_MUNDOS), 16)
+        for m in ("Auroria", "Belaria", "Infernum I", "Infernum II", "Infernum III", "Vesperia"):
+            self.assertIn(m, bot._MK_MUNDOS)
+
+    def test_mk_itemsprite_sucesso(self):
+        resp1 = _FakeResp()
+        resp1.json = lambda: {
+            "query": {
+                "pages": {
+                    "1": {
+                        "images": [
+                            {"title": "Arquivo:War_Hammer_ingred.gif"},
+                            {"title": "Arquivo:War Hammer.gif"},
+                        ]
+                    }
+                }
+            }
+        }
+        resp2 = _FakeResp()
+        resp2.json = lambda: {
+            "query": {
+                "pages": {
+                    "1": {
+                        "imageinfo": [
+                            {"thumburl": "https://www.tibiawiki.com.br/images/thumb/2/25/War_Hammer.gif"}
+                        ]
+                    }
+                }
+            }
+        }
+        calls = []
+
+        def fakeget(url, **kw):
+            calls.append(url)
+            return resp1 if "prop=images" in url else resp2
+
+        with mock.patch.object(bot.requests, "get", side_effect=fakeget):
+            url = bot._mk_itemsprite("War Hammer")
+        self.assertEqual(url, "https://www.tibiawiki.com.br/images/thumb/2/25/War_Hammer.gif")
+        self.assertEqual(len(calls), 2)
+
+    def test_mk_itemsprite_cache(self):
+        resp1 = _FakeResp()
+        resp1.json = lambda: {"query": {"pages": {"1": {"images": [{"title": "Arquivo:Pocao.gif"}]}}}}
+        resp2 = _FakeResp()
+        resp2.json = lambda: {
+            "query": {"pages": {"1": {"imageinfo": [{"thumburl": "https://www.tibiawiki.com.br/t/Pocao.gif"}]}}}
+        }
+
+        def fakeget(url, **kw):
+            return resp1 if "prop=images" in url else resp2
+
+        with mock.patch.object(bot.requests, "get", side_effect=fakeget):
+            url = bot._mk_itemsprite("Poção")
+        with mock.patch.object(bot.requests, "get", side_effect=AssertionError("nao deve chamar rede")):
+            self.assertEqual(bot._mk_itemsprite("Poção"), url)
+
+    def test_mk_itemsprite_falha_e_vazio(self):
+        with mock.patch.object(bot.requests, "get", side_effect=Exception("boom")):
+            self.assertEqual(bot._mk_itemsprite("Algum Item"), "")
+        self.assertEqual(bot._mk_itemsprite(""), "")
+        self.assertEqual(bot._mk_itemsprite("  "), "")
 
     # ---------- helpers ----------
 
@@ -554,6 +631,105 @@ class TestMkBot(unittest.TestCase):
         self.assertIn("VIP BAPZX", html)
         self.assertIn("Você ainda não publicou nada", html)
         self.assertIn("MARKTRADE", html)
+        self.assertIn("<select name='world'", html)
+        self.assertIn(">Auroria<", html)
+        self.assertIn(">Infernum I<", html)
+        self.assertIn("Wiki Tibia", html)
+        self.assertNotIn("tipo_pvp", html)
+
+    # ---------- POST /cliente/troca/publicar ----------
+
+    def test_publicar_mundo_invalido_rejeita(self):
+        c = bot.app.test_client()
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", side_effect=AssertionError("nao deve consultar")):
+            resp = c.post(
+                "/cliente/troca/publicar",
+                data={
+                    "_csrf": "tokenteste",
+                    "item_name": "War Hammer",
+                    "character_name": "Bapz",
+                    "world": "honbra",
+                },
+            )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
+
+    def test_publicar_mundo_ok_nao_valida_mundo(self):
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        posts = []
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+            })
+        self.assertEqual(resp.status_code, 500)
+        self.assertTrue(posts, "deve chegar ao Supabase")
+        pl = posts[0]
+        self.assertEqual(pl["world"], "Auroria")
+        self.assertEqual(pl["item_name"], "War Hammer")
+        self.assertNotIn("tipo_pvp", pl)
+
+    def test_publicar_sprite_vazio_busca_auto(self):
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        calls = []
+        posts = []
+        resp1 = _FakeResp()
+        resp1.json = lambda: {"query": {"pages": {"1": {"images": [{"title": "Arquivo:War Hammer.gif"}]}}}}
+        resp2 = _FakeResp()
+        resp2.json = lambda: {
+            "query": {"pages": {"1": {"imageinfo": [{"thumburl": "https://www.tibiawiki.com.br/t/War_Hammer.gif"}]}}}
+        }
+
+        def fakeget(url, **kw):
+            calls.append(url)
+            return resp1 if "prop=images" in url else resp2
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+            })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(posts)
+        self.assertEqual(posts[0]["sprite"], "https://www.tibiawiki.com.br/t/War_Hammer.gif")
 
 
 if __name__ == "__main__":

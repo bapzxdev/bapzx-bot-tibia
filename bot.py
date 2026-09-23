@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _registra_invalidador_marketplac
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.10.0"
+VERSION = "2.10.1"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -345,6 +345,86 @@ def _mk_ativo():
     if not cfg:
         return True
     return (cfg.get("status") or "ativo").strip().lower() in ("ativo", "aberto", "")
+
+
+_MK_MUNDOS = (
+    "Auroria", "Belaria", "Bellum", "Drakaria", "Eldrian", "Elysian",
+    "Infernum I", "Infernum II", "Infernum III", "Lunarian", "Malveria",
+    "Mystian", "Obsidian", "Solarian", "Tenebrium", "Vesperia",
+)
+
+_SPRITE_CACHE = {}
+
+
+def _mk_itemsprite(item_name):
+    """Busca a imagem oficial do item no Wiki Tibia (tibiawiki.com.br).
+
+    Fluxo: prop=images para achar "Arquivo:<Item>.gif/png" e depois imageinfo
+    com iiurlwidth=96 para gerar o thumb. Nunca derruba: em qualquer falha
+    devolve "" (o anúncio fica sem sprite e o cliente pode mandar a URL)."""
+    nome = (item_name or "").strip()
+    if not nome:
+        return ""
+    chave = nome.lower()
+    if chave in _SPRITE_CACHE:
+        return _SPRITE_CACHE[chave]
+    resultado = ""
+    try:
+        from urllib.parse import quote
+
+        base = "https://www.tibiawiki.com.br/api.php"
+        headers = {"User-Agent": f"BAPZX-MARKTRADE/{VERSION}"}
+        alvo = nome.lower().replace(" ", "_")
+        achou = None
+
+        def _get(params):
+            qs = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
+            r = requests.get(f"{base}?{qs}", timeout=8, headers=headers)
+            r.raise_for_status()
+            return r.json() or {}
+
+        dados = _get({
+            "action": "query",
+            "format": "json",
+            "redirects": "1",
+            "prop": "images",
+            "imlimit": "500",
+            "titles": nome,
+        })
+        for page in ((dados.get("query") or {}).get("pages") or {}).values():
+            for img in (page.get("images") or []):
+                titulo = (img.get("title") or "").strip()
+                if not titulo.lower().startswith("arquivo:"):
+                    continue
+                stem, _, _ext = titulo[8:].rpartition(".")
+                stem_norm = stem.lower().replace(" ", "_")
+                if stem_norm == alvo:
+                    achou = titulo
+                    break
+                if not achou and stem_norm.startswith(alvo):
+                    achou = titulo
+            if achou:
+                break
+        if achou:
+            dados2 = _get({
+                "action": "query",
+                "format": "json",
+                "prop": "imageinfo",
+                "iiprop": "url",
+                "iiurlwidth": "96",
+                "titles": achou,
+            })
+            for page in ((dados2.get("query") or {}).get("pages") or {}).values():
+                ii = page.get("imageinfo") or []
+                if ii and ii[0].get("thumburl"):
+                    resultado = ii[0]["thumburl"]
+                    break
+    except Exception:
+        resultado = ""
+    if len(_SPRITE_CACHE) > 800:
+        _SPRITE_CACHE.clear()
+    _SPRITE_CACHE[chave] = resultado
+    return resultado
 
 
 def _mk_parse_dt(value):
@@ -3002,8 +3082,10 @@ def cliente_troca():
             "placeholder='Ex.: War Hammer'></div>"
             "<div><label>Personagem *</label><input name='character_name' required maxlength='60' "
             "placeholder='Ex.: Bapz'></div>"
-            "<div><label>Mundo *</label><input name='world' required maxlength='60' "
-            "placeholder='Ex.: honbra'></div>"
+            "<div><label>Mundo *</label><select name='world' required>"
+            "<option value=''>Selecione o mundo...</option>"
+            + "".join(f"<option value='{html.escape(m)}'>{html.escape(m)}</option>" for m in _MK_MUNDOS)
+            + "</select></div>"
             "<div><label>Contato (discord/telegram ou deixa vazio)</label>"
             "<input name='contact' maxlength='200' placeholder='Ex.: @bapzx'></div>"
             "</div>"
@@ -3015,16 +3097,13 @@ def cliente_troca():
             "<label>Descrição</label>"
             "<textarea name='description' rows='3' maxlength='1000' "
             "placeholder='Detalhes do item, condição, negociação...'></textarea>"
-            "<div class='grid2'>"
             "<div><label>Preço em gp (ou deixe vazio para aceitar ofertas)</label>"
             "<input name='preco' type='text' placeholder='Ex.: 250000'></div>"
-            "<div><label>Tipo de PvP (opcional)</label><input name='tipo_pvp' maxlength='60' "
-            "placeholder='Ex.: Open PvP'></div>"
-            "</div>"
             "<p><label><input type='checkbox' name='aceita_ofertas' value='1' checked> "
             "Aceito ofertas / negociação</label></p>"
             "<label>URL da imagem do item (opcional)</label>"
             "<input name='sprite' type='url' maxlength='300' placeholder='https://...'>"
+            "<p class='note' style='margin-top:4px'>Deixe em branco para buscar a imagem automaticamente no Wiki Tibia.</p>"
             "<p><label><input type='checkbox' name='destaque' value='1'> "
             f"Destacar meu anúncio <b>(+ {_mk_brl(preco_des)}</b>) — fica no topo com tag de destaque</label></p>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Publicar agora</button></p>"
@@ -3123,13 +3202,12 @@ def cliente_troca_publicar():
 
     item_name = (request.form.get("item_name") or "").strip()[:120]
     character_name = (request.form.get("character_name") or "").strip()[:60]
-    world = (request.form.get("world") or "").strip()[:60]
+    world = (request.form.get("world") or "").strip()
     contact = (request.form.get("contact") or "").strip()[:200]
     category = (request.form.get("category") or "").strip()[:60]
     description = (request.form.get("description") or "").strip()[:1000]
     tipo = (request.form.get("tipo_anuncio") or "venda").strip().lower()
     sprite = (request.form.get("sprite") or "").strip()[:300]
-    tipo_pvp = (request.form.get("tipo_pvp") or "").strip()[:60]
     if sprite and not (sprite.startswith("http://") or sprite.startswith("https://")):
         sprite = ""
     if tipo not in ("venda", "compra", "troca"):
@@ -3137,6 +3215,11 @@ def cliente_troca_publicar():
     if not item_name or not character_name or not world:
         _mk_flash("erro", "Informe o item, o personagem e o mundo.")
         return redirect("/cliente/troca")
+    if world not in _MK_MUNDOS:
+        _mk_flash("erro", "Selecione um mundo válido para o anúncio.")
+        return redirect("/cliente/troca")
+    if not sprite:
+        sprite = _mk_itemsprite(item_name)
 
     preco = _mk_num_br(request.form.get("preco"))
     aceita_ofertas = request.form.get("aceita_ofertas") == "1"
@@ -3168,7 +3251,6 @@ def cliente_troca_publicar():
         "preco": preco,
         "aceita_ofertas": aceita_ofertas,
         "sprite": sprite,
-        "tipo_pvp": tipo_pvp,
         "verificado": _mk_vip_ativo(email),
         "expires_at": (agora + timedelta(days=_mk_duracao("duracao_publicacao_dias", 30))).isoformat(timespec="seconds"),
     }
