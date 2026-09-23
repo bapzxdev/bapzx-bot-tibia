@@ -4,6 +4,18 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.10.3 (23/09, data/hora BR no MARKTRADE)**: coluna "Publicado" de
+  "Meus anúncios" (bot.py `cliente_troca`) agora usa `_mk_fmt_dt` (dd/mm/aaaa
+  hh:mm) e a listagem de pagamentos do painel usa `_fmt_dt_amigavel`. Ambos
+  convertem UTC->America/Sao_Paulo com fallback fixo UTC-3 (ZoneInfo
+  "America/Sao_Paulo" falha no Windows sem o pacote `tzdata`; fallback evita
+  mostrar a hora crua). ⚠ NÃO usar `Set-Content`/`Out-File` para editar
+  .py com acentos: corrompe encoding (BOM+mojibake). Sempre usar Edit tool.
+  VERSION bot+painel **2.10.3**. py_compile OK; test_marketplace **40 OK**;
+  test_coins **26 OK**. **Próximo passo (dono): re-deploy no Render (v2.10.3
+  no /health) e testar ao vivo: publicar sem QR (modo teste do dono, email
+  MASTER) + conferir data/hora dd/mm/aaaa hh:mm.**
+
 - **v2.10.2 (23/09, modo teste do dono no MARKTRADE)**: quando o e-mail logado
   está em `MASTER_EMAILS` (fallback `ADMIN_EMAILS`; dono =
   lucascristianini1@gmail.com), a área do cliente **não gera Pix/QR**: publicar

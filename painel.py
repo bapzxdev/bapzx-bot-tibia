@@ -3224,6 +3224,8 @@ def api_troca():
             "world": a.get("world") or "",
             "jogador": a.get("character_name") or "",
             "verificado": bool(a.get("verificado")),
+            "is_destaque": bool(a.get("is_destaque")),
+            "destaque_until": a.get("destaque_until") or "",
             "criado_em": a.get("created_at") or "",
         }
         for a in anuncios
