@@ -77,6 +77,8 @@ PERMISSOES_LABEL = {
     "gerenciar_seguranca": "Encerrar sessões ativas",
     "ver_coins": "Ver área COINS (estoque, preço e histórico)",
     "gerenciar_coins": "Editar estoque, preço, status e limites de COINS",
+    "ver_marketplace": "Ver área Marketplace (anúncios, VIPs e pagamentos)",
+    "gerenciar_marketplace": "Gerenciar anúncios, VIPs e configurações do Marketplace",
 }
 
 PERM_TRACK = {
@@ -108,6 +110,8 @@ PERM_TRACK = {
     "gerenciar_seguranca": "seguranca",
     "ver_coins": "coins",
     "gerenciar_coins": "coins",
+    "ver_marketplace": "marketplace",
+    "gerenciar_marketplace": "marketplace",
 }
 
 _PADRAO_ADMINISTRADOR = "ALL"

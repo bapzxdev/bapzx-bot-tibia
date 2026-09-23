@@ -14,7 +14,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.8.1"
+VERSION = "2.10.0"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -25,6 +25,16 @@ def _registra_invalidador_coins(fn):
     (evita import circular)."""
     global _invalidate_coins_cache
     _invalidate_coins_cache = fn
+
+
+_invalidate_marketplace_cache = lambda: None
+
+
+def _registra_invalidador_marketplace(fn):
+    """Permite o bot.py registrar a função que zera o cache de marketplace_config
+    (evita import circular)."""
+    global _invalidate_marketplace_cache
+    _invalidate_marketplace_cache = fn
 
 
 def _env_master():
@@ -676,6 +686,7 @@ _ICONS = {
     "shield": "<path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/>",
     "brands": "<path d='M17 20h5v-2a3 3 0 0 0-5.36-1.86'/><path d='M3 20h5'/><path d='M16 15a3 3 0 1 0-2.12-5.12'/><path d='M8 4H3v5'/><circle cx='17' cy='4' r='2'/>",
     "clipboard": "<path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1'/>",
+    "tag": "<path d='M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z'/><line x1='7' y1='7' x2='7.01' y2='7'/>",
     "ticket": "<rect x='3' y='4' width='18' height='16' rx='3'/><path d='M7 4v1.5a1.5 1.5 0 0 0 0 3v7a1.5 1.5 0 0 0 0 3V20'/><path d='M17 4v1.5a1.5 1.5 0 0 1 0 3v7a1.5 1.5 0 0 1 0 3V20'/>",
     "clock": "<circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/>",
     "lock": "<rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/>",
@@ -918,6 +929,8 @@ def _page(user, title, body, active=""):
         vendas.append(("/admin/pedidos", "Pedidos", "pedidos", "cart"))
     if peut("ver_coins"):
         vendas.append(("/admin/coins", "COINS", "coins", "dollar"))
+    if peut("ver_marketplace"):
+        vendas.append(("/admin/marketplace", "MARKTRADE", "marketplace", "tag"))
     if peut("ver_itens"):
         vendas.append(("/admin/itens", "Itens", "itens", "package"))
     if peut("ver_cupons"):
@@ -2774,6 +2787,9 @@ _ACOES_AUDIT = {
     "servico_reabrir": ("Serviço reaberto", "#78350f", "#fbbf24"),
     "servico_excluir": ("Serviço excluído", "#7f1d1d", "#f87171"),
     "coins_salvar": ("COINS editado", "#065f46", "#34d399"),
+    "marketplace_config": ("MARKTRADE config", "#78350f", "#fbbf24"),
+    "marketplace_acao": ("Anúncio alterado", "#78350f", "#fbbf24"),
+    "marketplace_vip": ("VIP alterado", "#064e3b", "#4ade80"),
 }
 
 
@@ -3177,6 +3193,41 @@ def api_servicos():
     response = jsonify({"ok": True, "servicos": payload})
     if origin and _cors_ok():
         response.headers["Access-Control-Allow-Origin"] = origin
+    return response
+
+
+@bp.route("/api/troca", methods=["GET"])
+def api_troca():
+    if _rate_limited("api_troca", _RATE_LIMIT_TRACK_PER_MIN):
+        return jsonify({"ok": False, "error": "rate limit"}), 429
+    origin = request.headers.get("Origin") or ""
+    anuncios = _fetch_public(
+        "marketplace_listings",
+        select="*",
+        query="status=eq.ativa",
+        order="is_destaque.desc,created_at.desc",
+    )
+    payload = [
+        {
+            "id": a.get("id"),
+            "tipo": a.get("tipo_anuncio") or "venda",
+            "nome": a.get("item_name") or "",
+            "descricao": a.get("description") or "",
+            "sprite": a.get("sprite") or "",
+            "preco": a.get("preco"),
+            "aceita_ofertas": bool(a.get("aceita_ofertas")),
+            "world": a.get("world") or "",
+            "pvp": a.get("tipo_pvp") or "",
+            "jogador": a.get("character_name") or "",
+            "verificado": bool(a.get("verificado")),
+            "criado_em": a.get("created_at") or "",
+        }
+        for a in anuncios
+    ]
+    response = jsonify({"ok": True, "anuncios": payload})
+    if origin and _cors_ok():
+        response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Vary"] = "Origin"
     return response
 
 
@@ -4283,6 +4334,347 @@ def admin_coins_salvar():
             return f"Configuração salva, mas o histórico falhou: {exc}", 500
     _audit(user, "coins_salvar", descricao)
     return redirect("/admin/coins")
+
+
+def _mk_linha():
+    """Linha única (id=1) da config do MARKTRADE, ou {} se a tabela faltar."""
+    try:
+        rows = _fetch_soft("marketplace_config", query="id=eq.1", range_="0-0")
+    except Exception:
+        return {}
+    return rows[0] if rows else {}
+
+
+def _mk_preco(key, default):
+    v = _coins_num(_mk_linha().get(key) if _mk_linha() else 0)
+    return v or default
+
+
+def _mk_limite():
+    return max(1, int(_coins_num(_mk_linha().get("limite_publicacoes")) or 3))
+
+
+def _mk_mkt_status():
+    return ((_mk_linha().get("status") or "ativo").lower()) not in ("pausado", "fechado", "inativo")
+
+
+def _mk_tipo_lbl(tipo, low=True):
+    lbl = {"venda": "Venda", "compra": "Compra", "troca": "Troca"}.get(tipo or "venda", "Venda")
+    return lbl.lower() if low else lbl
+
+
+def _mk_status_badge(status, kind="listing"):
+    sklearn = None
+    if kind == "listing":
+        lbls = {
+            "pendente": "Aguardando pagamento",
+            "ativa": "Ativa",
+            "expirada": "Expirada",
+            "encerrada": "Encerrada",
+            "bloqueada": "Bloqueada",
+        }
+        cls = {
+            "pendente": "pendente",
+            "ativa": "pago",
+            "expirada": "aberto",
+            "encerrada": "aberto",
+            "bloqueada": "cancelado",
+        }
+    else:  # pagamento
+        lbls = {"pendente": "Aguardando", "confirmado": "Confirmado", "cancelado": "Cancelado"}
+        cls = {"pendente": "pendente", "confirmado": "pago", "cancelado": "cancelado"}
+    lbl = lbls.get(status or "", (status or "").capitalize())
+    return f"<span class='badge {html.escape(cls.get(status or '', 'aberto'))}'>{html.escape(lbl)}</span>"
+
+
+def _mk_gp_admin(value):
+    """Preço em gp sem moeda inventada."""
+    if value is None or str(value).strip() == "":
+        return "Aceita ofertas"
+    v = _coins_num(value)
+    return _coins_int(v) if v == int(v) else _coins_dec(v)
+
+
+@bp.route("/admin/marketplace", methods=["GET"])
+def admin_marketplace():
+    user = _require_perm("ver_marketplace")
+    if not user:
+        return redirect("/login")
+    cfg = _mk_linha()
+    sem_tabela = not bool(cfg)
+    ativo = _mk_mkt_status()
+    preco_pub = _mk_preco("preco_publicacao", 2.99)
+    preco_des = _mk_preco("preco_destaque", 5.00)
+    preco_vip = _mk_preco("preco_vip", 12.99)
+    limite = _mk_limite()
+
+    try:
+        listings = _fetch_soft("marketplace_listings", order="created_at.desc", range_="0-499")
+    except Exception:
+        listings = []
+    ativas = [l for l in listings if (l.get("status") or "") == "ativa"]
+
+    cards = (
+        "<div class='cards'>"
+        f"<div class='card'><div class='num'>{len(ativas)}</div><div class='lbl'>Anúncios ativos</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(preco_pub)}</div><div class='lbl'>Publicação</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(preco_des)}</div><div class='lbl'>Destaque (+)</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(preco_vip)}</div><div class='lbl'>VIP / mês</div></div>"
+        + (
+            "<div class='card'><div class='num' style='color:#bbf7d0'>ATIVO</div><div class='lbl'>Publicações liberadas</div></div>"
+            if ativo
+            else "<div class='card'><div class='num' style='color:#fecaca'>PAUSADO</div><div class='lbl'>Publicações pausadas</div></div>"
+        )
+        + "</div>"
+    )
+
+    aviso = ""
+    if sem_tabela:
+        aviso = (
+            "<div class='notice'><b>As tabelas do MARKTRADE ainda não existem.</b> "
+            "Rode o script <code>supabase_migracao_v124.sql</code> (em C:\\DEV\\Supabase) no SQL Editor do Supabase "
+            "para ativar o marketplace (config, anúncios, pagamentos e VIP).</div>"
+        )
+
+    body = cards + aviso
+
+    pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_marketplace")
+    if pode_gerenciar:
+        status_opts = (
+            f"<option value='ativo'{' selected' if ativo else ''}>ATIVO</option>"
+            f"<option value='pausado'{' selected' if not ativo else ''}>PAUSADO</option>"
+        )
+        body += (
+            "<section><h2>Editar configurações</h2>"
+            "<form method='post' action='/admin/marketplace/salvar'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<div class='box'>"
+            f"<div><label>Preço da publicação (R$)</label><input name='preco_publicacao' type='text' value='{_coins_dec(preco_pub) if not sem_tabela else '2,99'}' required></div>"
+            f"<div><label>Preço do destaque (R$)</label><input name='preco_destaque' type='text' value='{_coins_dec(preco_des) if not sem_tabela else '5,00'}' required></div>"
+            f"<div><label>Preço do VIP mensal (R$)</label><input name='preco_vip' type='text' value='{_coins_dec(preco_vip) if not sem_tabela else '12,99'}' required></div>"
+            f"<div><label>Limite de anúncios por cliente</label><input name='limite_publicacoes' type='text' value='{_coins_int(limite) if not sem_tabela else '3'}' required></div>"
+            f"<div><label>Duração do anúncio (dias)</label><input name='duracao_publicacao_dias' type='text' value='{_coins_int(_mk_preco('duracao_publicacao_dias', 30))}'></div>"
+            f"<div><label>Duração do VIP (dias)</label><input name='duracao_vip_dias' type='text' value='{_coins_int(_mk_preco('duracao_vip_dias', 30))}'></div>"
+            "<div><label>Status das publicações</label><select name='status'>" + status_opts + "</select></div></div>"
+            "<label>Observação interna</label>"
+            f"<textarea name='observacao' rows='2' placeholder='Nota visível só para administradores...'>{html.escape(cfg.get('observacao') or '')}</textarea>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar alterações</button></p>"
+            "</form></section>"
+        )
+
+    rows = ""
+    for l in listings:
+        lid = html.escape(str(l.get("id") or ""))
+        email = html.escape(str(l.get("email") or "-"))
+        item = html.escape(str(l.get("item_name") or "-"))
+        dest = "<span title='Destaque' style='color:#f59e0b'>&#11088;</span>" if l.get("is_destaque") else "-"
+        ver = "<span title='Verificado' style='color:#4ade80'>&#10004;</span>" if l.get("verificado") else "-"
+        status = (l.get("status") or "pendente")
+        acoes = []
+        if pode_gerenciar:
+            def _acao(lid, ac, lbl, ghost=True):
+                cls = "ghost " if ghost else ""
+                return (
+                    f"<form method='post' action='/admin/marketplace/{lid}/acao' style='display:inline'>"
+                    f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                    f"<input type='hidden' name='acao' value='{ac}'>"
+                    f"<button class='btn small {cls}'>{lbl}</button></form>"
+                )
+            if status == "pendente":
+                acoes += [_acao(lid, "ativar", "Ativar", False), _acao(lid, "encerrar", "Encerrar", True)]
+            elif status == "ativa":
+                acoes += [_acao(lid, "bloquear", "Bloquear", True), _acao(lid, "verificar", "Verif. ✓" if not l.get("verificado") else "Remover ✓", True), _acao(lid, "encerrar", "Encerrar", True)]
+            elif status == "bloqueada":
+                acoes += [_acao(lid, "desbloquear", "Liberar", False)]
+        rows += (
+            "<tr>"
+            f"<td><b>#{lid or '-'}</b></td>"
+            f"<td>{email}</td><td>{item}</td>"
+            f"<td>{_mk_tipo_lbl(l.get('tipo_anuncio'))}</td>"
+            f"<td>{html.escape(str(l.get('world') or '-'))}</td>"
+            f"<td>{html.escape(_mk_gp_admin(l.get('preco')))}</td>"
+            f"<td style='text-align:center'>{dest}</td><td style='text-align:center'>{ver}</td>"
+            f"<td>{_mk_status_badge(status)}</td>"
+            f"<td>{html.escape(str(l.get('anunciante') or ''))}</td>"
+            f"<td class='acts'>{''.join(acoes) or '-'}</td>"
+            "</tr>"
+        )
+    body += (
+        "<section><h2>Anúncios</h2><table>"
+        "<tr><th>#</th><th>Anunciante</th><th>Item</th><th>Tipo</th><th>Mundo</th><th>Preço</th>"
+        "<th>Destaque</th><th>Verif.</th><th>Status</th><th>Personagem</th><th>Ações</th></tr>"
+        + (rows or "<tr><td colspan='11' style='color:#5b6b82'>Nenhum anúncio publicado ainda.</td></tr>")
+        + "</table></section>"
+    )
+
+    try:
+        pags = _fetch_soft("marketplace_pagamentos", order="criado_em.desc", range_="0-99")
+    except Exception:
+        pags = []
+    prow = ""
+    for p in pags:
+        prow += (
+            "<tr>"
+            f"<td>{html.escape(str(p.get('reference') or '-'))}</td>"
+            f"<td>{_mk_tipo_lbl(str(p.get('tipo') or 'publicacao'), low=False)}{' · anuncio #' + str(p.get('listing_id') or '-') if p.get('listing_id') else ''}</td>"
+            f"<td>{html.escape(str(p.get('user_id') or '-'))}</td>"
+            f"<td>{_fmt_brl(_coins_num(p.get('valor')))}</td>"
+            f"<td>{_mk_status_badge(p.get('status'), 'payment')}</td>"
+            f"<td>{html.escape(str(p.get('mp_id') or '-'))}</td>"
+            f"<td>{html.escape(_fmt_dt(p.get('criado_em'), 16))}</td>"
+            "</tr>"
+        )
+    body += (
+        "<section><h2>Pagamentos (PIX)</h2><table>"
+        "<tr><th>Referência</th><th>Tipo</th><th>Cliente</th><th>Valor</th><th>Status</th><th>Mercado Pago</th><th>Criado</th></tr>"
+        + (prow or "<tr><td colspan='7' style='color:#5b6b82'>Nenhum pagamento ainda.</td></tr>")
+        + "</table></section>"
+    )
+
+    if pode_gerenciar:
+        body += (
+            "<section><h2>Testar status VIP</h2>"
+            "<form method='post' action='/admin/marketplace/vip/testar'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<div class='box'>"
+            "<div><label>E-mail do cliente</label><input name='email' type='email' required placeholder='cliente@email.com'></div>"
+            f"<div><label>Dias (padrão {_coins_int(_mk_preco('duracao_vip_dias', 30))})</label><input name='dias' type='text' placeholder='30'></div></div>"
+            "<p style='margin-top:14px'><button class='btn' type='submit' name='acao' value='ativar'>Ativar VIP</button> "
+            "<button class='btn ghost' type='submit' name='acao' value='remover'>Remover VIP</button></p>"
+            "</form></section>"
+        )
+    return _admin_page(user, "MARKTRADE", body, "marketplace")
+
+
+@bp.route("/admin/marketplace/salvar", methods=["POST"])
+def admin_marketplace_salvar():
+    user = _require_perm("gerenciar_marketplace")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    preco_pub = _coins_num(request.form.get("preco_publicacao"))
+    preco_des = _coins_num(request.form.get("preco_destaque"))
+    preco_vip = _coins_num(request.form.get("preco_vip"))
+    limite = max(1, int(_coins_num(request.form.get("limite_publicacoes")) or 3))
+    dup_dias = max(1, int(_coins_num(request.form.get("duracao_publicacao_dias")) or 30))
+    dv_dias = max(1, int(_coins_num(request.form.get("duracao_vip_dias")) or 30))
+    status = (request.form.get("status") or "ativo").strip().lower()
+    obs = (request.form.get("observacao") or "").strip()[:1000]
+    if min(preco_pub, preco_des, preco_vip) < 0:
+        return "Os preços não podem ser negativos.", 400
+    if preco_pub == 0 and preco_des == 0 and preco_vip == 0:
+        return "Informe ao menos um preço maior que zero.", 400
+    if status not in ("ativo", "pausado"):
+        return "Status inválido.", 400
+
+    payload = {
+        "preco_publicacao": preco_pub,
+        "preco_destaque": preco_des,
+        "preco_vip": preco_vip,
+        "limite_publicacoes": limite,
+        "duracao_publicacao_dias": dup_dias,
+        "duracao_vip_dias": dv_dias,
+        "status": status,
+        "observacao": obs,
+        "atualizado_em": datetime.utcnow().isoformat(),
+        "atualizado_por": user["email"],
+    }
+    try:
+        requests.post(
+            f"{SUPA_URL}/rest/v1/marketplace_config?on_conflict=id",
+            headers={**_headers(), "Prefer": "resolution=merge-duplicates,return=representation"},
+            json={"id": 1, **payload},
+            timeout=15,
+        )
+    except Exception as exc:
+        return f"Falha ao salvar: {exc}", 500
+    _invalidate_marketplace_cache()
+    descricao = (
+        f"publicação {_fmt_brl(preco_pub)} | destaque {_fmt_brl(preco_des)} | VIP {_fmt_brl(preco_vip)} | "
+        f"limite {limite} | anúncio {dup_dias}d | entrou em status {status.upper()}"
+    )
+    _audit(user, "marketplace_config", f"{descricao} (por {user['email']})")
+    return redirect("/admin/marketplace")
+
+
+@bp.route("/admin/marketplace/<lid>/acao", methods=["POST"])
+def admin_marketplace_acao(lid):
+    user = _require_perm("gerenciar_marketplace")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    acao = (request.form.get("acao") or "").strip()
+    try:
+        rows = _fetch_soft("marketplace_listings", query=f"id=eq.{lid}", range_="0-0")
+    except Exception:
+        rows = []
+    if not rows:
+        return "Anúncio não encontrado.", 404
+    listing = rows[0]
+
+    patch = {}
+    if acao == "ativar":
+        if (listing.get("status") or "") == "pendente":
+            patch["status"] = "ativa"
+    elif acao == "bloquear":
+        patch["status"] = "bloqueada"
+    elif acao == "desbloquear":
+        patch["status"] = "ativa"
+    elif acao == "encerrar":
+        patch["status"] = "encerrada"
+    elif acao == "verificar":
+        patch["verificado"] = not bool(listing.get("verificado"))
+    else:
+        return "Ação inválida.", 400
+    if not patch:
+        return redirect("/admin/marketplace")
+    try:
+        requests.patch(
+            f"{SUPA_URL}/rest/v1/marketplace_listings?id=eq.{lid}",
+            headers=_headers(),
+            json=patch,
+            timeout=15,
+        )
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    _invalidate_marketplace_cache()
+    item = str(listing.get("item_name") or lid)
+    _audit(user, "marketplace_acao", f"#{lid} {item} → {acao}")
+    return redirect("/admin/marketplace")
+
+
+@bp.route("/admin/marketplace/vip/testar", methods=["POST"])
+def admin_marketplace_vip_testar():
+    user = _require_perm("gerenciar_marketplace")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    email = (request.form.get("email") or "").strip().lower()
+    acao = (request.form.get("acao") or "ativar").strip().lower()
+    if "@" not in email:
+        return "E-mail inválido.", 400
+    if acao == "remover":
+        patch = {"vip_until": None}
+        rotulo = "removido"
+    else:
+        dias = max(1, int(_coins_num(request.form.get("dias")) or 0) or _mk_preco("duracao_vip_dias", 30))
+        patch = {"vip_until": (datetime.utcnow() + timedelta(days=dias)).isoformat(timespec="seconds")}
+        rotulo = f"{dias}d"
+    try:
+        requests.patch(
+            f"{SUPA_URL}/rest/v1/profiles?email=eq.{quote(email)}",
+            headers=_headers(),
+            json=patch,
+            timeout=15,
+        )
+    except Exception as exc:
+        return f"Falha: {exc}", 500
+    _invalidate_marketplace_cache()
+    _audit(user, "marketplace_vip", f"{email} → VIP {rotulo}")
+    return redirect("/admin/marketplace")
 
 
 @bp.route("/admin/seguranca", methods=["GET"])

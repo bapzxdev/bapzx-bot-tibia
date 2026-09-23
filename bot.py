@@ -8,7 +8,7 @@ import secrets
 import sys
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import requests
@@ -17,11 +17,11 @@ from werkzeug.exceptions import HTTPException
 
 from storage import OrderStore
 from painel import bp as painel_bp
-from painel import _registra_invalidador_coins, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
+from painel import _registra_invalidador_coins, _registra_invalidador_marketplace, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.9.0"
+VERSION = "2.10.0"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -266,6 +266,227 @@ def _coins_check(tc):
     if mx > 0 and tc is not None and tc > mx:
         return f"A compra máxima é de {int(mx):,} COINS.".replace(",", ".")
     return None
+
+
+# ============ MARKETPLACE (MARKTRADE) — configuração ============
+_MK_CACHE = {"ts": 0.0, "dados": None}
+_MK_TTL = 30
+_MK_VIP_CACHE = {}
+
+
+def _marketplace_invalidate():
+    """Zera o cache de configuração do marketplace (o painel chama isso ao
+    salvar, então a próxima leitura do bot busca o valor novo na hora)."""
+    _MK_CACHE["ts"] = 0.0
+    _MK_CACHE["dados"] = None
+
+
+_registra_invalidador_marketplace(_marketplace_invalidate)
+
+
+def _marketplace_config():
+    """Configuração atual do MARKTRADE (linha única id=1). Cache de 30s.
+    Nunca derruba: sem a tabela ou em falha devolve None e o bot segue com os
+    valores padrão do modelo comercial."""
+    if time.time() - _MK_CACHE["ts"] < _MK_TTL:
+        return _MK_CACHE["dados"]
+    dados = None
+    if STORE.remote:
+        try:
+            response = requests.get(
+                f"{STORE.url}/rest/v1/marketplace_config?select=*&id=eq.1",
+                headers=STORE._headers(),
+                timeout=10,
+            )
+            if response.status_code == 200 and response.json():
+                dados = response.json()[0]
+        except Exception:
+            dados = None
+    _MK_CACHE["ts"] = time.time()
+    _MK_CACHE["dados"] = dados
+    return dados
+
+
+def _mk_num(value, default=0.0):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return default
+
+
+def _mk_preco(chave, default):
+    """Preço configurado (R$) do marketplace, ou o default sugerido."""
+    cfg = _marketplace_config() or {}
+    v = _mk_num(cfg.get(chave), 0)
+    return v if v > 0 else default
+
+
+def _mk_limite():
+    cfg = _marketplace_config() or {}
+    try:
+        v = int(float(cfg.get("limite_publicacoes") or 0))
+    except (TypeError, ValueError):
+        v = 0
+    return v if v > 0 else 3
+
+
+def _mk_duracao(chave, default):
+    cfg = _marketplace_config() or {}
+    try:
+        v = int(float(cfg.get(chave) or 0))
+    except (TypeError, ValueError):
+        v = 0
+    return v if v > 0 else default
+
+
+def _mk_ativo():
+    """True = publicações liberadas (ou config ausente)."""
+    cfg = _marketplace_config()
+    if not cfg:
+        return True
+    return (cfg.get("status") or "ativo").strip().lower() in ("ativo", "aberto", "")
+
+
+def _mk_parse_dt(value):
+    try:
+        s = str(value or "").strip()
+        if not s:
+            return None
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+    except Exception:
+        return None
+
+
+def _mk_fmt_dt(value):
+    """dd/mm/aaaa hh:mm no fuso de São Paulo; cru se der erro."""
+    dt = _mk_parse_dt(value)
+    if not dt:
+        return "-"
+    try:
+        from zoneinfo import ZoneInfo
+        br = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Sao_Paulo"))
+        return br.strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        return dt.strftime("%Y-%m-%d %H:%M")
+
+
+def _mk_profile(email):
+    if not (STORE.remote and email):
+        return {}
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/profiles?email=eq.{email}&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            rows = response.json() or []
+            if rows:
+                return rows[0]
+    except Exception:
+        pass
+    return {}
+
+
+def _mk_vip_ativo(email):
+    """True se o cliente tem VIP BAPZX vigente (cache 30s por e-mail)."""
+    if not email:
+        return False
+    now = time.time()
+    cached = _MK_VIP_CACHE.get(email)
+    if cached and now - cached[0] < 30:
+        return cached[1]
+    ativo = False
+    dt = _mk_parse_dt((_mk_profile(email) or {}).get("vip_until"))
+    if dt:
+        ativo = dt > datetime.utcnow()
+    _MK_VIP_CACHE[email] = (now, ativo)
+    return ativo
+
+
+def _mk_minhas_listings(email):
+    if not (STORE.remote and email):
+        return []
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/marketplace_listings?user_id=eq.{email}"
+            "&order=created_at.desc&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            return response.json() or []
+    except Exception:
+        pass
+    return []
+
+
+def _mk_meus_pagamentos(email):
+    if not (STORE.remote and email):
+        return []
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos?user_id=eq.{email}"
+            "&order=created_at.desc&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            return response.json() or []
+    except Exception:
+        pass
+    return []
+
+
+def _mk_listing(lid):
+    if not STORE.remote:
+        return None
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/marketplace_listings?id=eq.{lid}&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            rows = response.json() or []
+            if rows:
+                return rows[0]
+    except Exception:
+        pass
+    return None
+
+
+def _mk_find_pagamento(reference):
+    if not STORE.remote:
+        return None
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos?external_reference=eq.{reference}&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            rows = response.json() or []
+            if rows:
+                return rows[0]
+    except Exception:
+        pass
+    return None
+
+
+def _mk_listing_status_lbl(status):
+    return {
+        "pendente": "Aguardando pagamento",
+        "ativa": "Ativa",
+        "expirada": "Expirada",
+        "encerrada": "Encerrada",
+        "bloqueada": "Bloqueada",
+    }.get(status or "pendente", (status or "pendente").capitalize())
 
 
 def _fmt_coin_brl(value):
@@ -815,6 +1036,131 @@ def send_qr(chat_id, data, order=None):
     send_message(chat_id, "\n".join(linhas))
 
 
+def create_marketplace_pix(reference, valor, descricao, email, primeiro_nome="Cliente"):
+    """Gera um Pix Mercado Pago para o marketplace (MARKTRADE).
+
+    external_reference usa prefixos que NÃO colidem com os pedidos do bot:
+      PUB-<listing> -> publicação comum
+      DES-<listing> -> publicação com destaque (ou destaque avulso)
+      VIP-<email>   -> plano VIP mensal
+    """
+    amount = _mk_num(valor, 0)
+    if amount <= 0:
+        return False, "valor inválido."
+    if not (MP_ACCESS_TOKEN and RENDER_URL):
+        return False, "gateway de pagamento não configurado."
+    payload = {
+        "transaction_amount": amount,
+        "description": ("BAPZX MARKTRADE · " + str(descricao))[:180],
+        "payment_method_id": "pix",
+        "payer": {"email": email, "first_name": primeiro_nome},
+        "external_reference": reference,
+        "notification_url": f"{RENDER_URL}/webhook/mp",
+    }
+    headers = {
+        "Authorization": f"Bearer {MP_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": str(uuid.uuid4()),
+    }
+    try:
+        response = requests.post(
+            "https://api.mercadopago.com/v1/payments", json=payload, headers=headers, timeout=20
+        )
+    except Exception as error:
+        return False, str(error)
+    if response.status_code not in (200, 201):
+        return False, f"Mercado Pago {response.status_code}: {response.text[:200]}"
+    data = response.json()
+    if data.get("status") != "pending":
+        return False, f"status inesperado: {data.get('status')}"
+    return True, data
+
+
+def _mk_mp_transaction(pag):
+    """Dados atuais do PIX (qr_code + imagem) junto ao Mercado Pago."""
+    mp_id = pag.get("mp_id") or ""
+    if not (mp_id and MP_ACCESS_TOKEN):
+        return None
+    try:
+        response = requests.get(
+            f"https://api.mercadopago.com/v1/payments/{mp_id}",
+            headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}"},
+            timeout=15,
+        )
+        if response.status_code == 200:
+            return (response.json().get("point_of_interaction") or {}).get("transaction_data") or None
+    except Exception:
+        pass
+    return None
+
+
+def _marketplace_confirm(reference, mp_payment_id):
+    """Efeitos de um pagamento MARKTRADE confirmado (chamado pelo webhook e pela
+    página de pagamento quando o cliente consulta o PIX direto no MP).
+
+    Nunca confia em dados do frontend: lê o marketplace_pagamentos por ref e só
+    ativa anúncio/VIP depois da confirmação real (webhook ou query no MP)."""
+    pag = _mk_find_pagamento(reference)
+    if not pag:
+        print(f"[mk] pagamento {reference} não encontrado")
+        return False
+    if (pag.get("status") or "pendente") == "confirmado":
+        return True
+    agora = datetime.utcnow()
+    try:
+        requests.patch(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos?id=eq.{pag['id']}",
+            headers=STORE._headers(),
+            json={
+                "status": "confirmado",
+                "mp_id": str(mp_payment_id or pag.get("mp_id") or ""),
+                "confirmed_at": agora.isoformat(timespec="seconds"),
+            },
+            timeout=15,
+        )
+    except Exception as exc:
+        print(f"[mk] falha ao confirmar pagamento {reference}: {exc}")
+        return False
+    tipo = pag.get("tipo") or "publicacao"
+    listing_id = pag.get("listing_id")
+    if tipo == "vip":
+        email = (pag.get("user_id") or "").lower()
+        dias = _mk_duracao("duracao_vip_dias", 30)
+        try:
+            requests.patch(
+                f"{STORE.url}/rest/v1/profiles?email=eq.{email}",
+                headers=STORE._headers(),
+                json={"vip_until": (agora + timedelta(days=dias)).isoformat(timespec="seconds")},
+                timeout=15,
+            )
+            _MK_VIP_CACHE.pop(email, None)
+        except Exception as exc:
+            print(f"[mk] falha ao aplicar VIP p/ {email}: {exc}")
+            return False
+        return True
+    if not listing_id:
+        return True
+    listing = _mk_listing(listing_id)
+    patch = {}
+    if not listing or (listing.get("status") or "") != "ativa":
+        patch["status"] = "ativa"
+        patch["expires_at"] = (agora + timedelta(days=_mk_duracao("duracao_publicacao_dias", 30))).isoformat(timespec="seconds")
+    if tipo == "destaque":
+        patch["is_destaque"] = True
+        patch["destaque_until"] = (agora + timedelta(days=_mk_duracao("duracao_destaque_dias", 30))).isoformat(timespec="seconds")
+    try:
+        requests.patch(
+            f"{STORE.url}/rest/v1/marketplace_listings?id=eq.{listing_id}",
+            headers=STORE._headers(),
+            json={**patch, "updated_at": agora.isoformat(timespec="seconds")},
+            timeout=15,
+        )
+    except Exception as exc:
+        print(f"[mk] falha ao ativar anúncio {listing_id}: {exc}")
+        return False
+    return True
+
+
 def apply_status(order_id, status, ts_field=None):
     order = STORE.find(order_id)
     if not order:
@@ -1348,6 +1694,9 @@ def webhook_mp():
                 "erro_pagamento",
                 f"pedido {reference} | mp status {payment.get('status') or '-'}",
             )
+        return "ok", 200
+    if reference.startswith(("PUB-", "DES-", "VIP-")):
+        _marketplace_confirm(reference, payment_id)
         return "ok", 200
     if not reference.isdigit():
         return "ok", 200
@@ -2070,26 +2419,35 @@ def _cliente_header(user, active="visao"):
         "<nav class='nav' aria-label='Navegação do cliente'>"
         "<a class='nav-link %s' href='/cliente'>Visão Geral</a>"
         "<a class='nav-link %s' href='/cliente#pedidos'>Meus Pedidos</a>"
+        "<a class='nav-link %s' href='/cliente/troca'>MARKTRADE</a>"
         "<a class='nav-link %s' href='/cliente/suporte'>Suporte</a>"
         "<a class='nav-link %s' href='/cliente/perfil'>Meu Perfil</a>"
         "</nav>"
     ) % (
         "active" if active == "visao" else "",
         "active" if active == "pedidos" else "",
+        "active" if active == "troca" else "",
         "active" if active == "suporte" else "",
         "active" if active == "perfil" else "",
     )
+    vip_chip = ""
+    if _mk_vip_ativo(user.get("email") or ""):
+        vip_chip = ("<span title='VIP BAPZX ativo' style='background:#0f2a22;border:1px solid #14532d;"
+                    "color:#4ade80;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;"
+                    "letter-spacing:.3px;flex-shrink:0'>VIP</span>")
     nome = user["name"] if user.get("name") else user["email"]
     inicial = _title_initials(nome)
     drop = (
         "<div class='user' tabindex='0' aria-label='Menu da conta'>"
         f"<span class='avatar' aria-hidden='true'>{inicial}</span>"
         f"<span class='uname'>{html.escape(str(nome))}</span>"
+        f"{vip_chip}"
         "<div class='user-menu'>"
         f"<div class='u-name'>{html.escape(str(nome))}</div>"
         f"<div class='u-mail'>{html.escape(user['email'])}</div>"
         "<hr>"
         "<a href='/cliente/perfil'>Meu perfil</a>"
+        "<a href='/cliente/troca'>MARKTRADE</a>"
         "<a href='/cliente/suporte'>Suporte</a>"
         "<a href='/acesso'>Trocar área</a>"
         "<a class='danger' href='/logout'>Sair</a>"
@@ -2477,6 +2835,679 @@ def cliente_suporte_detalhe(ticket_id):
         resposta,
     )
     return _page("Chamado", "Área do Cliente", top, body)
+
+
+# ============ MARKETPLACE (MARKTRADE) — área do cliente ============
+def _mk_brl(value):
+    v = _mk_num(value, 0)
+    return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _mk_gp(value):
+    """Formata preço em gp sem moeda inventada: inteiro com milhares, ou decimal."""
+    if value is None or str(value).strip() == "":
+        return "Aceita ofertas"
+    v = _mk_num(value, 0)
+    if v == int(v):
+        return f"{int(v):,}".replace(",", ".")
+    s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    inteiro, decimal = s.split(",")
+    return f"{inteiro},{decimal}"
+
+
+def _mk_num_br(value):
+    """Decimal em formato BR (vírgula) ou ponto; None se vazio/inválido."""
+    if value is None or str(value).strip() == "":
+        return None
+    text = str(value).replace("R$", "").replace(" ", "").strip()
+    if "," in text:
+        try:
+            return float(text.replace(".", "").replace(",", "."))
+        except ValueError:
+            return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _mk_tipo_lbl(tipo):
+    return {"venda": "Venda", "compra": "Compra", "troca": "Troca"}.get(tipo or "venda", "Venda")
+
+
+def _mk_status_badge(status):
+    lbl = _mk_listing_status_lbl(status)
+    cls = {
+        "pendente": "pendente",
+        "ativa": "pago",
+        "expirada": "aberto",
+        "encerrada": "aberto",
+        "bloqueada": "cancelado",
+    }.get(status or "pendente", "aberto")
+    return f"<span class='badge {html.escape(cls)}'>{html.escape(lbl)}</span>"
+
+
+def _mk_flash(tipo, texto):
+    session["_mk_msg"] = [tipo, texto]
+
+
+def _mk_consume_flash():
+    msg = session.pop("_mk_msg", None)
+    if not msg:
+        return ""
+    tipo, texto = msg[0], msg[1]
+    cor = {"erro": "#f87171", "ok": "#4ade80"}.get(tipo, "#e2e8f0")
+    return (
+        "<div class='notice' style='color:" + cor + ";border-color:" + cor + "88'>"
+        f"{html.escape(str(texto))}</div>"
+    )
+
+
+def _mk_pix_card(pag):
+    """QR (imagem) + copia-e-cola do PIX de uma intenção de pagamento."""
+    tx = _mk_mp_transaction(pag) or {}
+    qr_b64 = tx.get("qr_code_base64") or ""
+    qr_text = tx.get("qr_code") or pag.get("qr_code") or ""
+    parts = ["<div style='margin:14px 0'>"]
+    if qr_b64:
+        parts.append(
+            "<div style='text-align:center;margin-bottom:12px'>"
+            f"<img src='data:image/png;base64,{html.escape(qr_b64)}' alt='QR Code Pix' "
+            "style='width:190px;height:190px;border-radius:12px;background:#fff;padding:8px'></div>"
+        )
+    if qr_text:
+        parts.append(
+            "<label>Código PIX (copia e cola)</label>"
+            f"<textarea rows='3' readonly style='font-size:12px'>{html.escape(qr_text)}</textarea>"
+        )
+    else:
+        parts.append("<p style='color:#94a3b8'>QR indisponível no momento. Tente novamente em instantes.</p>")
+    parts.append(
+        "<p class='note'>Seu anúncio (ou VIP) é ATIVADO AUTOMATICAMENTE assim que o pagamento "
+        "for confirmado pelo Mercado Pago — não precisa avisar ninguém.</p></div>"
+    )
+    return "".join(parts)
+
+
+@app.route("/cliente/troca", methods=["GET"])
+def cliente_troca():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    top = _cliente_header(user, "troca")
+
+    cfg = _marketplace_config() or {}
+    preco_pub = _mk_preco("preco_publicacao", 2.99)
+    preco_des = _mk_preco("preco_destaque", 5.00)
+    preco_vip = _mk_preco("preco_vip", 12.99)
+    limite = _mk_limite()
+    ativo = _mk_ativo()
+
+    vip = _mk_vip_ativo(email)
+
+    mine = _mk_minhas_listings(email)
+    pagamentos = _mk_meus_pagamentos(email)
+    pend = [l for l in mine if (l.get("status") or "") == "pendente"]
+    ativas = [l for l in mine if (l.get("status") or "") in ("ativa", "pendente")]
+    vagas = max(0, limite - len(ativas))
+
+    kpis = (
+        "<div class='kpis'>"
+        f"<div class='kpi green'><div class='ic' aria-hidden='true'>&#128230;</div>"
+        f"<div><div class='num'>{len(mine)}</div><div class='lbl'>Meus anúncios</div></div></div>"
+        f"<div class='kpi blue'><div class='ic' aria-hidden='true'>&#11088;</div>"
+        f"<div><div class='num'>{len(ativas)}</div><div class='lbl'>Ativos / pendentes</div></div></div>"
+        f"<div class='kpi amber'><div class='ic' aria-hidden='true'>&#127919;</div>"
+        f"<div><div class='num'>{vagas}</div><div class='lbl'>Vagas (máx. {limite})</div></div></div>"
+        f"<div class='kpi purple'><div class='ic' aria-hidden='true'>&#128081;</div>"
+        f"<div><div class='num'>{'ATIVO' if vip else '—'}</div><div class='lbl'>VIP BAPZX</div></div></div>"
+        "</div>"
+    )
+
+    vip_card = (
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#128081; VIP BAPZX</h2>"
+        "<a class='btn ghost small' href='/cliente/troca/vip'>"
+        + ("Renovar" if vip else "Assinar")
+        + "</a></div>"
+        + (
+            f"<p>Seu VIP está <b>ativo</b> até <b>{_mk_fmt_dt((_mk_profile(email) or {}).get('vip_until'))}</b>. "
+            "Anúncios de VIPs ganham o selo de verificado &#10004; e destaque na página pública do MARKTRADE."
+            if vip
+            else f"<p>Com o VIP BAPZX seu anúncio ganha o <b>selo ✓ de verificado</b> e suporte premium. "
+            f"Plano mensal por <b>{_mk_brl(preco_vip)}</b>.</p>"
+        )
+        + "</div>"
+    )
+
+    if not ativo:
+        tables = (
+            "<div class='notice' style='color:#f87171'>As publicações do MARKTRADE estão "
+            "<b>pausadas</b> no momento. Volte em breve.</div>"
+        )
+    else:
+        form = (
+            "<div class='panel'>"
+            "<div class='panel-hd'><h2>&#128722; Publicar anúncio</h2>"
+            f"<span class='badge pago'>{_mk_brl(preco_pub)}</span>"
+            "</div>"
+            f"<p class='note'>Publicação por <b>{_mk_brl(preco_pub)}</b> · Destaque VIP + <b>{_mk_brl(preco_des)}</b> · "
+            f"o anúncio fica válido por <b>{_mk_duracao('duracao_publicacao_dias', 30)} dias</b>. "
+            f"Você publica quando quiser (até <b>{limite} ativos</b> ao mesmo tempo).</p>"
+            "<form method='post' action='/cliente/troca/publicar'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<div class='grid2'>"
+            "<div><label>Item *</label><input name='item_name' required maxlength='120' "
+            "placeholder='Ex.: War Hammer'></div>"
+            "<div><label>Personagem *</label><input name='character_name' required maxlength='60' "
+            "placeholder='Ex.: Bapz'></div>"
+            "<div><label>Mundo *</label><input name='world' required maxlength='60' "
+            "placeholder='Ex.: honbra'></div>"
+            "<div><label>Contato (discord/telegram ou deixa vazio)</label>"
+            "<input name='contact' maxlength='200' placeholder='Ex.: @bapzx'></div>"
+            "</div>"
+            "<label>Tipo de anúncio</label><select name='tipo_anuncio'>"
+            "<option value='venda'>Vendendo</option>"
+            "<option value='compra'>Comprando</option>"
+            "<option value='troca'>Quer trocar</option>"
+            "</select>"
+            "<label>Descrição</label>"
+            "<textarea name='description' rows='3' maxlength='1000' "
+            "placeholder='Detalhes do item, condição, negociação...'></textarea>"
+            "<div class='grid2'>"
+            "<div><label>Preço em gp (ou deixe vazio para aceitar ofertas)</label>"
+            "<input name='preco' type='text' placeholder='Ex.: 250000'></div>"
+            "<div><label>Tipo de PvP (opcional)</label><input name='tipo_pvp' maxlength='60' "
+            "placeholder='Ex.: Open PvP'></div>"
+            "</div>"
+            "<p><label><input type='checkbox' name='aceita_ofertas' value='1' checked> "
+            "Aceito ofertas / negociação</label></p>"
+            "<label>URL da imagem do item (opcional)</label>"
+            "<input name='sprite' type='url' maxlength='300' placeholder='https://...'>"
+            "<p><label><input type='checkbox' name='destaque' value='1'> "
+            f"Destacar meu anúncio <b>(+ {_mk_brl(preco_des)}</b>) — fica no topo com tag de destaque</label></p>"
+            "<p style='margin-top:14px'><button class='btn' type='submit'>Publicar agora</button></p>"
+            "</form></div>"
+        )
+
+        if mine:
+            por_listing = {}
+            for p in pagamentos:
+                por_listing.setdefault(p.get("listing_id"), []).append(p)
+
+            def _linha(l):
+                lid = l.get("id")
+                pend_pags = [p for p in (por_listing.get(lid) or []) if (p.get("status") or "") == "pendente"]
+                acoes = []
+                if (l.get("status") or "") == "pendente" and pend_pags:
+                    acoes.append(
+                        f"<form method='get' action='/cliente/troca/pagar/{lid}' style='display:inline'>"
+                        "<button class='btn small'>Pagar Pix</button></form>"
+                    )
+                if (l.get("status") or "") in ("pendente", "ativa"):
+                    acoes.append(
+                        f"<form method='post' action='/cliente/troca/cancelar/{lid}' style='display:inline'>"
+                        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                        "<button class='btn ghost small'>Encerrar</button></form>"
+                    )
+                dest = (
+                    "<span title='Destaque' style='color:#f59e0b'>&#11088; </span>"
+                    if l.get("is_destaque")
+                    else ""
+                )
+                ver = "&#10004; " if l.get("verificado") else ""
+                preco_txt = (
+                    f"<b>{html.escape(_mk_gp(l.get('preco')))}</b>"
+                    if l.get("preco") is not None
+                    else "Aceita ofertas"
+                )
+                return (
+                    "<tr>"
+                    f"<td><b>#{html.escape(str(lid or '-'))}</b></td>"
+                    f"<td>{dest}{f'{ver}'}{html.escape(str(l.get('item_name') or '-'))}</td>"
+                    f"<td>{html.escape(_mk_tipo_lbl(l.get('tipo_anuncio')))}</td>"
+                    f"<td>{preco_txt}</td>"
+                    f"<td>{html.escape(str(l.get('world') or '-'))}</td>"
+                    f"<td>{html.escape(str(l.get('created_at') or ''))[:16].replace('T',' ')}</td>"
+                    f"<td>{_mk_status_badge(l.get('status'))}</td>"
+                    f"<td class='acts'>{''.join(acoes)}</td>"
+                    "</tr>"
+                )
+
+            tabela = "".join(_linha(l) for l in mine)
+            meus = (
+                "<div class='panel'><div class='panel-hd'><h2>&#128203; Meus anúncios</h2></div>"
+                "<div class='table-wrap'><table>"
+                "<tr><th>#</th><th>Item</th><th>Tipo</th><th>Preço</th><th>Mundo</th><th>Publicado</th>"
+                "<th>Status</th><th>Ação</th></tr>"
+                + tabela
+                + "</table></div></div>"
+            )
+        else:
+            meus = (
+                "<div class='panel'>"
+                "<div class='empty-state'><div class='em-ic' aria-hidden='true'>&#128230;</div>"
+                "<h3>Você ainda não publicou nada</h3>"
+                "<p>Publique um anúncio de venda, compra ou troca de itens do Tibia. "
+                "Ele aparece na página pública do MARKTRADE após o pagamento.</p></div>"
+                "</div>"
+            )
+        tables = form + meus
+
+    body = (
+        "<div class='welcome'>"
+        "<div><h2>MARKTRADE &#128176;</h2>"
+        "<p>Troca de itens do Tibia — publique venda, compra ou troca e negocie entre jogadores.</p></div>"
+        f"<a class='btn' target='_blank' rel='noopener' href='{PORTFOLIO_URL}troca.html'>Ver anúncios públicos</a>"
+        "</div>"
+        + _mk_consume_flash()
+        + kpis
+        + vip_card
+        + tables
+    )
+    return _page("MARKTRADE", "Área do Cliente", top, body)
+
+
+@app.route("/cliente/troca/publicar", methods=["POST"])
+def cliente_troca_publicar():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    if not _mk_ativo():
+        _mk_flash("erro", "As publicações do MARKTRADE estão pausadas no momento.")
+        return redirect("/cliente/troca")
+    email = user["email"].lower()
+
+    item_name = (request.form.get("item_name") or "").strip()[:120]
+    character_name = (request.form.get("character_name") or "").strip()[:60]
+    world = (request.form.get("world") or "").strip()[:60]
+    contact = (request.form.get("contact") or "").strip()[:200]
+    category = (request.form.get("category") or "").strip()[:60]
+    description = (request.form.get("description") or "").strip()[:1000]
+    tipo = (request.form.get("tipo_anuncio") or "venda").strip().lower()
+    sprite = (request.form.get("sprite") or "").strip()[:300]
+    tipo_pvp = (request.form.get("tipo_pvp") or "").strip()[:60]
+    if sprite and not (sprite.startswith("http://") or sprite.startswith("https://")):
+        sprite = ""
+    if tipo not in ("venda", "compra", "troca"):
+        return "Tipo de anúncio inválido.", 400
+    if not item_name or not character_name or not world:
+        _mk_flash("erro", "Informe o item, o personagem e o mundo.")
+        return redirect("/cliente/troca")
+
+    preco = _mk_num_br(request.form.get("preco"))
+    aceita_ofertas = request.form.get("aceita_ofertas") == "1"
+    if preco is not None and preco < 0:
+        _mk_flash("erro", "Preço não pode ser negativo.")
+        return redirect("/cliente/troca")
+    if preco is None and not aceita_ofertas:
+        aceita_ofertas = True
+    destaque = request.form.get("destaque") == "1"
+
+    ativas = [l for l in _mk_minhas_listings(email) if (l.get("status") or "") in ("ativa", "pendente")]
+    limite = _mk_limite()
+    if len(ativas) >= limite:
+        _mk_flash("erro", f"Você atingiu o limite de {limite} publicações ativas no MARKTRADE.")
+        return redirect("/cliente/troca")
+
+    agora = datetime.utcnow()
+    payload = {
+        "user_id": email,
+        "item_name": item_name,
+        "description": description,
+        "character_name": character_name,
+        "world": world,
+        "contact": contact,
+        "category": category,
+        "tipo_anuncio": tipo,
+        "status": "pendente",
+        "is_destaque": False,
+        "preco": preco,
+        "aceita_ofertas": aceita_ofertas,
+        "sprite": sprite,
+        "tipo_pvp": tipo_pvp,
+        "verificado": _mk_vip_ativo(email),
+        "expires_at": (agora + timedelta(days=_mk_duracao("duracao_publicacao_dias", 30))).isoformat(timespec="seconds"),
+    }
+    try:
+        response = requests.post(
+            f"{STORE.url}/rest/v1/marketplace_listings",
+            headers={**STORE._headers(), "Prefer": "return=representation"},
+            json=payload,
+            timeout=15,
+        )
+    except Exception as exc:
+        return f"Falha ao publicar: {exc}", 500
+    if response.status_code not in (200, 201):
+        return f"Falha ao publicar: {response.status_code} {response.text[:200]}", 500
+    criado = (response.json() or [{}])[0]
+    lid = criado.get("id")
+    if not lid:
+        return "Resposta inesperada do servidor.", 500
+
+    preco_pub = _mk_preco("preco_publicacao", 2.99)
+    preco_des = _mk_preco("preco_destaque", 5.00)
+    if destaque:
+        ref, tipo_pag, valor = f"DES-{lid}", "destaque", preco_pub + preco_des
+    else:
+        ref, tipo_pag, valor = f"PUB-{lid}", "publicacao", preco_pub
+
+    try:
+        response = requests.post(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos",
+            headers={**STORE._headers(), "Prefer": "return=representation"},
+            json={
+                "external_reference": ref,
+                "tipo": tipo_pag,
+                "listing_id": lid,
+                "user_id": email,
+                "valor": valor,
+                "status": "pendente",
+            },
+            timeout=15,
+        )
+        pag = (response.json() or [{}])[0]
+        pid = pag.get("id")
+    except Exception as exc:
+        return f"Falha ao criar o pagamento: {exc}", 500
+
+    ok = False
+    try:
+        ok, charge = create_marketplace_pix(ref, valor, f"{item_name} ({_mk_tipo_lbl(tipo)})", email, user.get("name") or "Cliente")
+    except Exception as exc:
+        ok, charge = False, f"erro interno: {exc}"
+    if not ok:
+        _mk_flash("erro", f"Não foi possível gerar o Pix agora: {charge}")
+        return redirect(f"/cliente/troca/pagar/{lid}")
+    tx = (charge.get("point_of_interaction") or {}).get("transaction_data") or {}
+    try:
+        requests.patch(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos?id=eq.{pid}",
+            headers=STORE._headers(),
+            json={
+                "mp_id": str(charge.get("id") or ""),
+                "qr_code": tx.get("qr_code") or "",
+            },
+            timeout=15,
+        )
+    except Exception:
+        pass
+    return redirect(f"/cliente/troca/pagar/{lid}")
+
+
+@app.route("/cliente/troca/gerar/<int:lid>", methods=["POST"])
+def cliente_troca_gerar(lid):
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    email = user["email"].lower()
+    listing = _mk_listing(lid)
+    if not listing or (listing.get("user_id") or "").lower() != email:
+        return "Anúncio não encontrado.", 404
+    if (listing.get("status") or "") != "pendente":
+        _mk_flash("ok", "Este anúncio já foi processado.")
+        return redirect("/cliente/troca")
+    pag = None
+    for p in _mk_meus_pagamentos(email):
+        if p.get("listing_id") == lid and (p.get("status") or "") == "pendente":
+            pag = p
+            break
+    if not pag:
+        _mk_flash("erro", "Pagamento não localizado; publique novamente.")
+        return redirect("/cliente/troca")
+    valor = _mk_num(pag.get("valor"), 0)
+    ref = pag.get("external_reference") or f"PUB-{lid}"
+    try:
+        ok, charge = create_marketplace_pix(ref, valor, listing.get("item_name") or "Anúncio", email, user.get("name") or "Cliente")
+    except Exception as exc:
+        ok, charge = False, f"erro interno: {exc}"
+    if not ok:
+        _mk_flash("erro", f"Não foi possível gerar o Pix: {charge}")
+        return redirect(f"/cliente/troca/pagar/{lid}")
+    tx = (charge.get("point_of_interaction") or {}).get("transaction_data") or {}
+    try:
+        requests.patch(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos?id=eq.{pag['id']}",
+            headers=STORE._headers(),
+            json={"mp_id": str(charge.get("id") or ""), "qr_code": tx.get("qr_code") or ""},
+            timeout=15,
+        )
+    except Exception:
+        pass
+    return redirect(f"/cliente/troca/pagar/{lid}")
+
+
+@app.route("/cliente/troca/pagar/<int:lid>", methods=["GET", "POST"])
+def cliente_troca_pagar(lid):
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        return redirect(f"/cliente/troca/gerar/{lid}")
+    listing = _mk_listing(lid)
+    if not listing or (listing.get("user_id") or "").lower() != email:
+        return "Anúncio não encontrado.", 404
+    if (listing.get("status") or "") in ("ativa", "expirada"):
+        _mk_flash("ok", "Seu anúncio já está no ar no MARKTRADE.")
+        return redirect("/cliente/troca")
+    if (listing.get("status") or "") in ("encerrada", "bloqueada"):
+        _mk_flash("erro", "Este anúncio foi encerrado.")
+        return redirect("/cliente/troca")
+    top = _cliente_header(user, "troca")
+
+    pag = None
+    for p in _mk_meus_pagamentos(email):
+        if p.get("listing_id") == lid and (p.get("status") or "") == "pendente":
+            pag = p
+            break
+
+    corpo_qr = ""
+    retry = ""
+    if not pag:
+        retry = (
+            "<p class='note'>Nenhum Pix em aberto para este anúncio. Gere um novo.</p>"
+            "<form method='post' action='/cliente/troca/gerar/" + str(lid) + "'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<button class='btn' type='submit'>Gerar Pix agora</button></form>"
+        )
+    else:
+        tx = _mk_mp_transaction(pag)
+        status_mp = ""
+        if pag.get("mp_id") and MP_ACCESS_TOKEN:
+            try:
+                resp = requests.get(
+                    f"https://api.mercadopago.com/v1/payments/{pag['mp_id']}",
+                    headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}"},
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    status_mp = (resp.json() or {}).get("status") or ""
+            except Exception:
+                status_mp = ""
+        if status_mp == "approved":
+            _marketplace_confirm(pag.get("external_reference") or f"PUB-{lid}", pag.get("mp_id"))
+            _mk_flash("ok", "Pagamento confirmado! Seu anúncio já está no ar.")
+            return redirect("/cliente/troca")
+        corpo_qr = _mk_pix_card(pag or {})
+        retry = (
+            "<form method='post' action='/cliente/troca/gerar/" + str(lid) + "' style='margin-top:12px'>"
+            f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+            "<button class='btn ghost small' type='submit'>O código expirou? Gerar outro Pix</button></form>"
+        )
+
+    body = (
+        "<div class='panel'>"
+        f"<div class='panel-hd'><h2>&#128179; Pagamento da publicação #{html.escape(str(lid or '-'))}</h2></div>"
+        f"<p><b>{html.escape(str(listing.get('item_name') or '-'))}</b> · "
+        f"{html.escape(_mk_tipo_lbl(listing.get('tipo_anuncio')))} · "
+        f"<b>{_mk_brl((pag or {}).get('valor') or 0)}</b></p>"
+        + _mk_consume_flash()
+        + corpo_qr
+        + retry
+        + "<p class='legal-note'>Ao publicar, você concorda com nossos "
+        "<a href='/termos'>Termos de Uso</a> e <a href='/privacidade'>Política de Privacidade</a> (LGPD)."
+        "</div>"
+        "<p><a class='btn ghost' href='/cliente/troca'>Voltar ao MARKTRADE</a></p>"
+    )
+    return _page("Pagamento", "Área do Cliente", top, body)
+
+
+@app.route("/cliente/troca/cancelar/<int:lid>", methods=["POST"])
+def cliente_troca_cancelar(lid):
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    email = user["email"].lower()
+    listing = _mk_listing(lid)
+    if not listing or (listing.get("user_id") or "").lower() != email:
+        return "Anúncio não encontrado.", 404
+    if (listing.get("status") or "") not in ("pendente", "ativa"):
+        _mk_flash("erro", "Este anúncio não pode mais ser encerrado.")
+        return redirect("/cliente/troca")
+    try:
+        requests.patch(
+            f"{STORE.url}/rest/v1/marketplace_listings?id=eq.{lid}",
+            headers=STORE._headers(),
+            json={"status": "encerrada", "updated_at": datetime.utcnow().isoformat(timespec="seconds")},
+            timeout=15,
+        )
+        requests.patch(
+            f"{STORE.url}/rest/v1/marketplace_pagamentos?listing_id=eq.{lid}&status=eq.pendente",
+            headers=STORE._headers(),
+            json={"status": "cancelado"},
+            timeout=15,
+        )
+    except Exception as exc:
+        return f"Falha ao encerrar: {exc}", 500
+    _mk_flash("ok", "Anúncio encerrado.")
+    return redirect("/cliente/troca")
+
+
+@app.route("/cliente/troca/vip", methods=["GET", "POST"])
+def cliente_troca_vip():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    top = _cliente_header(user, "troca")
+
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        preco_vip = _mk_preco("preco_vip", 12.99)
+        ref, tipo_pag, valor = f"VIP-{email}", "vip", preco_vip
+        try:
+            response = requests.post(
+                f"{STORE.url}/rest/v1/marketplace_pagamentos",
+                headers={**STORE._headers(), "Prefer": "return=representation"},
+                json={
+                    "external_reference": ref,
+                    "tipo": tipo_pag,
+                    "user_id": email,
+                    "valor": valor,
+                    "status": "pendente",
+                },
+                timeout=15,
+            )
+            pag = (response.json() or [{}])[0]
+            pid = pag.get("id")
+        except Exception as exc:
+            return f"Falha ao criar o pagamento: {exc}", 500
+        try:
+            ok, charge = create_marketplace_pix(ref, valor, "Plano VIP BAPZX mensal", email, user.get("name") or "Cliente")
+        except Exception as exc:
+            ok, charge = False, f"erro interno: {exc}"
+        if not ok:
+            _mk_flash("erro", f"Não foi possível gerar o Pix agora: {charge}")
+            return redirect("/cliente/troca/vip")
+        tx = (charge.get("point_of_interaction") or {}).get("transaction_data") or {}
+        try:
+            requests.patch(
+                f"{STORE.url}/rest/v1/marketplace_pagamentos?id=eq.{pid}",
+                headers=STORE._headers(),
+                json={"mp_id": str(charge.get("id") or ""), "qr_code": tx.get("qr_code") or ""},
+                timeout=15,
+            )
+        except Exception:
+            pass
+        return redirect("/cliente/troca/vip")
+
+    preco_vip = _mk_preco("preco_vip", 12.99)
+    vip_dt = _mk_parse_dt((_mk_profile(email) or {}).get("vip_until"))
+    vip = bool(vip_dt and vip_dt > datetime.utcnow())
+    pend = None
+    for p in _mk_meus_pagamentos(email):
+        if (p.get("tipo") or "") == "vip" and (p.get("status") or "") == "pendente":
+            pend = p
+            break
+
+    if pend and pend.get("mp_id"):
+        status_mp = ""
+        try:
+            resp = requests.get(
+                f"https://api.mercadopago.com/v1/payments/{pend['mp_id']}",
+                headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}"},
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                status_mp = (resp.json() or {}).get("status") or ""
+        except Exception:
+            status_mp = ""
+        if status_mp == "approved":
+            _marketplace_confirm(pend.get("external_reference") or f"VIP-{email}", pend.get("mp_id"))
+            _MK_VIP_CACHE.pop(email, None)
+            _mk_flash("ok", "Pagamento confirmado! Você já é VIP BAPZX.")
+            return redirect("/cliente/troca/vip")
+
+    status_card = (
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#128081; Sua assinatura VIP</h2></div>"
+        + (
+            f"<p>Você é <b>VIP BAPZX</b> até <b>{_mk_fmt_dt((_mk_profile(email) or {}).get('vip_until'))}</b>. "
+            "Renove quando quiser — adicionamos os dias a partir de hoje.</p>"
+            if vip
+            else f"<p>Você ainda não é VIP. Plano mensal por <b>{_mk_brl(preco_vip)}</b> via Pix.</p>"
+        )
+        + "<p>Vantagens: &#10004; selo de verificado nos anúncios do MARKTRADE · &#128081; badge VIP "
+        "na sua área do cliente · &#129351; prioridade no atendimento.</p>"
+        + "</div>"
+    )
+
+    corpo_qr = _mk_pix_card(pend) if pend else ""
+    assinar = (
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>"
+        + ("Novo pagamento" if pend else "Assinar VIP")
+        + "</h2></div>"
+        + _mk_consume_flash()
+        + corpo_qr
+        + ("<p class='note'>Você já tem um Pix em aberto — finalize ele ou aguarde alguns minutos "
+           "para o anterior expirar.</p>" if pend else "")
+        + ("<form method='post'><input type='hidden' name='_csrf' value='" + html.escape(_csrf_token()) + "'>"
+           "<p style='margin-top:8px'><button class='btn' type='submit'>"
+           f"Gerar Pix de {_mk_brl(preco_vip)}</button></p></form>"
+           if not pend else "")
+        + "</div>"
+    )
+
+    body = (
+        "<div class='welcome'><div><h2>VIP BAPZX</h2>"
+        "<p>Plano mensal com selo de verificado no MARKTRADE e prioridade no atendimento.</p></div>"
+        "<a class='btn ghost' href='/cliente/troca'>Voltar ao MARKTRADE</a></div>"
+        + status_card
+        + assinar
+    )
+    return _page("VIP BAPZX", "Área do Cliente", top, body)
 
 
 def notify_owner(entry):
