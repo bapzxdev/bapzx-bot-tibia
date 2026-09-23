@@ -958,6 +958,126 @@ class TestMkBot(unittest.TestCase):
         self.assertTrue(profile_patch, "deve aplicar vip_until via PATCH no profiles")
         self.assertIn("vip_until", profile_patch[0])
 
+    # ---------- GET /api/troca/<id> (detalhe público) ----------
+
+    def test_api_troca_detalhe_encontra(self):
+        lista = [dict(LISTING, status="ativa")]
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False), \
+             mock.patch.object(painel, "_fetch_public", return_value=lista):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca/1", headers={"Origin": "https://bapzxdev.github.io"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data["ok"])
+        an = data["anuncio"]
+        self.assertEqual(an["id"], 1)
+        self.assertEqual(an["nome"], "War Hammer")
+        self.assertEqual(an["status"], "ativa")
+        self.assertTrue(an["aceita_ofertas"])
+        self.assertIn("Access-Control-Allow-Origin", resp.headers)
+
+    def test_api_troca_detalhe_origem_fora_sem_cors(self):
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False), \
+             mock.patch.object(painel, "_fetch_public", return_value=[dict(LISTING, status="ativa")]):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca/1", headers={"Origin": "https://malicioso.example"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn("Access-Control-Allow-Origin", resp.headers)
+
+    def test_api_troca_detalhe_nao_encontrado(self):
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False), \
+             mock.patch.object(painel, "_fetch_public", return_value=[]):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca/999")
+        self.assertEqual(resp.status_code, 404)
+        data = resp.get_json()
+        self.assertFalse(data["ok"])
+
+    def test_api_troca_detalhe_rate_limit(self):
+        with mock.patch.object(painel, "_rate_limited", lambda *a: True):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca/1")
+        self.assertEqual(resp.status_code, 429)
+
+    # ---------- GET /api/item (info wiki + referência) ----------
+
+    def test_api_item_sem_nome(self):
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False):
+            c = bot.app.test_client()
+            resp = c.get("/api/item")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data["ok"])
+        self.assertNotIn("info", data)
+        self.assertNotIn("referencia", data)
+
+    def test_api_item_com_info_wiki(self):
+        info = {"tier": "3", "nivel": "200", "peso": "24.00"}
+        ref = {"media": 300, "min": 100, "max": 500, "anuncios": 3}
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False), \
+             mock.patch.object(painel, "_iteminfo", return_value=info), \
+             mock.patch.object(painel, "_ref_de_preco", return_value=ref):
+            c = bot.app.test_client()
+            resp = c.get("/api/item?nome=Gnome%20Helmet")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data["item"], "Gnome Helmet")
+        self.assertEqual(data["info"]["tier"], "3")
+        self.assertEqual(data["referencia"]["media"], 300)
+
+    def test_iteminfo_wiki_parsea_infobox(self):
+        wikitext = """{{Infobox_Item|List={{{1|}}}|GetValue={{{GetValue|}}}\n"
+        | name           = Gnome Helmet
+        | primarytype    = Capacetes
+        | levelrequired  = 200
+        | max_tier       = 3
+        | weight         = 24.00
+        | resist         = [[Physical]] +3%, [[Energy]] +8%
+        }}"""
+        resp = _FakeResp()
+        resp.json = lambda: {"parse": {"wikitext": wikitext}}
+
+        with mock.patch.object(painel.requests, "get", return_value=resp):
+            info = painel._iteminfo_wiki("Gnome Helmet")
+        self.assertEqual(info["tier"], "3")
+        self.assertEqual(info["nivel"], "200")
+        self.assertEqual(info["peso"], "24.00")
+        self.assertEqual(info["tipo_item"], "Capacetes")
+        self.assertEqual(info["resistencias"], "Physical +3%, Energy +8%")
+
+    def test_iteminfo_wiki_sem_tier_deixa_vazio(self):
+        wikitext = "{{Infobox_Item|List={{{1|}}}\n| name = Coisa\n| weight = 1}}"
+        resp = _FakeResp()
+        resp.json = lambda: {"parse": {"wikitext": wikitext}}
+
+        with mock.patch.object(painel.requests, "get", return_value=resp):
+            info = painel._iteminfo_wiki("Coisa")
+        self.assertNotIn("tier", info)
+        self.assertIn("peso", info)
+
+    def test_iteminfo_wiki_falha_e_vazio(self):
+        with mock.patch.object(painel.requests, "get", side_effect=Exception("boom")):
+            self.assertEqual(painel._iteminfo_wiki("Algum Item"), {})
+        self.assertEqual(painel._iteminfo_wiki(""), {})
+
+    def test_ref_de_preco_calcula_media(self):
+        rows = [
+            {"preco": 100, "created_at": "2026-01-01T00:00:00", "tipo_anuncio": "venda"},
+            {"preco": 300, "created_at": "2026-01-02T00:00:00", "tipo_anuncio": "venda"},
+            {"preco": 500, "created_at": "2026-01-03T00:00:00", "tipo_anuncio": "venda"},
+        ]
+        with mock.patch.object(painel, "_fetch_public", return_value=rows):
+            ref = painel._ref_de_preco("War Hammer")
+        self.assertEqual(ref["min"], 100)
+        self.assertEqual(ref["max"], 500)
+        self.assertEqual(ref["media"], 300)
+        self.assertEqual(ref["anuncios"], 3)
+
+    def test_ref_de_preco_sem_precos_none(self):
+        with mock.patch.object(painel, "_fetch_public", return_value=[{"preco": None}]):
+            self.assertIsNone(painel._ref_de_preco("War Hammer"))
+        self.assertIsNone(painel._ref_de_preco(""))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

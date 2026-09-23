@@ -1,6 +1,7 @@
 import html
 import json
 import os
+import re
 import secrets
 import time
 from datetime import datetime, timedelta
@@ -14,7 +15,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.4"
+VERSION = "2.10.5"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3233,6 +3234,200 @@ def api_troca():
         for a in anuncios
     ]
     response = jsonify({"ok": True, "anuncios": payload})
+    if origin and _cors_ok():
+        response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Vary"] = "Origin"
+    return response
+
+
+_WIKI_BASE = "https://www.tibiawiki.com.br/api.php"
+_WIKI_UA = "BAPZX-MARKTRADE/2.10.5 (público; contato BAPZX)"
+_ITEMINFO_CACHE = {}
+
+
+def _wiki_get(params, timeout=(5, 15)):
+    """GET na API pública do TibiaWiki com redirects; nunca derruba.
+    Em 403/429 (rate limit) tenta uma vez com User-Agent neutro."""
+    query = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
+    url = f"{_WIKI_BASE}?{query}"
+    for ua in (_WIKI_UA, "BAPZX-PORTFOLIO/1.0 (contato: lucascristianini1@gmail.com)"):
+        try:
+            response = requests.get(
+                url, headers={"User-Agent": ua}, timeout=timeout
+            )
+            if response.status_code in (403, 429):
+                continue
+            response.raise_for_status()
+            return response.json() or {}
+        except Exception:
+            continue
+    return {}
+
+
+def _limpa_wiki(v):
+    v = str(v or "").strip()
+    v = re.sub(r"\[\[([^\]|]*)\|([^\]]*)\]\]", r"\2", v)
+    v = re.sub(r"\[\[([^\]]*)\]\]", r"\1", v)
+    v = v.replace("'''", "").replace("''", "").strip()
+    return v
+
+
+def _iteminfo_wiki(item_name):
+    """Busca a infobox do item no TibiaWiki e devolve dicionário limpo
+    (tier/atributos/requisitos/peso/preço referência) ou {} se não achar."""
+    nome = (item_name or "").strip()
+    if not nome:
+        return {}
+    try:
+        data = _wiki_get(
+            {
+                "action": "parse",
+                "redirects": "1",
+                "page": nome,
+                "prop": "wikitext",
+                "format": "json",
+                "formatversion": "2",
+            }
+        )
+        wikitext = ((data.get("parse") or {}).get("wikitext")) or ""
+    except Exception:
+        return {}
+    i = wikitext.find("{{Infobox_Item")
+    if i < 0:
+        return {}
+    seg = wikitext[i:]
+    seg = seg[: seg.find("\n}}")]
+    campos = {}
+    for chave, valor in re.findall(r"\|\s*([\w ]+?)\s*=\s*(.*)$", seg, re.M):
+        campos[chave.strip()] = _limpa_wiki(valor)
+    tier = campos.get("max_tier") or campos.get("tier") or ""
+    try:
+        tier_num = int(float(tier))
+        tier = str(tier_num) if float(tier).is_integer() else str(tier)
+    except Exception:
+        pass
+    info = {
+        "tier": tier,
+        "nivel": campos.get("levelrequired") or "",
+        "vocacoes": campos.get("vocrequired") or "",
+        "armor": campos.get("armor") or "",
+        "peso": campos.get("weight") or "",
+        "imbuement": campos.get("imbuement") or "",
+        "resistencias": campos.get("resist") or "",
+        "atributos": campos.get("skillboost") or "",
+        "classificacao": campos.get("classificacao") or "",
+        "raridade": campos.get("rarity") or "",
+        "vende_para": campos.get("sellto") or "",
+        "compra_de": campos.get("buyfrom") or "",
+        "implementado": campos.get("implemented") or "",
+        "tipo_item": campos.get("primarytype") or "",
+    }
+    return {k: v for k, v in info.items() if v}
+
+
+def _iteminfo(item_name):
+    """Info do item com cache curtíssimo (2 min) para não martelar o Wiki."""
+    chave = (item_name or "").strip().lower()
+    if not chave:
+        return {}
+    cache = _ITEMINFO_CACHE.get(chave)
+    if cache and time.time() - cache[0] < 120:
+        return cache[1]
+    info = _iteminfo_wiki(item_name)
+    _ITEMINFO_CACHE[chave] = (time.time(), info)
+    return info
+
+
+def _ref_de_preco(item_name):
+    """Histórico/preço de referência a partir dos anúncios ativos do mesmo
+    item no próprio marketplace (nunca inventa preço externo)."""
+    nome = (item_name or "").strip()
+    if not nome:
+        return None
+    try:
+        rows = _fetch_public(
+            "marketplace_listings",
+            select="preco,created_at,tipo_anuncio",
+            query=f"status=eq.ativa&item_name=ilike.*{quote(nome)}*",
+            order="created_at.asc",
+        )
+    except Exception:
+        return None
+    precos = []
+    for r in rows:
+        p = r.get("preco")
+        if p is None or p == "":
+            continue
+        try:
+            precos.append(float(p))
+        except (TypeError, ValueError):
+            continue
+    if not precos:
+        return None
+    custo_medio = sum(precos) / len(precos)
+    return {
+        "min": min(precos),
+        "max": max(precos),
+        "media": custo_medio,
+        "anuncios": len(precos),
+        "atualizado_em": rows[-1].get("created_at") or "",
+    }
+
+
+@bp.route("/api/troca/<int:aid>", methods=["GET"])
+def api_troca_detalhe(aid):
+    if _rate_limited("api_troca", _RATE_LIMIT_TRACK_PER_MIN):
+        return jsonify({"ok": False, "error": "rate limit"}), 429
+    origin = request.headers.get("Origin") or ""
+    rows = _fetch_public(
+        "marketplace_listings",
+        select="*",
+        query=f"id=eq.{aid}&status=eq.ativa",
+        range_="0-0",
+    )
+    if not rows:
+        response = jsonify({"ok": False, "error": "anúncio não encontrado"}), 404
+        if origin and _cors_ok():
+            response[0].headers["Access-Control-Allow-Origin"] = origin
+        response[0].headers["Vary"] = "Origin"
+        return response
+    a = rows[0]
+    payload = {
+        "id": a.get("id"),
+        "tipo": a.get("tipo_anuncio") or "venda",
+        "nome": a.get("item_name") or "",
+        "descricao": a.get("description") or "",
+        "sprite": a.get("sprite") or "",
+        "preco": a.get("preco"),
+        "aceita_ofertas": bool(a.get("aceita_ofertas")),
+        "world": a.get("world") or "",
+        "jogador": a.get("character_name") or "",
+        "categoria": a.get("category") or "",
+        "contato": a.get("contact") or "",
+        "verificado": bool(a.get("verificado")),
+        "is_destaque": bool(a.get("is_destaque")),
+        "destaque_until": a.get("destaque_until") or "",
+        "criado_em": a.get("created_at") or "",
+        "status": a.get("status") or "ativa",
+    }
+    resposta = jsonify({"ok": True, "anuncio": payload})
+    if origin and _cors_ok():
+        resposta.headers["Access-Control-Allow-Origin"] = origin
+    resposta.headers["Vary"] = "Origin"
+    return resposta
+
+
+@bp.route("/api/item", methods=["GET"])
+def api_item():
+    if _rate_limited("api_item", _RATE_LIMIT_TRACK_PER_MIN):
+        return jsonify({"ok": False, "error": "rate limit"}), 429
+    origin = request.headers.get("Origin") or ""
+    nome = (request.args.get("nome") or "").strip()
+    payload = {"item": nome, "ok": True}
+    if nome:
+        payload["info"] = _iteminfo(nome)
+        payload["referencia"] = _ref_de_preco(nome)
+    response = jsonify(payload)
     if origin and _cors_ok():
         response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Vary"] = "Origin"

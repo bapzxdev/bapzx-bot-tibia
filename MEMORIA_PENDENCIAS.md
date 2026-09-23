@@ -1,4 +1,50 @@
-﻿## LOG v2.7.8 (19/09/2026) - Analytics: corrigido NameError na tabela "Serviços mais vendidos"
+﻿## LOG v2.10.5 (23/09/2026) - Página de detalhes do anúncio + info do item via Wiki
+- Pedido do dono: clicar num anúncio da listagem MARKTRADE deve abrir uma página
+  de **detalhes dinâmica**, que busca tier/atributos/requisitos/peso/preço de
+  referência/histórico **automaticamente no Tibia Wiki**.
+- painel.py (VERSION **2.10.5**, bot.py segue 2.10.4):
+  - **GET `/api/troca/<id>`**: anúncio individual com `status` incluído;
+    `_fetch_public` com `id=eq.<id>&status=eq.ativa` `range_="0-0"`; 404 + CORS
+    se não achar; mesmo rate-limit de `/api/troca`.
+  - **GET `/api/item?nome=`** (cache 2min `_ITEMINFO_CACHE`): consulta o
+    TibiaWiki **server-side** (`action=parse&redirects=1&prop=wikitext`,
+    `formatversion=2`, User-Agent BAPZX-MARKTRADE, retry com UA neutro em
+    403/429, timeout `(5,15)`) — parse da `{{Infobox_Item` (`_iteminfo_wiki`) e
+    limpeza de wikilinks (`_limpa_wiki`) → `info` com tier/nivel/vocacoes/
+    armor/peso/imbuement/resistencias/atributos/classificacao/vende_para/
+    compra_de/tipo_item/implementado (só campos preenchidos). Sem infobox/falha
+    → `{}`.
+  - `referencia` (`_ref_de_preco`): min/max/média/quantidade/última data a
+    partir dos **anúncios ativos do mesmo item** no próprio marketplace
+    (`item_name=ilike.*<nome>*`, ignora preço vazio) — **nunca inventa preço
+    externo**; `None` sem dados.
+- portfolio C:\DEV\MEUS PROJETOS\bapzx-portfolio:
+  - **`anuncio.html`** (nova): visual dark igual troca.html, `header.wrap.back`
+    + `.btn ghost` ("← Voltar para os anúncios" → troca.html) padrão do site;
+    lê `?id=`, valida formato, trata loading / id inválido / 404 /
+    falha de rede; renderiza tipo, status (Ativo/Vendido/Expirado), nome+tier,
+    data, categoria, sprite (fallback iniciais), preço ou "Aceitando ofertas",
+    mundo, anunciante (verificado), contato (email, pill), descrição (pre-wrap),
+    seção "Sobre o item" (ficha do Wiki) e "Preço de referência"; título da aba
+    dinâmico (`document.title`); busca `/api/item?nome=` só se houver nome e
+    info/referência são bônus (falha não quebra a página).
+  - **`troca.html`**: `.mk-card` virou `<a href="anuncio.html?id=...">`
+    (`aria-label`, `text-decoration:none`, `cursor:pointer`); **filtros
+    persistidos em `sessionStorage`** (`marktrade-filtros`, `saveState()` a cada
+    alteração de filtro e `restoreState()` + `syncChips()` no carregamento) para
+    o usuário voltar do detalhe com a lista como deixou.
+- Testes: **+10 novos** em test_marketplace (api_troca detalhe encontrado/nao
+  encontrado/rate-limit/CORS origem fora, api_item sem nome/com info,
+  iteminfo_wiki parsea infobox/sem tier/falha+vazio, ref_de_preco média/vazio).
+- Validado: py_compile OK; test_marketplace **56 OK**; test_coins **26 OK**;
+  JS check troca.html + anuncio.html OK; navegador mock fim-a-fim (filtro Soul
+  Core → clique → detalhe com Tier 3/atributos/preço referência → Voltar →
+  filtro restaurado; id inválido e 404 tratados).
+- **Pendente dono**: re-deploy no Render (v2.10.5 no /health) e validar ao
+  vivo: clicar num anúncio real (foto/atributos/referência de preço) e o botão
+  "Voltar" preservando os filtros.
+
+## LOG v2.7.8 (19/09/2026) - Analytics: corrigido NameError na tabela "Serviços mais vendidos"
 - Erro real-reportado no dashboard Analytics (`/admin/analytics`): quando havia
   serviços no período (`top_servicos` não-vazio), o generator de `serv_rows`
   (painel.py ~1341) referenciada `qtd` e `total` (variáveis inexistentes) em vez

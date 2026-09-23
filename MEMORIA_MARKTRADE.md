@@ -11,6 +11,11 @@ A página que vamos trabalhar AGORA é exclusivamente:
 **https://bapzxdev.github.io/bapzx-portfolio/troca.html**
 
 - Nome da página: MARKTRADE / Troca de Itens.
+- Faz parte do fluxo desta página (pedido do dono, implementado na v2.10.5) a
+  **tela de detalhes do anúncio** `anuncio.html` — ela é o destino do clique em
+  um card da listagem (`.mk-card` virou `<a href="anuncio.html?id=...">`) e
+  volta via "← Voltar para os anúncios" (padrão do site), preservando os
+  filtros da listagem em `sessionStorage`.
 
 ### REGRA PRINCIPAL
 
