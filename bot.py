@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _registra_invalidador_marketplac
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.10.1"
+VERSION = "2.10.2"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3181,6 +3181,12 @@ def cliente_troca():
         f"<a class='btn' target='_blank' rel='noopener' href='{PORTFOLIO_URL}troca.html'>Ver anúncios públicos</a>"
         "</div>"
         + _mk_consume_flash()
+        + (
+            "<div class='notice' style='color:#fbbf24'>Você está no <b>modo teste do dono</b> — "
+            "publicações e VIP são ativados sem gerar cobrança/Pix.</div>"
+            if email in MASTER_EMAILS
+            else ""
+        )
         + kpis
         + vip_card
         + tables
@@ -3269,6 +3275,29 @@ def cliente_troca_publicar():
     lid = criado.get("id")
     if not lid:
         return "Resposta inesperada do servidor.", 500
+
+    # Modo teste do dono (MASTER): publica ATIVADO direto, sem gerar Pix/QR.
+    if email in MASTER_EMAILS:
+        agora_iso = agora.isoformat(timespec="seconds")
+        patch = {
+            "status": "ativa",
+            "is_destaque": bool(destaque),
+            "expires_at": (agora + timedelta(days=_mk_duracao("duracao_publicacao_dias", 30))).isoformat(timespec="seconds"),
+            "updated_at": agora_iso,
+        }
+        if destaque:
+            patch["destaque_until"] = (agora + timedelta(days=_mk_duracao("duracao_destaque_dias", 30))).isoformat(timespec="seconds")
+        try:
+            requests.patch(
+                f"{STORE.url}/rest/v1/marketplace_listings?id=eq.{lid}",
+                headers=STORE._headers(),
+                json=patch,
+                timeout=15,
+            )
+        except Exception as exc:
+            print(f"[mk] falha ao ativar anúncio (modo teste) {lid}: {exc}")
+        _mk_flash("ok", "Anúncio publicado! (modo teste do dono — publicado sem cobrança).")
+        return redirect("/cliente/troca")
 
     preco_pub = _mk_preco("preco_publicacao", 2.99)
     preco_des = _mk_preco("preco_destaque", 5.00)
@@ -3488,6 +3517,21 @@ def cliente_troca_vip():
             return "Requisição inválida (CSRF).", 403
         preco_vip = _mk_preco("preco_vip", 12.99)
         ref, tipo_pag, valor = f"VIP-{email}", "vip", preco_vip
+        # Modo teste do dono (MASTER): ativa o VIP direto, sem gerar Pix/QR.
+        if email in MASTER_EMAILS:
+            dia = (datetime.utcnow() + timedelta(days=_mk_duracao("duracao_vip_dias", 30))).isoformat(timespec="seconds")
+            try:
+                requests.patch(
+                    f"{STORE.url}/rest/v1/profiles?email=eq.{email}",
+                    headers=STORE._headers(),
+                    json={"vip_until": dia},
+                    timeout=15,
+                )
+                _MK_VIP_CACHE.pop(email, None)
+            except Exception as exc:
+                return f"Falha ao ativar VIP: {exc}", 500
+            _mk_flash("ok", "VIP BAPZX ativado! (modo teste do dono — sem cobrança).")
+            return redirect("/cliente/troca/vip")
         try:
             response = requests.post(
                 f"{STORE.url}/rest/v1/marketplace_pagamentos",
@@ -3586,6 +3630,12 @@ def cliente_troca_vip():
         "<div class='welcome'><div><h2>VIP BAPZX</h2>"
         "<p>Plano mensal com selo de verificado no MARKTRADE e prioridade no atendimento.</p></div>"
         "<a class='btn ghost' href='/cliente/troca'>Voltar ao MARKTRADE</a></div>"
+        + (
+            "<div class='notice' style='color:#fbbf24'>Você está no <b>modo teste do dono</b> — "
+            "o VIP é ativado sem gerar cobrança/Pix.</div>"
+            if email in MASTER_EMAILS
+            else ""
+        )
         + status_card
         + assinar
     )

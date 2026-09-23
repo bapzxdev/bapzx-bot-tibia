@@ -4,6 +4,20 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.10.2 (23/09, modo teste do dono no MARKTRADE)**: quando o e-mail logado
+  está em `MASTER_EMAILS` (fallback `ADMIN_EMAILS`; dono =
+  lucascristianini1@gmail.com), a área do cliente **não gera Pix/QR**: publicar
+  anúncio ativa direto (status `ativa`, destaque/`destaque_until` se marcado,
+  via PATCH no Supabase) e assinar VIP grava `profiles.vip_until` direto (+
+  invalida `_MK_VIP_CACHE`), ambos com flash "modo teste do dono — publicado/
+  ativado sem cobrança". Clientes normais continuam no fluxo PIX (PUB-/DES-/
+  VIP-). Aviso âmbar "modo teste do dono" no topo de `/cliente/troca` e
+  `/cliente/troca/vip` quando MASTER. VERSION bot+painel **2.10.2**. Testes:
+  test_marketplace.py **40 OK** (novos: publicar MASTER ativa direto sem QR;
+  com destaque; VIP MASTER sem QR) e test_coins.py **26 OK**; py_compile OK.
+  **Próximo passo (dono): rodar local ou re-deploy no Render (v2.10.2) e
+  testar ao vivo com o e-mail MASTER.**
+
 - **v2.10.1 (23/09, MARKTRADE — ajustes pedidos pelo dono)**: (1) **Mundo**
   virou `<select>` com os **16 mundos** (`_MK_MUNDOS` em bot.py: Auroria,
   Belaria, Bellum, Drakaria, Eldrian, Elysian, Infernum I/II/III, Lunarian,

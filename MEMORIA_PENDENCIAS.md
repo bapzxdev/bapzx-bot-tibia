@@ -88,6 +88,28 @@
 
 Lista única de pendências, observações e bloqueios do projeto BAPZX / RUBINI COINS.
 
+## LOG v2.10.2 (23/09/2026) - MARKTRADE: modo teste do dono (sem Pix/QR)
+- Pedido do dono (testando o MARKTRADE ao vivo): na area de cliente nao gerar
+  QRCODE de pagamento para ele conseguir testar (email do dono
+  lucascristianini1@gmail.com).
+- bot.py (VERSION 2.10.2): se o email logado esta em `MASTER_EMAILS` (que cai
+  no fallback `ADMIN_EMAILS` = env com o email do dono), **publicar anuncio
+  ativa direto** (PATCH status=`ativa` + `expires_at`; com destaque marca
+  `is_destaque` + `destaque_until`) SEM criar `marketplace_pagamentos` e SEM
+  chamar `create_marketplace_pix` (sem QR). **Assinar VIP grava**
+  `profiles.vip_until` direto (PATCH + invalida `_MK_VIP_CACHE`) SEM Pix. Flash
+  informativo "modo teste do dono — publicado/ativado sem cobrança" e aviso
+  âmbar no topo de `/cliente/troca` e `/cliente/troca/vip` quando MASTER.
+- Clientes comuns continuam no fluxo normal de cobranca (PUB-/DES-/VIP- com QR).
+- Testes: test_marketplace.py **40 OK** (novos: `test_publicar_master_sem_qr_
+  ativa_direto`, `test_publicar_master_com_destaque_sem_qr`, `test_vip_master_
+  sem_qr_ativa_direto` — assert que ativa via PATCH e NAO cria pagamento);
+  regressao test_coins.py **26 OK**; py_compile OK.
+- **PENDENTE (dono)**: rodar local ou re-deploy no Render (v2.10.2 no /health)
+  e testar ao vivo com o email MASTER (publicar sem QR, destaque, VIP sem QR,
+  vitrine troca.html); apos validar, retomar as pendencias anteriores
+  (validações v2.7.x/v2.8.x/v2.9.x ao vivo, Google OAuth publish).
+
 ## LOG v2.10.1 (23/09/2026) - MARKTRADE: mundo em select (16 mundos), remoção do tipo de PvP e sprite automático do Wiki Tibia
 - Pedido do dono (ajustes sobre o marketplace da v2.10.0).
 - bot.py (VERSION 2.10.1): campo **Mundo** virou `<select>` com os **16 mundos**

@@ -731,6 +731,135 @@ class TestMkBot(unittest.TestCase):
         self.assertTrue(posts)
         self.assertEqual(posts[0]["sprite"], "https://www.tibiawiki.com.br/t/War_Hammer.gif")
 
+    def test_publicar_master_sem_qr_ativa_direto(self):
+        # Modo teste do dono (email em MASTER_EMAILS): publica ATIVADO direto,
+        # sem criar pagamento e sem chamar o Mercado Pago (sem QR).
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        posts = []
+        patches = []
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def fakepost(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            posts.append(body)
+            if url.rstrip("/").endswith("marketplace_listings"):
+                r = _FakeResp()
+                r.json = lambda: [{"id": 999}]
+                return r
+            return _FakeResp()
+
+        def fakepatch(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            patches.append(body)
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost), \
+             mock.patch.object(bot.requests, "patch", side_effect=fakepatch), \
+             mock.patch.object(bot, "create_marketplace_pix", side_effect=lambda *a, **k: (_ for _ in ()).throw(Exception("nao deve gerar QR"))):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+            })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
+        posts_supabase = [p for p in posts if "marketplace_listings" in p.get("_url", "")]
+        self.assertTrue(posts_supabase, "listing deve ser criado no Supabase")
+        self.assertFalse([p for p in posts if "marketplace_pagamentos" in p.get("_url", "")],
+                         "modo teste não deve criar pagamento/QR")
+        ativacao = [p for p in patches if "/marketplace_listings?id=eq." in p.get("_url", "")]
+        self.assertTrue(ativacao, "deve ativar o anúncio via PATCH no Supabase")
+        self.assertEqual(ativacao[0]["status"], "ativa")
+
+    def test_publicar_master_com_destaque_sem_qr(self):
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        posts = []
+        patches = []
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def fakepost(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            posts.append(body)
+            if url.rstrip("/").endswith("marketplace_listings"):
+                r = _FakeResp()
+                r.json = lambda: [{"id": 999}]
+                return r
+            return _FakeResp()
+
+        def fakepatch(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            patches.append(body)
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost), \
+             mock.patch.object(bot.requests, "patch", side_effect=fakepatch), \
+             mock.patch.object(bot, "create_marketplace_pix", side_effect=lambda *a, **k: (_ for _ in ()).throw(Exception("nao deve gerar QR"))):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "destaque": "1",
+            })
+        self.assertEqual(resp.status_code, 302)
+        ativacao = [p for p in patches if "/marketplace_listings?id=eq." in p.get("_url", "")]
+        self.assertTrue(ativacao, "deve ativar o anúncio via PATCH no Supabase")
+        self.assertEqual(ativacao[0]["status"], "ativa")
+        self.assertTrue(ativacao[0]["is_destaque"])
+        self.assertIn("destaque_until", ativacao[0])
+        self.assertFalse([p for p in posts if "marketplace_pagamentos" in p.get("_url", "")],
+                         "modo teste não deve criar pagamento/QR")
+
+    def test_vip_master_sem_qr_ativa_direto(self):
+        c = bot.app.test_client()
+        patches = []
+
+        def fakepatch(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            patches.append(body)
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot.requests, "post", side_effect=lambda *a, **k: (_ for _ in ()).throw(Exception("nao deve criar pagamento"))), \
+             mock.patch.object(bot, "create_marketplace_pix", side_effect=lambda *a, **k: (_ for _ in ()).throw(Exception("nao deve gerar QR"))), \
+             mock.patch.object(bot.requests, "patch", side_effect=fakepatch):
+            resp = c.post("/cliente/troca/vip", data={"_csrf": "tokenteste"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/cliente/troca/vip", resp.headers.get("Location", ""))
+        profile_patch = [p for p in patches if "/profiles?email=eq." in p.get("_url", "")]
+        self.assertTrue(profile_patch, "deve aplicar vip_until via PATCH no profiles")
+        self.assertIn("vip_until", profile_patch[0])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
