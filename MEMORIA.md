@@ -4,6 +4,35 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.10.11 (24/09, escudos + schema de 12 campos com categoria)**: a pedido
+  do dono, adicionados os **85 escudos** colados por ele ao banco local —
+  `mk_itens.py` agora com **455 itens** (54 armas + 151 capacetes + 165
+  armaduras + 85 escudos). Dados em `_mk_escudos_dados.py` (gitignored,
+  transcritos do envio com slots/def/bonus/protecao/peso/drop; as **8 aljavas**
+  listadas junto na seção de escudos foram deixadas de fora e entram pelo
+  módulo de aljavas quando o dono mandar a seção). **Schema novo de 12
+  campos**: `[nome, nivel, vocacao, tipo_dano, bonus, protecao, dano_medio,
+  slots, tier, peso, drop, categoria]` — toda a base ganhou a coluna
+  `categoria` ("Armas", "Capacetes", "Armaduras", "Escudos"). Rótulo dinâmico
+  do `dano_medio` agora decide por **categoria**: Armas→"Dano Médio",
+  Escudos/Spellbooks→"Defesa", Aljavas→"Volume", demais→"Armadura".
+  Escudos: `tipo_dano=""`, `dano_medio`=Def (rótulo "Defesa"), `tier=""`.
+  Código: `painel._ficha_local` campos +"categoria"; `bot.py` `_MK_AC_SCRIPT`
+  `rotuloDano(it)` (com fallback legado por tipo_dano); `anuncio.html`
+  (portfolio) `rotuloDano(ficha)` no bloco da ficha local. Gerador
+  `_mk_gera_capacetes.py` atualizado (categoria no dict, armas do HEAD com 11
+  ou 12 campos, filtro por categoria, contadores no cabeçalho). VERSION
+  bot.py e painel.py **2.10.11**. Validado: py_compile OK; node --check no JS
+  (bot + anuncio); test_marketplace **67 OK** (+3: test_ficha_local_escudo
+  Demon Shield = "Defesa" 46, test_ficha_local_escudo_sem_def Adamant Shield,
+  test_db_itens_schema_12_campos_sem_duplicados); test_coins **26 OK** (93
+  total). Rótulos conferidos fim-a-fim via node com dados reais (Demon
+  Shield→Defesa 46, Amazon Armor→Armadura 13, Hailstorm Rod→Dano Médio 65,
+  Adamant Shield→Defesa vazio). Pendência: re-deploy no Render + GitHub Pages
+  (Render ainda em v2.10.8, 3 versões atrás); **aguardando o dono colar as
+  demais seções do envio (pernas, spellbooks, botas, aljavas, fetiches)**
+  para as próximas categorias.
+
 +- **v2.10.10 (24/09, armaduras no banco local)**: adicionadas as **165
 +  armaduras** que o dono colou (`_mk_armas_dados.py`, gitignored — transcritas
 +  do envio com arm/slots/tier/peso; sem coluna de sprite). Gerador

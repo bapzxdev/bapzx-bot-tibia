@@ -1151,6 +1151,29 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(ficha.get("tipo_dano", ""), "")
         self.assertEqual(ficha.get("dano_medio", ""), "")
 
+    def test_ficha_local_escudo(self):
+        ficha = painel._ficha_local("Demon Shield")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["nome"], "Demon Shield")
+        self.assertEqual(ficha.get("tipo_dano", ""), "")
+        self.assertEqual(ficha["dano_medio"], "46")
+        self.assertEqual(ficha["categoria"], "Escudos")
+        self.assertEqual(ficha["slots"], "1")
+        self.assertEqual(ficha["peso"], "26.00")
+
+    def test_ficha_local_escudo_sem_def(self):
+        ficha = painel._ficha_local("Adamant Shield")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Escudos")
+        self.assertEqual(ficha.get("dano_medio", ""), "")
+
+    def test_db_itens_schema_12_campos_sem_duplicados(self):
+        nomes = [it[0].lower() for it in bot._MK_ITENS_DB]
+        self.assertEqual(len(nomes), len(set(nomes)), "nomes duplicados no mk_itens.py")
+        for it in bot._MK_ITENS_DB:
+            self.assertEqual(len(it), 12, it[0])
+            self.assertIn(it[11], ("Armas", "Capacetes", "Armaduras", "Escudos"), it[0])
+
     def test_ficha_local_item_fora_da_base_e_none(self):
         self.assertIsNone(painel._ficha_local("Sword of the Unknown"))
         self.assertIsNone(painel._ficha_local(""))

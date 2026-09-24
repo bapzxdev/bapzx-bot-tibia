@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.10"
+VERSION = "2.10.11"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -460,10 +460,16 @@ _MK_AC_SCRIPT = ("""
     if (!it) return;
     campo.value = it[0];
     dd.hidden = true;
-    var init = campo.value.charAt(0);
+    function rotuloDano(e) {
+      if (!e[11]) return e[3] ? "Dano Médio" : "Armadura";
+      if (e[11] === "Armas") return "Dano Médio";
+      if (e[11] === "Escudos" || e[11] === "Spellbooks") return "Defesa";
+      if (e[11] === "Aljavas") return "Volume";
+      return "Armadura";
+    }
     var linhas = [
       ["Nível", it[1]], ["Vocação", it[2]], ["Tipo de dano", it[3]], ["Bônus", it[4]],
-      ["Proteção", it[5]], [it[3] ? "Dano Médio" : "Armadura", it[6]], ["Slots", it[7]], ["Tier", it[8]], ["Peso", it[9]]
+      ["Proteção", it[5]], [rotuloDano(it), it[6]], ["Slots", it[7]], ["Tier", it[8]], ["Peso", it[9]]
     ].filter(function (p) { return p[1] !== "" && p[1] != null; });
     ficha.innerHTML =
       "<h4>" + esc(it[0]) + "</h4>" +

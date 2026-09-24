@@ -1,8 +1,9 @@
 # Banco de itens (MK_PUBLICAR) - usado no autocomplete de "Publicar anúncio".
 # Campos: nome, nivel, vocacao, tipo_dano, bonus, protecao, dano_medio,
-# slots, tier, peso, drop.
-# Armas: tipo_dano = elemento, dano_medio = atk. Capacetes/armaduras: tipo_dano = "",
-# dano_medio = Arm (Armadura). Total de itens: 370 (armas 54, capacetes 151, armaduras 165).
+# slots, tier, peso, drop, categoria.
+# Armas: tipo_dano = elemento, dano_medio = atk. Capacetes/armaduras:
+# dano_medio = Arm (rotulo "Armadura"). Escudos: dano_medio = Def (rotulo "Defesa").
+# Total de itens: 455 (armas 54, capacetes 151, armaduras 165, escudos 85).
 
 _MK_ITENS_DB = [
  [
@@ -17,6 +18,7 @@ _MK_ITENS_DB = [
   "",
   "27.00",
   "Adept of the Cult, Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Moonlight Rod",
@@ -30,6 +32,7 @@ _MK_ITENS_DB = [
   "",
   "21.00",
   "Adept of the Cult, Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Necrotic Rod",
@@ -43,6 +46,7 @@ _MK_ITENS_DB = [
   "",
   "21.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Snakebite Rod",
@@ -56,6 +60,7 @@ _MK_ITENS_DB = [
   "",
   "19.00",
   "Baleful Bunny, Black Sphinx Acolyte, Cobra Vizier, Faceless Bane, Golgordan, Latrivan, Lizard Snakecharmer, Minotaur Cult Zealot, Serpent Spawn, Worm Priestess, Young Goanna.",
+  "Armas",
  ],
  [
   "Springsprout Rod",
@@ -69,6 +74,7 @@ _MK_ITENS_DB = [
   "",
   "27.00",
   "Adept of the Cult, Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Terra Rod",
@@ -82,6 +88,7 @@ _MK_ITENS_DB = [
   "",
   "25.00",
   "Acolyte of the Cult, Adult Goanna, Blemished Spawn, Bloated Man-Maggot, Bonelord, Cobra Vizier, Devourer (Criatura), Drume, Elder Forest Fury, Faceless Bane, Flimsy Lost Soul, Fury, Infernal Phantom, Irgix the Flimsy, Jungle Moister, Lizard Snakecharmer, Madareth, Marid, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Underworld Rod",
@@ -95,6 +102,7 @@ _MK_ITENS_DB = [
   "",
   "29.00",
   "Adept of the Cult, Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Northwind Rod",
@@ -108,6 +116,7 @@ _MK_ITENS_DB = [
   "",
   "29.00",
   "Adept of the Cult, Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Shimmer Rod",
@@ -121,6 +130,7 @@ _MK_ITENS_DB = [
   "",
   "31.00",
   "Adept of the Cult, Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon.",
+  "Armas",
  ],
  [
   "Glacial Rod",
@@ -134,6 +144,7 @@ _MK_ITENS_DB = [
   "",
   "37.00",
   "Droga: Animated Feather, Blemished Spawn, Blightwalker, Bluebeak, Burster Spectre, Crazed Winter Rearguard, Crystal Wolf, Dark Carnisylvan, Faceless Bane, Flimsy Lost Soul, Ice Witch, Infernal Phantom, Irgix the Flimsy, Madareth, Marid, Melting Frozen Horror, Priestess, The Sandking, Tremendous Tyrant, Varnished Diremaw, Werehyaena Shaman. Durante Eventos: Animated Snowman, Ice Dragon, Ice Dragon, Ice Dragon.",
+  "Armas",
  ],
  [
   "Muck Rod",
@@ -147,6 +158,7 @@ _MK_ITENS_DB = [
   "",
   "37.00",
   "Droga: Carnisylvan, ... Durante Invasões: Oodok Witchmaster.",
+  "Armas",
  ],
  [
   "The Chiller",
@@ -160,6 +172,7 @@ _MK_ITENS_DB = [
   "",
   "15.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Ogre Scepta",
@@ -173,6 +186,7 @@ _MK_ITENS_DB = [
   "",
   "29.00",
   "Ogre Sage, Ogre Shaman, Shaper Matriarch.",
+  "Armas",
  ],
  [
   "Rod of Destruction",
@@ -186,6 +200,7 @@ _MK_ITENS_DB = [
   "",
   "27.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Sorcerer and Druid Staff",
@@ -199,6 +214,7 @@ _MK_ITENS_DB = [
   "",
   "19.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "The Scorcher",
@@ -212,6 +228,7 @@ _MK_ITENS_DB = [
   "",
   "15.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Wand of Vortex",
@@ -225,6 +242,7 @@ _MK_ITENS_DB = [
   "",
   "19.00",
   "Novice of the Cult.",
+  "Armas",
  ],
  [
   "Wand of Dragonbreath",
@@ -238,6 +256,7 @@ _MK_ITENS_DB = [
   "",
   "23.00",
   "Cinder Wyrmling, Crazed Summer Vanguard, Dark Apprentice, Fire Devil, Inkwing, Insane Siren, Manticore, Menacing Carnivor, Herald of Fire.",
+  "Armas",
  ],
  [
   "Wand of Decay",
@@ -251,6 +270,7 @@ _MK_ITENS_DB = [
   "",
   "23.00",
   "Candy Horror, Dark Apprentice, Knowledge Elemental, Menacing Carnivor, Merlkin, Ogre Shaman, Orc Cult Priest, Orc Shaman, Priestess Of The Wild Sun, Shaper Matriarch, Venerable Girtablilu.",
+  "Armas",
  ],
  [
   "Wand of Draconia",
@@ -264,6 +284,7 @@ _MK_ITENS_DB = [
   "",
   "27.00",
   "Blistering Fire Elemental, Crazed Summer Vanguard, Elder Wyrm, Feral Sphinx, Gazer Spectre, Insane Siren, Magma Crawler, Manticore, Ogre Rowdy, Seacrest Serpent, Wyrm.",
+  "Armas",
  ],
  [
   "Wand of Cosmic Energy",
@@ -277,6 +298,7 @@ _MK_ITENS_DB = [
   "",
   "25.00",
   "Amenef The Burning, Arachnophobica, Blemished Spawn, Burster Spectre, Clavius, Diamond Servant, Diamond Servant Replica, Elf Arcanist, Energy Elemental, Flimsy Lost Soul, Gorzindel, High Voltage Elemental, Irgix the Flimsy, Knowledge Elemental, Mercurial Menace, Minotaur Mage, Quara Hydromancer, Quara Hydromancer Scout, Raubritter Chastener, Realityquake, Renegade Quara Hydromancer, Souleater, Sparkion, Spectre, Thanatursus, Tremendous Tyrant, Twisted Shaper, Usurper Warlock, Venerable Girtablilu, Yielothax.",
+  "Armas",
  ],
  [
   "Wand of Inferno",
@@ -290,6 +312,7 @@ _MK_ITENS_DB = [
   "",
   "27.00",
   "Amenef The Burning, Arbaziloth, Dawnfire Asura, Dragon, Draken Spellweaver, Efreet, Eldritch Dragon Lord, Enlightened of the Cult, Essence Of Malice, Feral Sphinx, Gazer Spectre, Gravedigger, Guardian Of Tales, Hand of Cursed Fate, Hellfire Fighter, Hellhound, Insane Siren, Lava Golem, Lizard Dragon Priest, Lokathmor, Madareth, Massive Fire Elemental, Ogre Rowdy, Shaburak Demon, Shaburak Lord, Shaburak Prince, The Baron from Below, The Count Of The Core, The Duke Of The Depths, Thornfire Wolf, True Dawnfire Asura, Vulcongra, Wrathful Archivist, Wyvern.",
+  "Armas",
  ],
  [
   "Wand of Dimensions",
@@ -303,6 +326,7 @@ _MK_ITENS_DB = [
   "",
   "28.00",
   "Mazzinor.",
+  "Armas",
  ],
  [
   "Wand of Starstorm",
@@ -316,6 +340,7 @@ _MK_ITENS_DB = [
   "",
   "25.50",
   "Amenef The Burning, Blemished Spawn, Clavius, Converter, Dark Carnisylvan, Elder Wyrm, Energuardian Of Tales, Flimsy Lost Soul, Headpecker, Infernal Phantom, Irgix the Flimsy, Lloyd, Madareth, Massive Energy Elemental, Mazzinor, Menacing Carnivor, Overcharged Energy Elemental, Poisonous Carnisylvan, Raubritter Chastener, Retching Horror, Shulgrax, Sphinx, Tremendous Tyrant, Usurper Warlock, Varnished Diremaw, Werehyaena Shaman, Wyrm.",
+  "Armas",
  ],
  [
   "Shimmer Wand",
@@ -329,6 +354,7 @@ _MK_ITENS_DB = [
   "",
   "31.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Wand of Darkness",
@@ -342,6 +368,7 @@ _MK_ITENS_DB = [
   "",
   "32.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Wand of Voodoo",
@@ -355,6 +382,7 @@ _MK_ITENS_DB = [
   "",
   "28.50",
   "Black Sphinx Acolyte, Burster Spectre, Carnivostrich, Draken Abomination, Drume, Flimsy Lost Soul, Ghulosh, Grimeleech, Infernal Phantom, Madareth, Menacing Carnivor, Shaper Matriarch, Sharpclaw, Usurper Commander, Undertaker, Venerable Girtablilu, Werebadger, Werehyaena Shaman. Durante Invasões: Feroxa (Mortal).",
+  "Armas",
  ],
  [
   "Ferumbras' Staff (Wand)",
@@ -368,6 +396,7 @@ _MK_ITENS_DB = [
   "",
   "22.50",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Wand of Defiance",
@@ -381,6 +410,7 @@ _MK_ITENS_DB = [
   "",
   "37.00",
   "Bulltaur Forgepriest, Cliff Strider, Essence Of Malice, Harpy, Lady Tenebris, Mercurial Menace, Norcferatu Nightweaver, Orewalker, Seacrest Serpent, Sphinx, Thanatursus, The Souldespoiler, Venerable Girtablilu. Durante Invasões: Mawhawk.",
+  "Armas",
  ],
  [
   "Wand of Everblazing",
@@ -394,6 +424,7 @@ _MK_ITENS_DB = [
   "",
   "37.00",
   "Adventurer Group, Essence Of Malice, Lava Golem, Magma Crawler, Manticore, Mazoran, Ogre Rowdy, Priestess Of The Wild Sun, Rage Squid, The Source Of Corruption, Weeper, Gaffir. Durante Invasões: Furyosa.",
+  "Armas",
  ],
  [
   "Dream Blossom Staff",
@@ -407,6 +438,7 @@ _MK_ITENS_DB = [
   "",
   "32.00",
   "Boogy, Dark Faun, Mercurial Menace, Nymph, Pixie, Pooka, Sugar Mommy.",
+  "Armas",
  ],
  [
   "Ferumbras' Staff (Enchanted Wand)",
@@ -420,6 +452,7 @@ _MK_ITENS_DB = [
   "",
   "34.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Jungle Wand",
@@ -433,6 +466,7 @@ _MK_ITENS_DB = [
   "",
   "32.00",
   "Ratmiral Blackwhiskers",
+  "Armas",
  ],
  [
   "Deepling Ceremonial Dagger",
@@ -446,6 +480,7 @@ _MK_ITENS_DB = [
   "",
   "32.00",
   "Brokul",
+  "Armas",
  ],
  [
   "Energized Limb",
@@ -459,6 +494,7 @@ _MK_ITENS_DB = [
   "",
   "27.00",
   "Maxxenius.",
+  "Armas",
  ],
  [
   "Wand of Destruction",
@@ -472,6 +508,7 @@ _MK_ITENS_DB = [
   "",
   "35.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Lion Wand",
@@ -485,6 +522,7 @@ _MK_ITENS_DB = [
   "",
   "21.00",
   "Ancient Lion Knight, Drume.",
+  "Armas",
  ],
  [
   "Deepling Fork",
@@ -498,6 +536,7 @@ _MK_ITENS_DB = [
   "",
   "33.00",
   "Brokul.",
+  "Armas",
  ],
  [
   "Eldritch Wand",
@@ -511,6 +550,7 @@ _MK_ITENS_DB = [
   "",
   "36.00",
   "The Brainstealer.",
+  "Armas",
  ],
  [
   "Gilded Eldritch Wand",
@@ -524,6 +564,7 @@ _MK_ITENS_DB = [
   "",
   "37.00",
   "The Brainstealer.",
+  "Armas",
  ],
  [
   "Naga Wand",
@@ -537,6 +578,7 @@ _MK_ITENS_DB = [
   "",
   "28.00",
   "Timira the Many-Headed",
+  "Armas",
  ],
  [
   "Cobra Wand",
@@ -550,6 +592,7 @@ _MK_ITENS_DB = [
   "",
   "19.00",
   "Scarlett Etzel, Gaffir.",
+  "Armas",
  ],
  [
   "Draining Inferniarch Wand",
@@ -563,6 +606,7 @@ _MK_ITENS_DB = [
   "",
   "24.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Falcon Wand",
@@ -576,6 +620,7 @@ _MK_ITENS_DB = [
   "",
   "33.00",
   "Grand Canon Dominus, Grand Master Oberon.",
+  "Armas",
  ],
  [
   "Inferniarch Wand",
@@ -589,6 +634,7 @@ _MK_ITENS_DB = [
   "",
   "24.00",
   "Arbaziloth.",
+  "Armas",
  ],
  [
   "Rending Inferniarch Wand",
@@ -602,6 +648,7 @@ _MK_ITENS_DB = [
   "",
   "24.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Siphoning Inferniarch Wand",
@@ -615,6 +662,7 @@ _MK_ITENS_DB = [
   "",
   "24.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Amber Wand",
@@ -628,6 +676,7 @@ _MK_ITENS_DB = [
   "",
   "20.00",
   "The Rootkraken.",
+  "Armas",
  ],
  [
   "Soultainter",
@@ -641,6 +690,7 @@ _MK_ITENS_DB = [
   "",
   "19.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Crypt Bile",
@@ -654,6 +704,7 @@ _MK_ITENS_DB = [
   "",
   "20.00",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Grand Sanguine Coil",
@@ -667,6 +718,7 @@ _MK_ITENS_DB = [
   "",
   "21.00",
   "Bakragore dentro de uma Bag You Covet.",
+  "Armas",
  ],
  [
   "Sanguine Coil",
@@ -680,6 +732,7 @@ _MK_ITENS_DB = [
   "",
   "22.00",
   "Bakragore, Chagorz, Ichgahal, Murcion e Vemiath, dentro de uma Bag You Covet.",
+  "Armas",
  ],
  [
   "Moonsilver Channeler",
@@ -693,6 +746,7 @@ _MK_ITENS_DB = [
   "",
   "23.50",
   "Phosphorus.",
+  "Armas",
  ],
  [
   "Stellar Moonsilver Channeler",
@@ -706,6 +760,7 @@ _MK_ITENS_DB = [
   "",
   "24.80",
   "Ninguém.",
+  "Armas",
  ],
  [
   "Amazon Helmet",
@@ -719,6 +774,7 @@ _MK_ITENS_DB = [
   "4",
   "29.50",
   "Durante Invasões:\nOrc Warlord.",
+  "Capacetes",
  ],
  [
   "Ancient Tiara",
@@ -732,6 +788,7 @@ _MK_ITENS_DB = [
   "4",
   "24.00",
   "Durante Eventos:\nElf Arcanist,\nRescelus.",
+  "Capacetes",
  ],
  [
   "Bandana",
@@ -745,6 +802,7 @@ _MK_ITENS_DB = [
   "2",
   "2.00",
   "Durante Eventos:\nAmazon,\nGozzan Elite,\nSainted Amazon.",
+  "Capacetes",
  ],
  [
   "Blue Spectacles",
@@ -758,6 +816,7 @@ _MK_ITENS_DB = [
   "3",
   "2.50",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Bonelord Helmet",
@@ -771,6 +830,7 @@ _MK_ITENS_DB = [
   "3",
   "5.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Brass Helmet",
@@ -784,6 +844,7 @@ _MK_ITENS_DB = [
   "1",
   "63.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Bridal Wreath",
@@ -797,6 +858,7 @@ _MK_ITENS_DB = [
   "2",
   "3.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Broken Iks Headpiece",
@@ -810,6 +872,7 @@ _MK_ITENS_DB = [
   "4",
   "30.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Broken Visor",
@@ -823,6 +886,7 @@ _MK_ITENS_DB = [
   "2",
   "7.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Ceremonial Mask",
@@ -836,6 +900,7 @@ _MK_ITENS_DB = [
   "3",
   "12.00",
   "Durante Eventos:\nWitch,\nWitch Knight.",
+  "Capacetes",
  ],
  [
   "Chain Helmet",
@@ -849,6 +914,7 @@ _MK_ITENS_DB = [
   "1",
   "30.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Charmer's Tiara",
@@ -862,6 +928,7 @@ _MK_ITENS_DB = [
   "4",
   "9.00",
   "Lady Bufon,\nMorax the Magnificent,\nSirhide,\nThe Charmer.",
+  "Capacetes",
  ],
  [
   "Charred Mask",
@@ -875,6 +942,7 @@ _MK_ITENS_DB = [
   "4",
   "25.00",
   "The Charmer.",
+  "Capacetes",
  ],
  [
   "Cobra Crown",
@@ -888,6 +956,7 @@ _MK_ITENS_DB = [
   "4",
   "35.00",
   "Scarlett Etzel.",
+  "Capacetes",
  ],
  [
   "Crown",
@@ -901,6 +970,7 @@ _MK_ITENS_DB = [
   "1",
   "25.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Crown Helmet",
@@ -914,6 +984,7 @@ _MK_ITENS_DB = [
   "1",
   "15.00",
   "Durante Eventos:\nGolden Knight,\nGygnus the Undefeated.",
+  "Capacetes",
  ],
  [
   "Crusader Helmet",
@@ -927,6 +998,7 @@ _MK_ITENS_DB = [
   "1",
   "36.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Damaged Helmet",
@@ -940,6 +1012,7 @@ _MK_ITENS_DB = [
   "2",
   "10.50",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Dark Helmet",
@@ -953,6 +1026,7 @@ _MK_ITENS_DB = [
   "1",
   "26.50",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Demon Helmet",
@@ -966,6 +1040,7 @@ _MK_ITENS_DB = [
   "3",
   "41.00",
   "Durante Invasões:\nDemon,\nDemon Master,\nAnkrahm,\nAngry Demon,\nFerumbras Mortal Shell,\nHeralds of the Air,\nManiacal Demon,\nManiacal Demon Killer,\nMercyless Flame,\nRift Demon,\nRozelie the Pale,\nSilencer.",
+  "Capacetes",
  ],
  [
   "Devil Helmet",
@@ -979,6 +1054,7 @@ _MK_ITENS_DB = [
   "1",
   "44.00",
   "Blazing Fire Elemental,\nOtherworldly Entity,\nQuara Predator,\nSearing Fire Elemental,\nServant Golem,\nSpark of Destruction,\nThe Many,\nVolatile Fire Elemental.",
+  "Capacetes",
  ],
  [
   "Dragon Scale Helmet",
@@ -992,6 +1068,7 @@ _MK_ITENS_DB = [
   "3",
   "20.50",
   "Durante Eventos:\nDragon,\nGreater Dragon.",
+  "Capacetes",
  ],
  [
   "Dwarven Helmet",
@@ -1005,6 +1082,7 @@ _MK_ITENS_DB = [
   "1",
   "38.00",
   "Durante Invasões:\nDwarf Elder,\nDwarf Guard,\nDwarf Henchman,\nDwarf King,\nDwarf Soldier,\nDwarf Worker,\nFrost Giant,\nFrost Giantess,\nKreebosh the Exile,\nMarx the Undefeated,\nSkullhunter,\nSnow Gnome,\nWar Golem (Durante Invasões),\nYeti.",
+  "Capacetes",
  ],
  [
   "Feather Headdress",
@@ -1018,6 +1096,7 @@ _MK_ITENS_DB = [
   "2",
   "7.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Ferumbras' Candy Hat",
@@ -1031,6 +1110,7 @@ _MK_ITENS_DB = [
   "2",
   "8.50",
   "Durante Eventos:\nFerumbras Mortal Shell.",
+  "Capacetes",
  ],
  [
   "Ferumbras' Hat",
@@ -1044,6 +1124,7 @@ _MK_ITENS_DB = [
   "2",
   "27.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Flower Wreath",
@@ -1057,6 +1138,7 @@ _MK_ITENS_DB = [
   "2",
   "1.50",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Full Helmet of the Ancients",
@@ -1070,6 +1152,7 @@ _MK_ITENS_DB = [
   "2",
   "28.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Fur Cap",
@@ -1083,6 +1166,7 @@ _MK_ITENS_DB = [
   "1",
   "19.00",
   "Durante Eventos:\nBear,\nHuntress.",
+  "Capacetes",
  ],
  [
   "Glacier Mask",
@@ -1096,6 +1180,7 @@ _MK_ITENS_DB = [
   "2",
   "3.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Golden Crown",
@@ -1109,6 +1194,7 @@ _MK_ITENS_DB = [
   "3",
   "13.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Golden Helmet",
@@ -1122,6 +1208,7 @@ _MK_ITENS_DB = [
   "3",
   "36.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Golden Horned Helmet",
@@ -1135,6 +1222,7 @@ _MK_ITENS_DB = [
   "2",
   "31.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Green Demon Helmet",
@@ -1148,6 +1236,7 @@ _MK_ITENS_DB = [
   "3",
   "41.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Gryphon Mask",
@@ -1161,6 +1250,7 @@ _MK_ITENS_DB = [
   "2",
   "24.00",
   "Durante Eventos:\nKing Tibianus,\nPillar of Death (Durante Eventos),\nRukel the Destroyer.",
+  "Capacetes",
  ],
  [
   "Hat of the Mad",
@@ -1174,6 +1264,7 @@ _MK_ITENS_DB = [
   "1",
   "3.00",
   "Durante Invasões:\nBanshee,\nDark Apprentice,\nDark Magician,\nDemon,\nDemon Master,\nGrim Reaper,\nLethal Lissy,\nNeutral Demon,\nNightmare,\nPhantasm,\nWraith.",
+  "Capacetes",
  ],
  [
   "Helmet of Nature",
@@ -1187,6 +1278,7 @@ _MK_ITENS_DB = [
   "3",
   "15.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Helmet of the Ancients",
@@ -1200,6 +1292,7 @@ _MK_ITENS_DB = [
   "2",
   "10.00",
   "Durante Eventos:\nMadareth.",
+  "Capacetes",
  ],
  [
   "Helmet of the Deep",
@@ -1213,6 +1306,7 @@ _MK_ITENS_DB = [
   "3",
   "22.00",
   "Durante Invasões:\nDragon,\nGreater Dragon,\nWyrm (Durante Eventos).",
+  "Capacetes",
  ],
  [
   "Helmet of The Lost",
@@ -1226,6 +1320,7 @@ _MK_ITENS_DB = [
   "3",
   "23.00",
   "Durante Eventos:\nThe Lost.",
+  "Capacetes",
  ],
  [
   "Helmet of Ultimate Terror",
@@ -1239,6 +1334,7 @@ _MK_ITENS_DB = [
   "2",
   "45.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Horned Helmet",
@@ -1252,6 +1348,7 @@ _MK_ITENS_DB = [
   "1",
   "32.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Horseman Helmet",
@@ -1265,6 +1362,7 @@ _MK_ITENS_DB = [
   "1",
   "43.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Incandescent Crown",
@@ -1278,6 +1376,7 @@ _MK_ITENS_DB = [
   "2",
   "25.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Iron Crown",
@@ -1291,6 +1390,7 @@ _MK_ITENS_DB = [
   "1",
   "21.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Iron Helmet",
@@ -1304,6 +1404,7 @@ _MK_ITENS_DB = [
   "1",
   "40.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Ivory Mask",
@@ -1317,6 +1418,7 @@ _MK_ITENS_DB = [
   "2",
   "21.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Jester Hat",
@@ -1330,6 +1432,7 @@ _MK_ITENS_DB = [
   "3",
   "4.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Krimhorn Helmet",
@@ -1343,6 +1446,7 @@ _MK_ITENS_DB = [
   "2",
   "31.00",
   "Durante Eventos:\nSoul Maiden,\nSoul Rider.",
+  "Capacetes",
  ],
  [
   "Laurel Wreath",
@@ -1356,6 +1460,7 @@ _MK_ITENS_DB = [
   "2",
   "1.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Leaf Crown",
@@ -1369,6 +1474,7 @@ _MK_ITENS_DB = [
   "2",
   "6.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Leather Helmet",
@@ -1382,6 +1488,7 @@ _MK_ITENS_DB = [
   "1",
   "11.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Legion Helmet",
@@ -1395,6 +1502,7 @@ _MK_ITENS_DB = [
   "1",
   "35.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Light Bandana",
@@ -1408,6 +1516,7 @@ _MK_ITENS_DB = [
   "2",
   "0.50",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Lightning Headband",
@@ -1421,6 +1530,7 @@ _MK_ITENS_DB = [
   "2",
   "3.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Mage Hat",
@@ -1434,6 +1544,7 @@ _MK_ITENS_DB = [
   "1",
   "6.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Mage's Cap",
@@ -1447,6 +1558,7 @@ _MK_ITENS_DB = [
   "1",
   "13.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Magician Hat",
@@ -1460,6 +1572,7 @@ _MK_ITENS_DB = [
   "2",
   "7.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Magma Monocle",
@@ -1473,6 +1586,7 @@ _MK_ITENS_DB = [
   "3",
   "2.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Mighty Helm of Green Sparks",
@@ -1486,6 +1600,7 @@ _MK_ITENS_DB = [
   "3",
   "35.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Mining Helmet",
@@ -1499,6 +1614,7 @@ _MK_ITENS_DB = [
   "2",
   "18.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Mining Helmet (Budrik)",
@@ -1512,6 +1628,7 @@ _MK_ITENS_DB = [
   "2",
   "18.00",
   "Budrik Ditob.",
+  "Capacetes",
  ],
  [
   "Mirror Mask",
@@ -1525,6 +1642,7 @@ _MK_ITENS_DB = [
   "2",
   "17.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Mystic Turban",
@@ -1538,6 +1656,7 @@ _MK_ITENS_DB = [
   "2",
   "8.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Odd Hat",
@@ -1551,6 +1670,7 @@ _MK_ITENS_DB = [
   "1",
   "8.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Pair of Earmuffs",
@@ -1564,6 +1684,7 @@ _MK_ITENS_DB = [
   "2",
   "0.10",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Party Hat",
@@ -1577,6 +1698,7 @@ _MK_ITENS_DB = [
   "2",
   "7.00",
   "Durante Eventos:\nSun-Touched Boar.",
+  "Capacetes",
  ],
  [
   "Pirate Hat",
@@ -1590,6 +1712,7 @@ _MK_ITENS_DB = [
   "1",
   "22.00",
   "Durante Invasões:\nPirate Buccaneer,\nPirate Cutthroat,\nPirate Ghost,\nPirate Marauder,\nPirate Sculptor.",
+  "Capacetes",
  ],
  [
   "Porcelain Mask",
@@ -1603,6 +1726,7 @@ _MK_ITENS_DB = [
   "2",
   "5.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Post Officer's Hat",
@@ -1616,6 +1740,7 @@ _MK_ITENS_DB = [
   "2",
   "9.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Ragnir Helmet",
@@ -1629,6 +1754,7 @@ _MK_ITENS_DB = [
   "2",
   "38.00",
   "Durante Eventos:\nRagnir.",
+  "Capacetes",
  ],
  [
   "Reflecting Crown",
@@ -1642,6 +1768,7 @@ _MK_ITENS_DB = [
   "2",
   "18.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Royal Helmet",
@@ -1655,6 +1782,7 @@ _MK_ITENS_DB = [
   "3",
   "26.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Rusty Winged Helmet",
@@ -1668,6 +1796,7 @@ _MK_ITENS_DB = [
   "1",
   "30.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Santa Hat",
@@ -1681,6 +1810,7 @@ _MK_ITENS_DB = [
   "3",
   "5.00",
   "Durante Eventos:\nA Crazed Reindeer,\nSanta Claus.",
+  "Capacetes",
  ],
  [
   "Sedge Hat",
@@ -1694,6 +1824,7 @@ _MK_ITENS_DB = [
   "1",
   "13.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Sensing Crown",
@@ -1707,6 +1838,7 @@ _MK_ITENS_DB = [
   "2",
   "20.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Shamanic Mask",
@@ -1720,6 +1852,7 @@ _MK_ITENS_DB = [
   "2",
   "7.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Silver Mask",
@@ -1733,6 +1866,7 @@ _MK_ITENS_DB = [
   "2",
   "9.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Skull Helmet",
@@ -1746,6 +1880,7 @@ _MK_ITENS_DB = [
   "2",
   "24.00",
   "Durante Invasões:\nCrypt Warden,\nDemon Hunter,\nScarlet Siren.",
+  "Capacetes",
  ],
  [
   "Soldier Helmet",
@@ -1759,6 +1894,7 @@ _MK_ITENS_DB = [
   "1",
   "28.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Sphinx Tiara",
@@ -1772,6 +1908,7 @@ _MK_ITENS_DB = [
   "2",
   "12.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Spooky Hood",
@@ -1785,6 +1922,7 @@ _MK_ITENS_DB = [
   "2",
   "30.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Steel Helmet",
@@ -1798,6 +1936,7 @@ _MK_ITENS_DB = [
   "2",
   "49.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Strange Helmet",
@@ -1811,6 +1950,7 @@ _MK_ITENS_DB = [
   "3",
   "7.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Studded Helmet",
@@ -1824,6 +1964,7 @@ _MK_ITENS_DB = [
   "1",
   "30.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Terra Hood",
@@ -1837,6 +1978,7 @@ _MK_ITENS_DB = [
   "2",
   "25.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "The Crown of the Percht Queen (Fire)",
@@ -1850,6 +1992,7 @@ _MK_ITENS_DB = [
   "3",
   "35.00",
   "Durante Eventos:\nPercht Queen.",
+  "Capacetes",
  ],
  [
   "The Crown of the Percht Queen (Ice)",
@@ -1863,6 +2006,7 @@ _MK_ITENS_DB = [
   "3",
   "35.00",
   "Durante Eventos:\nPercht Queen.",
+  "Capacetes",
  ],
  [
   "The Epic Wisdom",
@@ -1876,6 +2020,7 @@ _MK_ITENS_DB = [
   "4",
   "30.00",
   "Durante Eventos:\nGrandmother.",
+  "Capacetes",
  ],
  [
   "Traditional Gamsbart Hat",
@@ -1889,6 +2034,7 @@ _MK_ITENS_DB = [
   "2",
   "10.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Tribal Mask",
@@ -1902,6 +2048,7 @@ _MK_ITENS_DB = [
   "2",
   "3.00",
   "Durante Invasões:\nAmazon,\nGozzan Elite,\nSainted Amazon.",
+  "Capacetes",
  ],
  [
   "Viking Helmet",
@@ -1915,6 +2062,7 @@ _MK_ITENS_DB = [
   "1",
   "38.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Visage of the End Days",
@@ -1928,6 +2076,7 @@ _MK_ITENS_DB = [
   "2",
   "46.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Warrior Helmet",
@@ -1941,6 +2090,7 @@ _MK_ITENS_DB = [
   "1",
   "36.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Winged Helmet",
@@ -1954,6 +2104,7 @@ _MK_ITENS_DB = [
   "2",
   "25.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Witch Hat",
@@ -1967,6 +2118,7 @@ _MK_ITENS_DB = [
   "3",
   "5.00",
   "Durante Invasões:\nWitch,\nWitch Knight.",
+  "Capacetes",
  ],
  [
   "Wood Cape",
@@ -1980,6 +2132,7 @@ _MK_ITENS_DB = [
   "1",
   "25.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Zaoan Helmet",
@@ -1993,6 +2146,7 @@ _MK_ITENS_DB = [
   "2",
   "27.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Batwing Hat",
@@ -2006,6 +2160,7 @@ _MK_ITENS_DB = [
   "2",
   "8.00",
   "Durante Eventos:\nBat.",
+  "Capacetes",
  ],
  [
   "Jade Hat",
@@ -2019,6 +2174,7 @@ _MK_ITENS_DB = [
   "3",
   "8.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Coned Hat of Enlightenment",
@@ -2032,6 +2188,7 @@ _MK_ITENS_DB = [
   "2",
   "12.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Rubber Cap",
@@ -2045,6 +2202,7 @@ _MK_ITENS_DB = [
   "2",
   "1.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Crest of the Deep Seas",
@@ -2058,6 +2216,7 @@ _MK_ITENS_DB = [
   "3",
   "7.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Yalahari Mask",
@@ -2071,6 +2230,7 @@ _MK_ITENS_DB = [
   "2",
   "26.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Elite Draken Helmet",
@@ -2084,6 +2244,7 @@ _MK_ITENS_DB = [
   "4",
   "37.00",
   "Brutus.",
+  "Capacetes",
  ],
  [
   "Enchanted Werewolf Helmet (Axe)",
@@ -2097,6 +2258,7 @@ _MK_ITENS_DB = [
   "4",
   "64.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Enchanted Werewolf Helmet (Club)",
@@ -2110,6 +2272,7 @@ _MK_ITENS_DB = [
   "4",
   "64.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Enchanted Werewolf Helmet (Distance)",
@@ -2123,6 +2286,7 @@ _MK_ITENS_DB = [
   "4",
   "64.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Enchanted Werewolf Helmet (Fist)",
@@ -2136,6 +2300,7 @@ _MK_ITENS_DB = [
   "4",
   "64.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Enchanted Werewolf Helmet (Magic)",
@@ -2149,6 +2314,7 @@ _MK_ITENS_DB = [
   "4",
   "64.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Enchanted Werewolf Helmet (Sword)",
@@ -2162,6 +2328,7 @@ _MK_ITENS_DB = [
   "4",
   "64.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Tiara of Power",
@@ -2175,6 +2342,7 @@ _MK_ITENS_DB = [
   "3",
   "11.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Werewolf Helmet",
@@ -2188,6 +2356,7 @@ _MK_ITENS_DB = [
   "3",
   "38.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Jade Conical Hat",
@@ -2201,6 +2370,7 @@ _MK_ITENS_DB = [
   "2",
   "9.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Depth Galea",
@@ -2214,6 +2384,7 @@ _MK_ITENS_DB = [
   "3",
   "10.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Gill Gugel",
@@ -2227,6 +2398,7 @@ _MK_ITENS_DB = [
   "2",
   "4.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Prismatic Helmet",
@@ -2240,6 +2412,7 @@ _MK_ITENS_DB = [
   "3",
   "24.00",
   "Durante Eventos:\nCinder Beast,\nFaerwood Sentinel,\nFear Beast.",
+  "Capacetes",
  ],
  [
   "Shroud of Despair",
@@ -2253,6 +2426,7 @@ _MK_ITENS_DB = [
   "4",
   "15.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Dark Vision Bandana",
@@ -2266,6 +2440,7 @@ _MK_ITENS_DB = [
   "4",
   "5.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Dark Whispers",
@@ -2279,6 +2454,7 @@ _MK_ITENS_DB = [
   "4",
   "45.00",
   "Drume.",
+  "Capacetes",
  ],
  [
   "Gnome Helmet",
@@ -2292,6 +2468,7 @@ _MK_ITENS_DB = [
   "4",
   "24.00",
   "Durante Eventos:\nFloating Island Boss,\nMegasylvan Yselda,\nMr. Punch and Judy,\nShulgrax,\nSpriteling.",
+  "Capacetes",
  ],
  [
   "Galea Mortis",
@@ -2305,6 +2482,7 @@ _MK_ITENS_DB = [
   "3",
   "19.00",
   "Durante Invasões:\nHerald of Gloom.",
+  "Capacetes",
  ],
  [
   "Lion Spangenhelm",
@@ -2318,6 +2496,7 @@ _MK_ITENS_DB = [
   "4",
   "42.00",
   "Lion Knight.",
+  "Capacetes",
  ],
  [
   "Norcferatu Bonehood",
@@ -2331,6 +2510,7 @@ _MK_ITENS_DB = [
   "4",
   "45.00",
   "norcferatu Nightstriker.",
+  "Capacetes",
  ],
  [
   "Terra Helmet",
@@ -2344,6 +2524,7 @@ _MK_ITENS_DB = [
   "4",
   "18.00",
   "Timira the Many-Headed.",
+  "Capacetes",
  ],
  [
   "Antler-Horn Helmet",
@@ -2357,6 +2538,7 @@ _MK_ITENS_DB = [
   "2",
   "26.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Eldritch Cowl",
@@ -2370,6 +2552,7 @@ _MK_ITENS_DB = [
   "4",
   "14.00",
   "The Brainstealer.",
+  "Capacetes",
  ],
  [
   "Eldritch Hood",
@@ -2383,6 +2566,7 @@ _MK_ITENS_DB = [
   "4",
   "14.00",
   "The Brainstealer.",
+  "Capacetes",
  ],
  [
   "Stoic Iks Casque",
@@ -2396,6 +2580,7 @@ _MK_ITENS_DB = [
   "2",
   "8.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Stoic Iks Headpiece",
@@ -2409,6 +2594,7 @@ _MK_ITENS_DB = [
   "3",
   "12.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Cobra Hood",
@@ -2422,6 +2608,7 @@ _MK_ITENS_DB = [
   "4",
   "33.00",
   "Scarlett Etzel.",
+  "Capacetes",
  ],
  [
   "Norcferatu Skullguard",
@@ -2435,6 +2622,7 @@ _MK_ITENS_DB = [
   "4",
   "44.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Demon Mengu",
@@ -2448,6 +2636,7 @@ _MK_ITENS_DB = [
   "4",
   "23.00",
   "Shulgrax.",
+  "Capacetes",
  ],
  [
   "Demonfang Mask",
@@ -2461,6 +2650,7 @@ _MK_ITENS_DB = [
   "4",
   "30.00",
   "Shulgrax.",
+  "Capacetes",
  ],
  [
   "Dreadfire Headpiece",
@@ -2474,6 +2664,7 @@ _MK_ITENS_DB = [
   "4",
   "28.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Falcon Circlet",
@@ -2487,6 +2678,7 @@ _MK_ITENS_DB = [
   "4",
   "30.00",
   "Baron Moss,\nGrand Canon Dominus,\nOsmar.",
+  "Capacetes",
  ],
  [
   "Falcon Coif",
@@ -2500,6 +2692,7 @@ _MK_ITENS_DB = [
   "4",
   "30.00",
   "Baron Moss,\nGrand Canon Dominus,\nOsmar.",
+  "Capacetes",
  ],
  [
   "Hellstalker Visor",
@@ -2513,6 +2706,7 @@ _MK_ITENS_DB = [
   "4",
   "20.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Maliceforged Helmet",
@@ -2526,6 +2720,7 @@ _MK_ITENS_DB = [
   "4",
   "55.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Stag Helmet",
@@ -2539,6 +2734,7 @@ _MK_ITENS_DB = [
   "2",
   "18.00",
   "Durante Eventos:\nStag.",
+  "Capacetes",
  ],
  [
   "Alicorn Headguard",
@@ -2552,6 +2748,7 @@ _MK_ITENS_DB = [
   "0",
   "25.00",
   "Drume.",
+  "Capacetes",
  ],
  [
   "Arboreal Crown",
@@ -2565,6 +2762,7 @@ _MK_ITENS_DB = [
   "2",
   "28.00",
   "Durante Eventos:\nFaerwood Sentinel.",
+  "Capacetes",
  ],
  [
   "Arcanomancer Regalia",
@@ -2578,6 +2776,7 @@ _MK_ITENS_DB = [
   "4",
   "24.00",
   "Drume.",
+  "Capacetes",
  ],
  [
   "Ethereal Coned Hat",
@@ -2591,6 +2790,7 @@ _MK_ITENS_DB = [
   "4",
   "5.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Spiritthorn Helmet",
@@ -2604,6 +2804,7 @@ _MK_ITENS_DB = [
   "4",
   "20.00",
   "Drume.",
+  "Capacetes",
  ],
  [
   "Moonsilver Battle Visor",
@@ -2617,6 +2818,7 @@ _MK_ITENS_DB = [
   "0",
   "23.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Moonsilver Nimbus Hat",
@@ -2630,6 +2832,7 @@ _MK_ITENS_DB = [
   "0",
   "23.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Moonsilver Spirit Mask",
@@ -2643,6 +2846,7 @@ _MK_ITENS_DB = [
   "0",
   "23.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Moonsilver Strike Helm",
@@ -2656,6 +2860,7 @@ _MK_ITENS_DB = [
   "0",
   "23.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Moonsilver Trail Hood",
@@ -2669,6 +2874,7 @@ _MK_ITENS_DB = [
   "0",
   "23.00",
   "Ninguém.",
+  "Capacetes",
  ],
  [
   "Albino Plate",
@@ -2682,6 +2888,7 @@ _MK_ITENS_DB = [
   "3",
   "84.00",
   "White Pale.",
+  "Armaduras",
  ],
  [
   "Ball Gown",
@@ -2695,6 +2902,7 @@ _MK_ITENS_DB = [
   "0",
   "25.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Belted Cape",
@@ -2708,6 +2916,7 @@ _MK_ITENS_DB = [
   "1",
   "35.00",
   "Afflicted Strider, Amenef The Burning, Bog Raider, Crazed Summer Vanguard, Gladiator, Undead Elite Gladiator, Undead Gladiator.\nDurante Invasões:\nWeakened Shlorg.",
+  "Armaduras",
  ],
  [
   "Blue Robe",
@@ -2721,6 +2930,7 @@ _MK_ITENS_DB = [
   "2",
   "22.00",
   "Banshee, Enlightened of the Cult, Feversleep, Girtablilu Warrior, Hellgorak, Horadron, Lich, Lokathmor, Lumbering Carnivor, Midnight Asura, Quara Mantassin, Renegade Quara Mantassin, Spiky Carnivor, Tamru the Black, Terrorsleep, True Midnight Asura, Vashresamun, Warlock.\nDurante Invasões:\nCountess Sorrow, Grandfather Tridian, Gravelord Oshuran, The Handmaiden, Zarabustor.",
+  "Armaduras",
  ],
  [
   "Brass Armor",
@@ -2734,6 +2944,7 @@ _MK_ITENS_DB = [
   "1",
   "80.00",
   "Bandit, Crypt Defiler, Gladiator, Grave Robber, Hunter, Minotaur Archer, Minotaur Guard, Nomad, Nomad (Blue), Orc Warlord, Quara Constrictor, Quara Constrictor Scout, Renegade Quara Constrictor, The Horned Fox, Undead Gladiator, Wild Warrior.\nDurante Invasões:\nGeneral Murius.",
+  "Armaduras",
  ],
  [
   "Broken Iks Cuirass",
@@ -2747,6 +2958,7 @@ _MK_ITENS_DB = [
   "0",
   "19.00",
   "Ahau, Iks Aucar.",
+  "Armaduras",
  ],
  [
   "Buckle",
@@ -2760,6 +2972,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Lost Basher, Lost Exile, Lost Husher, Lost Thrower, Spiky Carnivor.",
+  "Armaduras",
  ],
  [
   "Burial Shroud",
@@ -2773,6 +2986,7 @@ _MK_ITENS_DB = [
   "0",
   "5.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Cape",
@@ -2786,6 +3000,7 @@ _MK_ITENS_DB = [
   "1",
   "32.00",
   "Ekatrix, Ghost, Lizard Snakecharmer, Quara Mantassin, Renegade Quara Mantassin, Tarnished Spirit, Two-Headed Turtle, Witch, Lizard Magician.\nDurante Invasões:\nYaga the Crone.",
+  "Armaduras",
  ],
  [
   "Chain Armor",
@@ -2799,6 +3014,7 @@ _MK_ITENS_DB = [
   "1",
   "100.00",
   "Barbarian Bloodwalker, Barbarian Brutetamer, Blood Crab, Deepsea Blood Crab, Dwarf Soldier, Juvenile Cyclops, Lizard Sentinel, Minotaur, Minotaur Bruiser, Minotaur Guard, Minotaur Poacher, Orc Berserker, Orc Shaman, Orc Warrior, Pirate Marauder, Quara Mantassin Scout, Scar Tribe Warrior, Valkyrie.",
+  "Armaduras",
  ],
  [
   "Coat",
@@ -2812,6 +3028,7 @@ _MK_ITENS_DB = [
   "1",
   "27.00",
   "Ekatrix, Frost Troll, Witch.\nDurante Invasões:\nYaga the Crone.",
+  "Armaduras",
  ],
  [
   "Crown Armor",
@@ -2825,6 +3042,7 @@ _MK_ITENS_DB = [
   "2",
   "99.00",
   "Ashmunrah, Cliff Strider, Demon Outcast, Execowtioner, Gorzindel, Hand of Cursed Fate, Hellgorak, Hero, Horadron, King Zelos, Orewalker, Phantasm, Prince Drazzak, Quara Pincher, Raubritter Skirmisher, Renegade Knight, Renegade Quara Pincher, Serpent Spawn, The Noxious Spawn, Thul, Vile Grandmaster.",
+  "Armaduras",
  ],
  [
   "Dark Armor",
@@ -2838,6 +3056,7 @@ _MK_ITENS_DB = [
   "1",
   "120.00",
   "Adlerauge, Ancient Lion Knight, Behemoth, Bibby Bloodbath, Black Knight, Blight Mariner, Bretzecutioner, Clavius, Destroyer, Gargoyle, Ghastly Dragon, Michael the Stalwart, Overseer Osverger, Pirate Corsair, Spiky Carnivor, Werelion.\nDurante Invasões:\nArthom the Hunter, Dracola.\nDurante Eventos:\nHaunted Dragon.",
+  "Armaduras",
  ],
  [
   "Demon Armor",
@@ -2851,6 +3070,7 @@ _MK_ITENS_DB = [
   "2",
   "80.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Doublet",
@@ -2864,6 +3084,7 @@ _MK_ITENS_DB = [
   "1",
   "25.00",
   "Afflicted Strider, Amenef The Burning, Dawnfly, Gore Horn, Gorerilla, Hulking Prehemoth, Jungle Moa, Spiky Carnivor, Werehyaena Shaman, Werelion.",
+  "Armaduras",
  ],
  [
   "Dragon Scale Mail",
@@ -2877,6 +3098,7 @@ _MK_ITENS_DB = [
   "2",
   "114.00",
   "Demodras, Dragon Lord, Frost Dragon, Paiz the Pauperizer, Soul of Dragonking Zyrtarch, Albino Dragon.\nDurante Invasões:\nChizzoron the Distorter.\nDurante Eventos:\nGelidrazah the Frozen, Ice Dragon, Kalyassa, Tazhadur.",
+  "Armaduras",
  ],
  [
   "Dwarven Armor",
@@ -2890,6 +3112,7 @@ _MK_ITENS_DB = [
   "3",
   "130.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Elven Mail",
@@ -2903,6 +3126,7 @@ _MK_ITENS_DB = [
   "3",
   "90.00",
   "Ravenous Hunger.",
+  "Armaduras",
  ],
  [
   "Ethno Coat",
@@ -2916,6 +3140,7 @@ _MK_ITENS_DB = [
   "1",
   "25.50",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Flower Dress",
@@ -2929,6 +3154,7 @@ _MK_ITENS_DB = [
   "0",
   "19.00",
   "Dryad.",
+  "Armaduras",
  ],
  [
   "Focus Cape",
@@ -2942,6 +3168,7 @@ _MK_ITENS_DB = [
   "2",
   "21.00",
   "Afflicted Strider, Amenef The Burning, Converter, Dawnfire Asura, Draken Spellweaver, Girtablilu Warrior, Harpy, Hellgorak, Lizard Dragon Priest, Lumbering Carnivor, Nightmare Scion, Pirat Cutthroat, Raging Mage, Reality Reaver, Sea Serpent, Tremendous Tyrant, True Dawnfire Asura, Wyrm.\nDurante Invasões:\nCaptain Jones.",
+  "Armaduras",
  ],
  [
   "Girl's Dress",
@@ -2955,6 +3182,7 @@ _MK_ITENS_DB = [
   "0",
   "13.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Golden Armor",
@@ -2968,6 +3196,7 @@ _MK_ITENS_DB = [
   "2",
   "80.00",
   "Falcon Knight, Falcon Paladin, Ferumbras Mortal Shell, Golden Servant, Golden Servant Replica, Grand Canon Dominus, Grand Commander Soeren, Hellflayer, Hellgorak, Horadron, Horestis, Juggernaut, Katex Blood Tongue, Kerberos, Phosphorus, Preceptor Lazare, The Last Lore Keeper, Undead Dragon, Warlock, Zanakeph.\nDurante Invasões:\nFerumbras, Ghazbaran, Massacre.",
+  "Armaduras",
  ],
  [
   "Goo Shell",
@@ -2981,6 +3210,7 @@ _MK_ITENS_DB = [
   "3",
   "58.00",
   "Durante Invasões:\nWeakened Shlorg.",
+  "Armaduras",
  ],
  [
   "Green Demon Armor",
@@ -2994,6 +3224,7 @@ _MK_ITENS_DB = [
   "4",
   "80.00",
   "Ninguém.\nDurante Invasões:\nMorshabaal",
+  "Armaduras",
  ],
  [
   "Green Tunic",
@@ -3007,6 +3238,7 @@ _MK_ITENS_DB = [
   "1",
   "9.30",
   "Elf Arcanist, Hero, Vicious Squire.\nDurante Invasões:\nFernfang.",
+  "Armaduras",
  ],
  [
   "Heat Core",
@@ -3020,6 +3252,7 @@ _MK_ITENS_DB = [
   "2",
   "55.00",
   "Glooth Brigand, Glooth Fairy, Glooth Golem.",
+  "Armaduras",
  ],
  [
   "Heavy Metal T-Shirt",
@@ -3033,6 +3266,7 @@ _MK_ITENS_DB = [
   "2",
   "8.00",
   "Boogey.",
+  "Armaduras",
  ],
  [
   "Hibiscus Dress",
@@ -3046,6 +3280,7 @@ _MK_ITENS_DB = [
   "0",
   "19.00",
   "Angry Sugar Fairy, Boreth, Nymph, Vampire Bride, Wyrm.",
+  "Armaduras",
  ],
  [
   "Jacket",
@@ -3059,6 +3294,7 @@ _MK_ITENS_DB = [
   "1",
   "24.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Knight Armor",
@@ -3072,6 +3308,7 @@ _MK_ITENS_DB = [
   "2",
   "120.00",
   "Afflicted Strider, Amenef The Burning, Black Knight, Brutus Bloodbeard, Crystal Spider, Deadeye Devious, Esmeralda, Falcon Knight, Fleshcrawler, Giant Spider, Grand Chaplain Gaunder, Hand of Cursed Fate, Hydra, Juggernaut, Lethal Lissy, Medusa, Mooh'Tah Warrior, Naga Warrior, Pirat Cutthroat, Preceptor Lazare, Quara Hydromancer, Quara Hydromancer Scout, Rhindeer, Ron The Ripper, Sir Leonard, Sir Leopold, Stampor, Terrorsleep, The Bloodweb, The Many, The Old Widow, The Snapper, Tromphonyte, Undead Dragon, Usurper Archer, Zanakeph.\nDurante Invasões:\nMamma Longlegs, The Welter.",
+  "Armaduras",
  ],
  [
   "Leather Armor",
@@ -3085,6 +3322,7 @@ _MK_ITENS_DB = [
   "1",
   "60.00",
   "Dworc Fleshhunter, Dworc Venomsniper, Dworc Voodoomaster, Goblin, Goblin Assassin, Goblin Leader, Goblin Scavenger, Mountain Troll, Muglex Clan Assassin, Muglex Clan Footman, Muglex Clan Scavenger.\nDurante Invasões:\nOodok Witchmaster.",
+  "Armaduras",
  ],
  [
   "Leather Harness",
@@ -3098,6 +3336,7 @@ _MK_ITENS_DB = [
   "1",
   "29.00",
   "Corym Charlatan, Corym Skirmisher, Corym Vanguard.",
+  "Armaduras",
  ],
  [
   "Leopard Armor",
@@ -3111,6 +3350,7 @@ _MK_ITENS_DB = [
   "2",
   "95.00",
   "Assassin.",
+  "Armaduras",
  ],
  [
   "Magic Plate Armor",
@@ -3124,6 +3364,7 @@ _MK_ITENS_DB = [
   "2",
   "85.00",
   "Angry Demon, Arbaziloth, Demon, Dracola, Ferumbras Mortal Shell, Grimeleech, Harpy, Hellflayer, Katex Blood Tongue, Rage Squid, Rotrender, Shulgrax, Terofar, The Source Of Corruption, Utua Stone Sting, Vexclaw, Yirkas Blue Scales.\nDurante Invasões:\nFerumbras, Ghazbaran, Morgaroth, Orshabaal, Sight of Surrender.\nDurante Eventos:\nBones.",
+  "Armaduras",
  ],
  [
   "Magician's Robe",
@@ -3137,6 +3378,7 @@ _MK_ITENS_DB = [
   "1",
   "25.00",
   "The Corruptor, Corrupted Skeleton",
+  "Armaduras",
  ],
  [
   "Mammoth Fur Cape",
@@ -3150,6 +3392,7 @@ _MK_ITENS_DB = [
   "2",
   "20.00",
   "Barbaria, Barbarian Brutetamer, Ravenous Hunger, The Bloodtusk.",
+  "Armaduras",
  ],
  [
   "Monk Robe",
@@ -3163,6 +3406,7 @@ _MK_ITENS_DB = [
   "1",
   "70.00",
   "Tarantula.",
+  "Armaduras",
  ],
  [
   "Mooh'tah Plate",
@@ -3176,6 +3420,7 @@ _MK_ITENS_DB = [
   "2",
   "125.00",
   "Minotaur Hunter, Minotaur Invader, Mooh'Tah Warrior, Bullwark.",
+  "Armaduras",
  ],
  [
   "Native Armor",
@@ -3189,6 +3434,7 @@ _MK_ITENS_DB = [
   "4",
   "80.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Noble Armor",
@@ -3202,6 +3448,7 @@ _MK_ITENS_DB = [
   "1",
   "120.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Old Cape",
@@ -3215,6 +3462,7 @@ _MK_ITENS_DB = [
   "3",
   "35.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Pair of Old Bracers",
@@ -3228,6 +3476,7 @@ _MK_ITENS_DB = [
   "0",
   "2.00",
   "Thaian.",
+  "Armaduras",
  ],
  [
   "Paladin Armor",
@@ -3241,6 +3490,7 @@ _MK_ITENS_DB = [
   "2",
   "65.00",
   "Annihilon, Bog Raider, Terofar, Zavarash.\nDurante Invasões:\nZulazza the Corruptor.",
+  "Armaduras",
  ],
  [
   "Pirate Shirt",
@@ -3254,6 +3504,7 @@ _MK_ITENS_DB = [
   "1",
   "20.00",
   "Pirate Buccaneer, Pirate Gunner.",
+  "Armaduras",
  ],
  [
   "Plain Monk Robe",
@@ -3267,6 +3518,7 @@ _MK_ITENS_DB = [
   "1",
   "65.00",
   "Desconhecido.",
+  "Armaduras",
  ],
  [
   "Plate Armor",
@@ -3280,6 +3532,7 @@ _MK_ITENS_DB = [
   "1",
   "120.00",
   "Ancient Lion Knight, Ancient Scarab, Behemoth, Black Knight, Bonebeast, Brutus Bloodbeard, Crystal Spider, Cursed Ape, Deadeye Devious, Destroyer, Dreadbeast, Giant Spider, High Templar Cobrass, Kongra, Lethal Lissy, Lizard Templar, Naga Warrior, Orc Cult Fanatic, Orc Leader, Orc Warlord, Pirate Buccaneer, Quara Pincher Scout, Ron The Ripper, Sacred Spider, The Snapper, Undead Elite Gladiator, Undead Gladiator, Valkyrie.\nDurante Invasões:\nWarlord Ruzad.",
+  "Armaduras",
  ],
  [
   "Ranger's Cloak",
@@ -3293,6 +3546,7 @@ _MK_ITENS_DB = [
   "1",
   "48.00",
   "Corrupted Skeleton, The Corruptor, Corrupted Ghost, Muglex Clan Footman e Muglex Clan Assassin.",
+  "Armaduras",
  ],
  [
   "Red Robe",
@@ -3306,6 +3560,7 @@ _MK_ITENS_DB = [
   "1",
   "26.00",
   "Adept of the Cult, Banshee, Pirate Ghost.\nDurante Invasões:\nCaptain Jones.",
+  "Armaduras",
  ],
  [
   "Red Tunic",
@@ -3319,6 +3574,7 @@ _MK_ITENS_DB = [
   "0",
   "14.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Scale Armor",
@@ -3332,6 +3588,7 @@ _MK_ITENS_DB = [
   "1",
   "105.00",
   "Barbarian Headsplitter, Barbarian Skullhunter, Dwarf Guard, Ghoul, Lizard Sentinel, Minotaur Archer, Mutated Human, Orc Rider, Pirate Cutthroat, Quara Predator Scout, Undead Prospector, Lizard Commander.\nDurante Invasões:\nGrorlam.",
+  "Armaduras",
  ],
  [
   "Simple Dress",
@@ -3345,6 +3602,7 @@ _MK_ITENS_DB = [
   "0",
   "10.00",
   "Banshee, Zombie.",
+  "Armaduras",
  ],
  [
   "Spectral Dress",
@@ -3358,6 +3616,7 @@ _MK_ITENS_DB = [
   "0",
   "10.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Spirit Cloak",
@@ -3371,6 +3630,7 @@ _MK_ITENS_DB = [
   "1",
   "26.50",
   "Afflicted Strider, Goggle Cake, Hellgorak, Nightstalker, Renegade Quara Hydromancer, Sea Serpent, Werelion.",
+  "Armaduras",
  ],
  [
   "Studded Armor",
@@ -3384,6 +3644,7 @@ _MK_ITENS_DB = [
   "1",
   "71.00",
   "Brittle Skeleton, Crazed Dwarf, Dwarf, Dwarf Miner, Elf, Minotaur Bruiser, Minotaur Poacher, Orc, Scar Tribe Shaman, Troll Marauder, Woodling.",
+  "Armaduras",
  ],
  [
   "Summer Dress",
@@ -3397,6 +3658,7 @@ _MK_ITENS_DB = [
   "0",
   "10.00",
   "Swan Maiden.",
+  "Armaduras",
  ],
  [
   "The Rain Coat",
@@ -3410,6 +3672,7 @@ _MK_ITENS_DB = [
   "0",
   "32.00",
   "Mephiles.",
+  "Armaduras",
  ],
  [
   "Traditional Shirt",
@@ -3423,6 +3686,7 @@ _MK_ITENS_DB = [
   "0",
   "4.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Tunic",
@@ -3436,6 +3700,7 @@ _MK_ITENS_DB = [
   "0",
   "15.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "White Dress",
@@ -3449,6 +3714,7 @@ _MK_ITENS_DB = [
   "0",
   "24.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Glooth Cape",
@@ -3462,6 +3728,7 @@ _MK_ITENS_DB = [
   "2",
   "29.00",
   "Devourer (Criatura), Glooth Anemone, Glooth Bandit, Glooth Fairy, Lisa, Tremor Worm.",
+  "Armaduras",
  ],
  [
   "Fur Armor",
@@ -3475,6 +3742,7 @@ _MK_ITENS_DB = [
   "2",
   "49.00",
   "Adult Goanna, Blemished Spawn, Bloodback, Cave Chimera, Girtablilu Warrior, Lumbering Carnivor, Michael the Stalwart, Shadowpelt, Raubritter Skirmisher, Rotten Golem, Turbulent Elemental, Varnished Diremaw, Werebear, Wereboar, Werepanther, Young Goanna.\nDurante Invasões:\nFeroxa (Mortal), Owin (Criatura).",
+  "Armaduras",
  ],
  [
   "Glacier Robe",
@@ -3488,6 +3756,7 @@ _MK_ITENS_DB = [
   "2",
   "22.50",
   "Crazed Winter Rearguard, Crazed Winter Vanguard, Girtablilu Warrior, Goggle Cake, Icecold Book, King Zelos, Quara Pincher, Quara Predator, Squid Warden, Srezz Yellow Eyes, Tarbaz, Tremendous Tyrant, Turbulent Elemental.\nDurante Invasões:\nZushuka (Mortal), Yakchal.\nDurante Eventos:\nSchiach.",
+  "Armaduras",
  ],
  [
   "Lightning Robe",
@@ -3501,6 +3770,7 @@ _MK_ITENS_DB = [
   "2",
   "22.50",
   "Anomaly, Bulltaur Forgepriest, Court Warlock, Cursed Prospector, Elder Wyrm, High Voltage Elemental, Mad Mage, Prince Drazzak, Raubritter Chastener, Realityquake, Tyrn, Warlock.\nDurante Invasões:\nOmrafir, Zarabustor.",
+  "Armaduras",
  ],
  [
   "Magma Coat",
@@ -3514,6 +3784,7 @@ _MK_ITENS_DB = [
   "2",
   "22.50",
   "Afflicted Strider, Burning Book, Cinder Wyrmling, Crape Man, Dawnfire Asura, Diabolic Imp, Fire Overlord, Gazer Spectre, Girtablilu Warrior, Gorerilla, Guardian Of Tales, Hellfire Fighter, Hellhound, Insane Siren, King Zelos, Lava Golem, Manticore, Mazoran, Scarlett Etzel, Shaburak Lord, Shaburak Prince, Stalking Stalk, The Baron from Below, The Flaming Orchid, The Sandking, True Dawnfire Asura, Urmahlullu the Weakened, Vulcongra, Wandering Pillar, Weeper.\nDurante Invasões:\nFuryosa, Gaz'Haragoth, Morgaroth, The Imperor.\nDurante Eventos:\nPercht.",
+  "Armaduras",
  ],
  [
   "Terra Mantle",
@@ -3527,6 +3798,7 @@ _MK_ITENS_DB = [
   "2",
   "22.50",
   "Adlerauge, Ancient Spawn of Morgathla, Askarak Lord, Askarak Prince, Banshee, Blightwalker, Bramble Wyrmling, Choking Fear, Cursed Book, Drume, Earth Overlord, Esmeralda, Exotic Cave Spider, Feral Werecrocodile, Fleshcrawler, Glooth Bandit, Glooth Brigand, Gorgo, Hideous Fungus, Humongous Fungus, Ink Blob, Ink Splash, Medusa, Raubritter Marksman, Rotten Golem, Scarlett Etzel, Spiky Carnivor.\nDurante Invasões:\nThe Evil Eye.",
+  "Armaduras",
  ],
  [
   "Witchhunter's Coat",
@@ -3540,6 +3812,7 @@ _MK_ITENS_DB = [
   "0",
   "25.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Zaoan Armor",
@@ -3553,6 +3826,7 @@ _MK_ITENS_DB = [
   "2",
   "95.50",
   "Darklight Emitter, Draken Abomination, Draken Elite, Draken Warmaster, Ethershreck, Fazzrah, Ghastly Dragon, Lizard Chosen, Lizard High Guard, Lizard Legionnaire, Lizard Zaogun, Paiz the Pauperizer.\nDurante Invasões:\nBattlemaster Zunzu.",
+  "Armaduras",
  ],
  [
   "Zaoan Monk Robe",
@@ -3566,6 +3840,7 @@ _MK_ITENS_DB = [
   "2",
   "110.00",
   "Ethershreck, Hatebreeder, Soul of Dragonking Zyrtarch, Lizard Templar.",
+  "Armaduras",
  ],
  [
   "Amazon Armor",
@@ -3579,6 +3854,7 @@ _MK_ITENS_DB = [
   "4",
   "45.00",
   "Durante Invasões:\nOrc Warlord.",
+  "Armaduras",
  ],
  [
   "Crystalline Armor",
@@ -3592,6 +3868,7 @@ _MK_ITENS_DB = [
   "2",
   "84.50",
   "Animated Feather, Armadile, Blight Mariner, Crystal Wolf, Darklight Source, Diamond Servant, Diamond Servant Replica, Eradicator, Haunted Hunter, Icecold Book, Ice Overlord, Mazzinor, Melting Frozen Horror, Michael the Stalwart, Orewalker, Prince Drazzak, Realityquake, Ravenous Hunger, Roaming Dread, Sea Serpent, Squid Warden, The Count Of The Core, Tunnel Tyrant, Turbulent Elemental.\nDurante Invasões:\nGhazbaran.",
+  "Armaduras",
  ],
  [
   "Lavos Armor",
@@ -3605,6 +3882,7 @@ _MK_ITENS_DB = [
   "2",
   "85.00",
   "Annihilon, Fire Overlord, Terofar, Zavarash",
+  "Armaduras",
  ],
  [
   "Spellweaver's Robe",
@@ -3618,6 +3896,7 @@ _MK_ITENS_DB = [
   "2",
   "23.50",
   "Arbaziloth, Bulltaur Alchemist, Burning Gladiator, Draken Spellweaver, Ethershreck, Ghastly Dragon, Hatebreeder, Juvenile Bashmu, Lady Tenebris, Lloyd, Lokathmor, The Duke Of The Depths, Undead Dragon, Utua Stone Sting, Wrathful Archivist, Yirkas Blue Scales.\nDurante Eventos:\nHaunted Dragon.",
+  "Armaduras",
  ],
  [
   "Swamplair Armor",
@@ -3631,6 +3910,7 @@ _MK_ITENS_DB = [
   "2",
   "84.50",
   "Cursed Book, Earth Overlord, Feral Werecrocodile, Ink Blob, Paiz the Pauperizer, Serpent Spawn, The Enraged Thorn Knight, The Noxious Spawn.\nDurante Invasões:\nChizzoron the Distorter.",
+  "Armaduras",
  ],
  [
   "Swan Feather Cloak",
@@ -3644,6 +3924,7 @@ _MK_ITENS_DB = [
   "2",
   "4.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Voltage Armor",
@@ -3657,6 +3938,7 @@ _MK_ITENS_DB = [
   "2",
   "84.50",
   "Energy Overlord, Hellgorak, Terofar, The Last Lore Keeper.",
+  "Armaduras",
  ],
  [
   "Zaoan Robe",
@@ -3670,6 +3952,7 @@ _MK_ITENS_DB = [
   "2",
   "24.50",
   "Lizard Dragon Priest, Draken Spellweaver.\nDurante Invasões:\nFlamecaller Zazrak.",
+  "Armaduras",
  ],
  [
   "Dark Lord's Cape",
@@ -3683,6 +3966,7 @@ _MK_ITENS_DB = [
   "4",
   "29.00",
   "Durante Invasões:\nMorgaroth.",
+  "Armaduras",
  ],
  [
   "Divine Plate",
@@ -3696,6 +3980,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Dragon Pack, Ferumbras Mortal Shell, Undead Dragon, Zanakeph.\nDurante Invasões:\nFerumbras.",
+  "Armaduras",
  ],
  [
   "Dragon Robe",
@@ -3709,6 +3994,7 @@ _MK_ITENS_DB = [
   "2",
   "28.50",
   "Durante Invasões:\nFuryosa, Morgaroth.",
+  "Armaduras",
  ],
  [
   "Frozen Plate",
@@ -3722,6 +4008,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Leviathan, Melting Frozen Horror, Renegade Quara Predator.\nDurante Invasões:\nGhazbaran.\nDurante Eventos:\nGelidrazah the Frozen.",
+  "Armaduras",
  ],
  [
   "Ghazbaran Oyoroi",
@@ -3735,6 +4022,7 @@ _MK_ITENS_DB = [
   "4",
   "135.00",
   "Ghazbaran.",
+  "Armaduras",
  ],
  [
   "Greenwood Coat",
@@ -3748,6 +4036,7 @@ _MK_ITENS_DB = [
   "2",
   "28.50",
   "Ferumbras Mortal Shell.\nDurante Invasões:\nFerumbras, Chizzoron the Distorter.",
+  "Armaduras",
  ],
  [
   "Molten Plate",
@@ -3761,6 +4050,7 @@ _MK_ITENS_DB = [
   "4",
   "75.00",
   "Durante Invasões:\nMorgaroth.",
+  "Armaduras",
  ],
  [
   "Robe of the Ice Queen",
@@ -3774,6 +4064,7 @@ _MK_ITENS_DB = [
   "4",
   "29.50",
   "Durante Invasões:\nGhazbaran.",
+  "Armaduras",
  ],
  [
   "Spirit Bind",
@@ -3787,6 +4078,7 @@ _MK_ITENS_DB = [
   "2",
   "135.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Velvet Mantle",
@@ -3800,6 +4092,7 @@ _MK_ITENS_DB = [
   "2",
   "28.50",
   "Ferumbras Mortal Shell, The False God.\nDurante Invasões:\nFerumbras.",
+  "Armaduras",
  ],
  [
   "Calopteryx Cape",
@@ -3813,6 +4106,7 @@ _MK_ITENS_DB = [
   "2",
   "20.00",
   "Hive Overseer, Kollos, Spidris, Spidris Elite, Spitter, The Sandking, The Baron from Below.",
+  "Armaduras",
  ],
  [
   "Yalahari Armor",
@@ -3826,6 +4120,7 @@ _MK_ITENS_DB = [
   "2",
   "70.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Skullcracker Armor",
@@ -3839,6 +4134,7 @@ _MK_ITENS_DB = [
   "2",
   "110.00",
   "Annihilon, Bony Sea Devil, Frost Flower Asura, Grim Reaper, Midnight Asura, Sopping Corpus, The Moonlight Aster, The Scourge of Oblivion, The Source Of Corruption, True Frost Flower Asura, True Midnight Asura, Undead Dragon.\nDurante Eventos:\nHaunted Dragon.",
+  "Armaduras",
  ],
  [
   "Earthborn Titan Armor",
@@ -3852,6 +4148,7 @@ _MK_ITENS_DB = [
   "4",
   "120.00",
   "Ancient Spawn of Morgathla, Lord of the Elements, Terofar.\nDurante Invasões:\nZulazza the Corruptor.",
+  "Armaduras",
  ],
  [
   "Elite Draken Mail",
@@ -3865,6 +4162,7 @@ _MK_ITENS_DB = [
   "2",
   "120.00",
   "Draken Elite, Paiz the Pauperizer.",
+  "Armaduras",
  ],
  [
   "Fireborn Giant Armor",
@@ -3878,6 +4176,7 @@ _MK_ITENS_DB = [
   "2",
   "120.00",
   "Ancient Spawn of Morgathla, Lord of the Elements.\nDurante Invasões:\nMorgaroth.",
+  "Armaduras",
  ],
  [
   "Master Archer's Armor",
@@ -3891,6 +4190,7 @@ _MK_ITENS_DB = [
   "3",
   "69.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Merudri Scale Mail",
@@ -3904,6 +4204,7 @@ _MK_ITENS_DB = [
   "3",
   "29.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Oceanborn Leviathan Armor",
@@ -3917,6 +4218,7 @@ _MK_ITENS_DB = [
   "4",
   "100.00",
   "Lord of the Elements.\nDurante Invasões:\nGhazbaran.",
+  "Armaduras",
  ],
  [
   "Robe of the Underworld",
@@ -3930,6 +4232,7 @@ _MK_ITENS_DB = [
   "2",
   "31.00",
   "Ancient Spawn of Morgathla.\nDurante Invasões:\nOrshabaal.",
+  "Armaduras",
  ],
  [
   "Royal Draken Mail",
@@ -3943,6 +4246,7 @@ _MK_ITENS_DB = [
   "3",
   "130.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Royal Scale Robe",
@@ -3956,6 +4260,7 @@ _MK_ITENS_DB = [
   "3",
   "45.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Windborn Colossus Armor",
@@ -3969,6 +4274,7 @@ _MK_ITENS_DB = [
   "2",
   "120.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Prismatic Armor",
@@ -3982,6 +4288,7 @@ _MK_ITENS_DB = [
   "2",
   "79.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Merudri Nanbando",
@@ -3995,6 +4302,7 @@ _MK_ITENS_DB = [
   "2",
   "106.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Furious Frock",
@@ -4008,6 +4316,7 @@ _MK_ITENS_DB = [
   "4",
   "34.00",
   "Durante Invasões:\nFuryosa.",
+  "Armaduras",
  ],
  [
   "Depth Lorica",
@@ -4021,6 +4330,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Jaul.",
+  "Armaduras",
  ],
  [
   "Gill Coat",
@@ -4034,6 +4344,7 @@ _MK_ITENS_DB = [
   "2",
   "19.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Gnomish Cuirass",
@@ -4047,6 +4358,7 @@ _MK_ITENS_DB = [
   "2",
   "100.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Robe of Enlightenment",
@@ -4060,6 +4372,7 @@ _MK_ITENS_DB = [
   "1",
   "24.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Dream Shroud",
@@ -4073,6 +4386,7 @@ _MK_ITENS_DB = [
   "3",
   "25.00",
   "Alptramun.",
+  "Armaduras",
  ],
  [
   "Living Armor",
@@ -4086,6 +4400,7 @@ _MK_ITENS_DB = [
   "3",
   "48.00",
   "Plagueroot.",
+  "Armaduras",
  ],
  [
   "Earthheart Cuirass",
@@ -4099,6 +4414,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Earthheart Hauberk",
@@ -4112,6 +4428,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Earthheart Platemail",
@@ -4125,6 +4442,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Earthmind Raiment",
@@ -4138,6 +4456,7 @@ _MK_ITENS_DB = [
   "2",
   "55.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Earthsoul Tabard",
@@ -4151,6 +4470,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Energy Robe",
@@ -4164,6 +4484,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Fireheart Cuirass",
@@ -4177,6 +4498,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Fireheart Hauberk",
@@ -4190,6 +4512,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Fireheart Platemail",
@@ -4203,6 +4526,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Firemind Raiment",
@@ -4216,6 +4540,7 @@ _MK_ITENS_DB = [
   "2",
   "55.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Firesoul Tabard",
@@ -4229,6 +4554,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Frostheart Cuirass",
@@ -4242,6 +4568,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Frostheart Hauberk",
@@ -4255,6 +4582,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Frostheart Platemail",
@@ -4268,6 +4596,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Frostmind Raiment",
@@ -4281,6 +4610,7 @@ _MK_ITENS_DB = [
   "2",
   "55.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Frostsoul Tabard",
@@ -4294,6 +4624,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Gnome Armor",
@@ -4307,6 +4638,7 @@ _MK_ITENS_DB = [
   "3",
   "120.00",
   "The Baron from Below.",
+  "Armaduras",
  ],
  [
   "Ice Robe",
@@ -4320,6 +4652,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Leaf Robe",
@@ -4333,6 +4666,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Magma Robe",
@@ -4346,6 +4680,7 @@ _MK_ITENS_DB = [
   "2",
   "75.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Ornate Chestplate",
@@ -4359,6 +4694,7 @@ _MK_ITENS_DB = [
   "2",
   "156.00",
   "Jaul.",
+  "Armaduras",
  ],
  [
   "Thunderheart Cuirass",
@@ -4372,6 +4708,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Thunderheart Hauberk",
@@ -4385,6 +4722,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Thunderheart Platemail",
@@ -4398,6 +4736,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Thundermind Raiment",
@@ -4411,6 +4750,7 @@ _MK_ITENS_DB = [
   "2",
   "55.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Thundersoul Tabard",
@@ -4424,6 +4764,7 @@ _MK_ITENS_DB = [
   "2",
   "145.00",
   "Ninguém",
+  "Armaduras",
  ],
  [
   "Embrace of Nature",
@@ -4437,6 +4778,7 @@ _MK_ITENS_DB = [
   "3",
   "24.00",
   "Count Vlarkorth, Duke Krule, Lord Azaram, Sir Baeloc.",
+  "Armaduras",
  ],
  [
   "Toga Mortis",
@@ -4450,6 +4792,7 @@ _MK_ITENS_DB = [
   "3",
   "52.00",
   "King Zelos.",
+  "Armaduras",
  ],
  [
   "Bear Skin",
@@ -4463,6 +4806,7 @@ _MK_ITENS_DB = [
   "3",
   "44.00",
   "Lord Azaram, Duke Krule, Count Vlarkorth, Sir Baeloc.",
+  "Armaduras",
  ],
  [
   "Death Oyoroi",
@@ -4476,6 +4820,7 @@ _MK_ITENS_DB = [
   "3",
   "105.00",
   "Sir Nictros, King Zelos.",
+  "Armaduras",
  ],
  [
   "Ghost Chestplate",
@@ -4489,6 +4834,7 @@ _MK_ITENS_DB = [
   "3",
   "123.00",
   "The Fear Feaster, The Pale Worm.",
+  "Armaduras",
  ],
  [
   "Eldritch Cuirass",
@@ -4502,6 +4848,7 @@ _MK_ITENS_DB = [
   "4",
   "110.00",
   "The Brainstealer.",
+  "Armaduras",
  ],
  [
   "Stoic Iks Chestplate",
@@ -4515,6 +4862,7 @@ _MK_ITENS_DB = [
   "4",
   "142.00",
   "Mitmah Vanguard.",
+  "Armaduras",
  ],
  [
   "Stoic Iks Cuirass",
@@ -4528,6 +4876,7 @@ _MK_ITENS_DB = [
   "4",
   "44.00",
   "Mitmah Vanguard.",
+  "Armaduras",
  ],
  [
   "Stoic Iks Robe",
@@ -4541,6 +4890,7 @@ _MK_ITENS_DB = [
   "4",
   "128.00",
   "Mitmah Vanguard.",
+  "Armaduras",
  ],
  [
   "Dawnfire Sherwani",
@@ -4554,6 +4904,7 @@ _MK_ITENS_DB = [
   "4",
   "28.00",
   "Timira the Many-Headed",
+  "Armaduras",
  ],
  [
   "Lion Plate",
@@ -4567,6 +4918,7 @@ _MK_ITENS_DB = [
   "4",
   "150.00",
   "Ancient Lion Knight, Drume.",
+  "Armaduras",
  ],
  [
   "Mutated Skin Armor",
@@ -4580,6 +4932,7 @@ _MK_ITENS_DB = [
   "4",
   "63.00",
   "The Monster.",
+  "Armaduras",
  ],
  [
   "Naga Tanko",
@@ -4593,6 +4946,7 @@ _MK_ITENS_DB = [
   "4",
   "90.00",
   "Timira the Many-Headed",
+  "Armaduras",
  ],
  [
   "Norcferatu Bloodhide",
@@ -4606,6 +4960,7 @@ _MK_ITENS_DB = [
   "4",
   "39.00",
   "Vladrukh.",
+  "Armaduras",
  ],
  [
   "Norcferatu Bonecloak",
@@ -4619,6 +4974,7 @@ _MK_ITENS_DB = [
   "4",
   "42.00",
   "Vladrukh.",
+  "Armaduras",
  ],
  [
   "Norcferatu Tuskplate",
@@ -4632,6 +4988,7 @@ _MK_ITENS_DB = [
   "4",
   "148.00",
   "Vladrukh",
+  "Armaduras",
  ],
  [
   "Arcane Dragon Robe",
@@ -4645,6 +5002,7 @@ _MK_ITENS_DB = [
   "4",
   "43.00",
   "Dragon Hoard.",
+  "Armaduras",
  ],
  [
   "Dauntless Dragon Scale Armor",
@@ -4658,6 +5016,7 @@ _MK_ITENS_DB = [
   "4",
   "152.00",
   "Dragon Hoard.",
+  "Armaduras",
  ],
  [
   "Falcon Plate",
@@ -4671,6 +5030,7 @@ _MK_ITENS_DB = [
   "4",
   "188.00",
   "Grand Canon Dominus, Grand Master Oberon.",
+  "Armaduras",
  ],
  [
   "Merudri Battle Mail",
@@ -4684,6 +5044,7 @@ _MK_ITENS_DB = [
   "4",
   "29.00",
   "Dragon Pack",
+  "Armaduras",
  ],
  [
   "Midnight Tunic",
@@ -4697,6 +5058,7 @@ _MK_ITENS_DB = [
   "4",
   "27.00",
   "Timira the Many-Headed.",
+  "Armaduras",
  ],
  [
   "Mystical Dragon Robe",
@@ -4710,6 +5072,7 @@ _MK_ITENS_DB = [
   "4",
   "38.00",
   "Dragon Hoard.",
+  "Armaduras",
  ],
  [
   "Unerring Dragon Scale Armor",
@@ -4723,6 +5086,7 @@ _MK_ITENS_DB = [
   "4",
   "135.00",
   "Dragon Hoard.",
+  "Armaduras",
  ],
  [
   "Stag Plate",
@@ -4736,6 +5100,7 @@ _MK_ITENS_DB = [
   "4",
   "130.00",
   "Court Warlock.",
+  "Armaduras",
  ],
  [
   "Stag Robe",
@@ -4749,6 +5114,7 @@ _MK_ITENS_DB = [
   "4",
   "80.00",
   "Court Warlock.",
+  "Armaduras",
  ],
  [
   "Soulgarb",
@@ -4762,6 +5128,7 @@ _MK_ITENS_DB = [
   "4",
   "107.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Soulmantle",
@@ -4775,6 +5142,7 @@ _MK_ITENS_DB = [
   "4",
   "24.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Soulshell",
@@ -4788,6 +5156,7 @@ _MK_ITENS_DB = [
   "4",
   "123.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Soulshroud",
@@ -4801,6 +5170,7 @@ _MK_ITENS_DB = [
   "4",
   "24.00",
   "Ninguém.",
+  "Armaduras",
  ],
  [
   "Spiritthorn Armor",
@@ -4814,5 +5184,1196 @@ _MK_ITENS_DB = [
   "4",
   "160.00",
   "Magma Bubble.",
+  "Armaduras",
+ ],
+ [
+  "Adamant Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "91.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Amazon Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "42",
+  "1",
+  "",
+  "62.00",
+  "Durante Invasões:\nOrc Warlord.",
+  "Escudos",
+ ],
+ [
+  "Ancient Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "36",
+  "0",
+  "",
+  "61.00",
+  "Crusader, Enslaved Dwarf, Enraged Soul, Ghost, Lich, Nightmare, Sir Leonard, Sir Leopold, Tarnished Spirit.",
+  "Escudos",
+ ],
+ [
+  "Aurora's Collection",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "7.09",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Aylie",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "12.06",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Battle Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "30",
+  "0",
+  "",
+  "62.00",
+  "Assassin, Cyclops, Cyclops Drone, Cyclops Smith, Demon Skeleton, Dwarf Guard, Elf Overseer, Foreman Kneebiter, Frost Giant, Frost Giantess, Gargoyle, Hellspawn, Minotaur Guard, Mutated Bat, Orc Rider, Pirate Buccaneer, The Horned Fox, War Golem.\nDurante Invasões:\nGeneral Murius.",
+  "Escudos",
+ ],
+ [
+  "Biscuit Barrier",
+  "200",
+  "Knights",
+  "",
+  "Shielding +2",
+  "Physical +3%, Fire +5%",
+  "47",
+  "1",
+  "",
+  "52.00",
+  "Sugar Daddy.",
+  "Escudos",
+ ],
+ [
+  "Black Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "24",
+  "0",
+  "",
+  "42.00",
+  "Bruise Payne, Candy Horror, Gloom Maw, Lost Basher, Lost Berserker, Magma Crawler, Mummy, Mutated Bat, Priestess, Sandstone Scorpion, Thanatursus, Werehyaena Shaman, Wiggler.",
+  "Escudos",
+ ],
+ [
+  "Blessed Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "52",
+  "0",
+  "",
+  "68.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Bone Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "26",
+  "0",
+  "",
+  "55.00",
+  "Bonebeast, Chakoya Toolshaper, Chakoya Tribewarden, Chakoya Windcaller, Crypt Shambler, Dreadbeast, Dworc Fleshhunter, Necropharus, Ribstride, Tomb Servant.\nDurante Invasões:\nOcyakao.",
+  "Escudos",
+ ],
+ [
+  "Bonelord Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "37",
+  "1",
+  "",
+  "47.00",
+  "Bone Overlord, Bonelord, Braindeath, Elder Bonelord, The Gravedigger.\nDurante Invasões:\nThe Evil Eye.",
+  "Escudos",
+ ],
+ [
+  "Brass Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "21",
+  "0",
+  "",
+  "60.00",
+  "Bandit, Brittle Skeleton, Grand Master Oberon, Skeleton, Stalker, Wild Warrior.\nDurante Invasões:\nTeleskor.",
+  "Escudos",
+ ],
+ [
+  "Broken Wooden Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "15",
+  "0",
+  "",
+  "40.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Carapace Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "47",
+  "1",
+  "",
+  "55.00",
+  "Hive Overseer, Kollos, Spidris, Spidris Elite, Waspoid.",
+  "Escudos",
+ ],
+ [
+  "Castle Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "37",
+  "1",
+  "",
+  "49.00",
+  "Lich.",
+  "Escudos",
+ ],
+ [
+  "Copper Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "25",
+  "0",
+  "",
+  "63.00",
+  "Dwarf, Orc Warrior.\nDurante Invasões:\nRottie the Rotworm.",
+  "Escudos",
+ ],
+ [
+  "Crown Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "42",
+  "1",
+  "",
+  "62.00",
+  "Annihilon, Demon Outcast, Flameborn, Hero, Lava Golem, Michael the Stalwart, Raubritter Skirmisher, Renegade Knight, Retching Horror, Soul-Broken Harbinger, Sulphider, Terofar, Varnished Diremaw, Vile Grandmaster.",
+  "Escudos",
+ ],
+ [
+  "Dark Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "33",
+  "0",
+  "",
+  "52.00",
+  "Ancient Lion Knight, Grim Reaper, Michael the Stalwart, Pirate Corsair, Silencer, Thanatursus, Werelion.\nDurante Invasões:\nThe Handmaiden.\nDurante Eventos:\nHaunted Dragon.",
+  "Escudos",
+ ],
+ [
+  "Death Gaze",
+  "200",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "50",
+  "1",
+  "",
+  "79.00",
+  "Ferumbras Mortal Shell, Ragiaz.",
+  "Escudos",
+ ],
+ [
+  "Demon Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "46",
+  "1",
+  "",
+  "26.00",
+  "Angry Demon, Annihilon, Arbaziloth, Brinebrute Inferniarch, Demon, Demon Outcast, Essence Of Malice, Ferumbras Mortal Shell, Golgordan, Grimeleech, Latrivan, Katex Blood Tongue, Rage Squid, Rotrender, Shulgrax, Terofar, Utua Stone Sting, Vexclaw, Yirkas Blue Scales, Zavarash.\nDurante Invasões:\nFerumbras, Ghazbaran, Orshabaal.\nDurante Eventos:\nMinishabaal.",
+  "Escudos",
+ ],
+ [
+  "Dragon Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "41",
+  "1",
+  "",
+  "60.00",
+  "Bramble Wyrmling, Cinder Wyrmling, Dragon, Inkwing.\nDurante Invasões:\nGrand Mother Foulscale.\nDurante Eventos:\nTazhadur.",
+  "Escudos",
+ ],
+ [
+  "Dwarven Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "34",
+  "0",
+  "",
+  "55.00",
+  "Ancient Lion Knight, Dwarf Soldier.",
+  "Escudos",
+ ],
+ [
+  "Eagle Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "42",
+  "0",
+  "",
+  "62.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Ectoplasmic Shield",
+  "180",
+  "Knights",
+  "",
+  "Axe Fighting +3, Club Fighting +3",
+  "Ice +7%, Fire -3%",
+  "49",
+  "1",
+  "",
+  "58.00",
+  "Faceless Bane.",
+  "Escudos",
+ ],
+ [
+  "Eerie Song Book",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "0",
+  "0",
+  "",
+  "13.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Eldritch Shield",
+  "270",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Physical +4%",
+  "51",
+  "1",
+  "",
+  "69.00",
+  "The Brainstealer.",
+  "Escudos",
+ ],
+ [
+  "Falcon Escutcheon",
+  "300",
+  "Knights and Paladins",
+  "",
+  "Nenhum.",
+  "Physical +7%, Fire +15%",
+  "52",
+  "1",
+  "",
+  "60.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Falcon Shield",
+  "300",
+  "Knights and Paladins",
+  "",
+  "Nenhum.",
+  "Physical +6%, Fire +10%",
+  "51",
+  "1",
+  "",
+  "57.00",
+  "Grand Chaplain Gaunder, Grand Master Oberon.",
+  "Escudos",
+ ],
+ [
+  "Fiery Rainbow Shield",
+  "100",
+  "Knights",
+  "",
+  "Shielding +3",
+  "Nenhuma.",
+  "47",
+  "0",
+  "",
+  "69.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Gnome Shield",
+  "200",
+  "Knights and Paladins",
+  "",
+  "Shielding +2",
+  "Physical +6%, Energy +8%, Ice -2%",
+  "50",
+  "1",
+  "",
+  "60.00",
+  "The Count Of The Core, The Duke Of The Depths, The Baron from Below.",
+  "Escudos",
+ ],
+ [
+  "Golden Blessed Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "68.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Great Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "50",
+  "1",
+  "",
+  "84.00",
+  "Ferumbras Mortal Shell,Razzagorn, Soul of Dragonking Zyrtarch.\nDurante Invasões:\nFerumbras, Massacre, Morgaroth, Ghazbaran.",
+  "Escudos",
+ ],
+ [
+  "Griffin Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "38",
+  "1",
+  "",
+  "50.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Guardian Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "39",
+  "0",
+  "",
+  "55.00",
+  "Annihilon, Burning Book, Choking Fear, Cult Enforcer, Demon Skeleton, Diabolic Imp, Energy Elemental, Enslaved Dwarf, Fire Devil, Knowledge Elemental, Lost Berserker, Lost Exile, Lost Husher, Minotaur Invader, Mooh'Tah Warrior, Mutated Tiger, Spiky Carnivor, Terofar, Vicious Squire, Zavarash.\nDurante Invasões:\nTyrn, Zomba, Zulazza the Corruptor.\nDurante Eventos:\nMinishabaal.",
+  "Escudos",
+ ],
+ [
+  "Haunted Mirror Piece",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "45",
+  "1",
+  "",
+  "28.00",
+  "Durante Invasões:\nThe Pale Count.",
+  "Escudos",
+ ],
+ [
+  "Icy Rainbow Shield",
+  "100",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "51",
+  "0",
+  "",
+  "69.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Journal Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "27.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Lion Shield",
+  "250",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Physical +7%, Earth +10%",
+  "51",
+  "1",
+  "",
+  "65.00",
+  "Ancient Lion Knight, Drume.",
+  "Escudos",
+ ],
+ [
+  "Mastermind Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "49",
+  "1",
+  "",
+  "57.00",
+  "Angry Demon, Annihilon, Brachiodemon, Demon, Falcon Knight, Falcon Paladin, Ferumbras Mortal Shell, Grand Canon Dominus, Hellflayer, Juggernaut, Latrivan, Preceptor Lazare, Rhindeer, Terofar, Vexclaw, Zavarash.\nDurante Invasões:\nFerumbras, Ghazbaran, Orshabaal, Zulazza the Corruptor.",
+  "Escudos",
+ ],
+ [
+  "Mathmaster Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "3.14",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Meat Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "13",
+  "1",
+  "",
+  "5.00",
+  "Doctor Perhaps.",
+  "Escudos",
+ ],
+ [
+  "Medusa Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "43",
+  "1",
+  "",
+  "58.00",
+  "Gorgo, Hydra, Lion Hydra, Medusa, The Enraged Thorn Knight, The Many, The Souldespoiler.\nDurante Invasões:\nThe Welter.",
+  "Escudos",
+ ],
+ [
+  "Mino Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "41",
+  "0",
+  "",
+  "65.00",
+  "Bulltaur Brute, Minotaur Amazon, Minotaur Cult Follower, Minotaur Hunter, Thanatursus, The False God, Usurper Archer.",
+  "Escudos",
+ ],
+ [
+  "Morshabaal's Mask",
+  "150",
+  "Todas",
+  "",
+  "Fire Magic Level +1, Ice Magic Level +1, Earth Magic Level +1, Energy Magic Level +1",
+  "Nenhuma.",
+  "0",
+  "0",
+  "",
+  "41.00",
+  "Ninguém.\nDurante Invasões:\nMorshabaal.",
+  "Escudos",
+ ],
+ [
+  "Necromancer Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "49",
+  "1",
+  "",
+  "32.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Nightmare Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "49",
+  "1",
+  "",
+  "32.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Norse Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "37",
+  "1",
+  "",
+  "41.00",
+  "Frost Giant, Frost Giantess.",
+  "Escudos",
+ ],
+ [
+  "Ornamented Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "29",
+  "1",
+  "",
+  "67.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Ornate Shield",
+  "130",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Physical +5%",
+  "47",
+  "1",
+  "",
+  "71.00",
+  "Jaul,Tanjis.",
+  "Escudos",
+ ],
+ [
+  "Painted Gourd Rattle",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "3.90",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Phoenix Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "45",
+  "1",
+  "",
+  "35.00",
+  "Ferumbras Mortal Shell, Mahrdis, The Time Guardian.\nDurante Invasões:\nFerumbras, Furyosa.",
+  "Escudos",
+ ],
+ [
+  "Plate Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "23",
+  "0",
+  "",
+  "65.00",
+  "Assassin, Cyclops, Cyclops Drone, Cyclops Smith, Crazed Dwarf, Elf, Gladiator, Gozzler, Iks Aucar, Juvenile Cyclops, Minotaur, Minotaur Bruiser, Minotaur Cult Follower, Mutated Rat, Orc Cult Fanatic, Orc Leader, Pirate Marauder, Renegade Orc, Rorc, Scar Tribe Warrior, Tarantula, Tortoise, Wailing Widow, War Golem, Werewolf.",
+  "Escudos",
+ ],
+ [
+  "Prismatic Shield",
+  "150",
+  "Knights",
+  "",
+  "Shielding +2",
+  "Physical +4%",
+  "49",
+  "0",
+  "",
+  "72.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Rainbow Shield",
+  "100",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "39",
+  "0",
+  "",
+  "69.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Refined Stag Shield",
+  "350",
+  "Knights",
+  "",
+  "Axe Fighting +2, Club Fighting +2, Sword Fighting +2",
+  "Physical +5%, Ice +12%",
+  "54",
+  "1",
+  "",
+  "62.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Rift Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "49",
+  "1",
+  "",
+  "65.00",
+  "Ferumbras Mortal Shell, Grimeleech, Hellflayer, Mazoran, Shulgrax, The Scourge of Oblivion, Vexclaw.",
+  "Escudos",
+ ],
+ [
+  "Rose Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "36",
+  "0",
+  "",
+  "52.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Runic Ice Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "41",
+  "1",
+  "",
+  "49.00",
+  "Melting Frozen Horror.\nDurante Invasões:\nHirintror.\nDurante Eventos:\nGelidrazah the Frozen.",
+  "Escudos",
+ ],
+ [
+  "Salamander Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "34",
+  "0",
+  "",
+  "59.00",
+  "High Templar Cobrass, Lizard Templar, Lizard Executioner.",
+  "Escudos",
+ ],
+ [
+  "Scarab Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "33",
+  "0",
+  "",
+  "47.00",
+  "Ancient Scarab, Ancient Spawn of Morgathla, Fleshcrawler, The Ravager.",
+  "Escudos",
+ ],
+ [
+  "Sentinel Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "29",
+  "1",
+  "",
+  "49.00",
+  "Lizard Sentinel, Lizard Henchman.",
+  "Escudos",
+ ],
+ [
+  "Shield of Care",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "11",
+  "1",
+  "",
+  "17.00",
+  "Monstor.",
+  "Escudos",
+ ],
+ [
+  "Shield of Corruption",
+  "80",
+  "Knights",
+  "",
+  "Sword Fighting +3",
+  "Nenhuma.",
+  "47",
+  "1",
+  "",
+  "49.00",
+  "Draken Abomination, Essence Of Malice, Soul of Dragonking Zyrtarch, The Souldespoiler.",
+  "Escudos",
+ ],
+ [
+  "Shield of Destiny",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "68.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Shield of Endless Search",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "11.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Shield of Honour",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "43",
+  "0",
+  "",
+  "54.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Shield of the White Knight",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "11",
+  "1",
+  "",
+  "5.00",
+  "Mephiles.",
+  "Escudos",
+ ],
+ [
+  "Soulbastion",
+  "400",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Physical +10%, Death +10%",
+  "55",
+  "1",
+  "",
+  "58.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Sparking Rainbow Shield",
+  "100",
+  "Knights",
+  "",
+  "Speed +10",
+  "Nenhuma.",
+  "47",
+  "0",
+  "",
+  "69.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "Spike Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "37",
+  "0",
+  "",
+  "59.00",
+  "Corym Charlatan, Corym Skirmisher, Corym Vanguard.",
+  "Escudos",
+ ],
+ [
+  "Stag Shield",
+  "350",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Physical +5%, Ice +10%",
+  "52",
+  "1",
+  "",
+  "62.00",
+  "Court Warlock.",
+  "Escudos",
+ ],
+ [
+  "Steel Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "28",
+  "1",
+  "",
+  "69.00",
+  "Assassin, Bonelord, Braindeath, Crypt Defiler, Dragon, Elder Bonelord, Gladiator, Grave Robber, Nomad, Pirate Cutthroat, Plaguesmith, Wild Warrior.\nDurante Invasões:\nGrorlam, Rukor Zad, The Evil Eye.",
+  "Escudos",
+ ],
+ [
+  "Strange Good Night Songs",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "0",
+  "0",
+  "",
+  "13.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Studded Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "20",
+  "0",
+  "",
+  "58.00",
+  "Ancient Lion Knight, Orc, Woodling.\nDurante Invasões:\nXenia.",
+  "Escudos",
+ ],
+ [
+  "Tempest Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "47",
+  "1",
+  "",
+  "51.00",
+  "Mazoran.\nDurante Invasões:\nFerumbras, The Imperor.\nDurante Eventos:\nMinishabaal.",
+  "Escudos",
+ ],
+ [
+  "Terran Rainbow Shield",
+  "100",
+  "Knights",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "49",
+  "0",
+  "",
+  "69.00",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "The Dragon Spirit",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "",
+  "0",
+  "",
+  "26.02",
+  "Ninguém.",
+  "Escudos",
+ ],
+ [
+  "The Shield Nevermourn",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "33",
+  "0",
+  "",
+  "52.00",
+  "Dirtbeard.",
+  "Escudos",
+ ],
+ [
+  "Tortoise Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "34",
+  "0",
+  "",
+  "52.00",
+  "Tortoise.",
+  "Escudos",
+ ],
+ [
+  "Tower Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "42",
+  "1",
+  "",
+  "82.00",
+  "Albino Dragon, Annihilon, Armadile, Boar Man, Dragon Lord, Draken Warmaster, Enslaved Dwarf, Esmeralda, Eternal Guardian, Frost Dragon, Lizard High Guard, Lizard Zaogun, Lizard Chosen, Lost Berserker, Lost Exile, Lost Husher, Lost Soul, Mutated Rat, Retching Horror, Serpent Spawn, The Noxious Spawn.\nDurante Invasões:\nSight of Surrender, Zulazza the Corruptor.",
+  "Escudos",
+ ],
+ [
+  "Tusk Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "36",
+  "0",
+  "",
+  "69.00",
+  "Clomp, Elephant, Mammoth, Stone Rhino, Terrified Elephant, The Bloodtusk.",
+  "Escudos",
+ ],
+ [
+  "Vampire Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "45",
+  "1",
+  "",
+  "38.00",
+  "Arthei, Boreth, Lersatio, Nightfiend, The Count, The Weakened Count, Vampire, Vampire Viscount.\nDurante Invasões:\nArachir the Ancient One, Diblis the Fair, Sir Valorcrest, The Pale Count, Zevelon Duskbringer.",
+  "Escudos",
+ ],
+ [
+  "Viking Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "29",
+  "1",
+  "",
+  "66.00",
+  "Ninguém",
+  "Escudos",
+ ],
+ [
+  "Warrior's Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "43",
+  "1",
+  "",
+  "75.00",
+  "Ancient Spawn of Morgathla, Crape Man, Deathling Scout, Deathling Spellsinger, Deepling Elite, Deepling Warrior, Thanatursus, The Sandking, Tremendous Tyrant.",
+  "Escudos",
+ ],
+ [
+  "Wooden Shield",
+  "0",
+  "Todas",
+  "",
+  "Nenhum.",
+  "Nenhuma.",
+  "19",
+  "0",
+  "",
+  "40.00",
+  "Big Boss Trolliver, Frost Troll, Island Troll, Troll, Troll Champion, Troll Marauder, Young Troll.",
+  "Escudos",
  ],
 ]
