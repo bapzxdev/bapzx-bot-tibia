@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.8"
+VERSION = "2.10.9"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3378,8 +3378,9 @@ def _iteminfo(item_name):
 
 def _ficha_local(item_name):
     """Busca a ficha do item no banco local (mk_itens.py) e devolve dicionário
-    com as stats da nossa base (nível/vocação/elemento/bônus/resistência/atk/
-    def/slots/peso/drop) ou None se o item não estiver cadastrado."""
+    com as stats da nossa base (nível/vocação/tipo de dano/bônus/proteção/dano
+    médio ou armadura/slots/tier/peso/drop) ou None se o item não estiver
+    cadastrado."""
     nome = (item_name or "").strip()
     if not nome:
         return None
@@ -3387,7 +3388,7 @@ def _ficha_local(item_name):
         s = (s or "").strip().lower()
         return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
     alvo = norm(nome)
-    campos = ["nome", "nivel", "vocacao", "elemento", "bonus", "resistencia", "atk", "def", "slots", "peso", "drop"]
+    campos = ["nome", "nivel", "vocacao", "tipo_dano", "bonus", "protecao", "dano_medio", "slots", "tier", "peso", "drop"]
     for linha in _MK_ITENS_DB:
         if norm(linha[0]) == alvo:
             ficha = dict(zip(campos, [str(v or "") for v in linha]))

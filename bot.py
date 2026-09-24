@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.8"
+VERSION = "2.10.9"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -462,8 +462,8 @@ _MK_AC_SCRIPT = ("""
     dd.hidden = true;
     var init = campo.value.charAt(0);
     var linhas = [
-      ["Nível", it[1]], ["Vocação", it[2]], ["Elemento", it[3]], ["Bônus", it[4]],
-      ["Resistência", it[5]], ["Ataque", it[6]], ["Defesa", it[7]], ["Slots", it[8]], ["Peso", it[9]]
+      ["Nível", it[1]], ["Vocação", it[2]], ["Tipo de dano", it[3]], ["Bônus", it[4]],
+      ["Proteção", it[5]], [it[3] ? "Dano Médio" : "Armadura", it[6]], ["Slots", it[7]], ["Tier", it[8]], ["Peso", it[9]]
     ].filter(function (p) { return p[1] !== "" && p[1] != null; });
     ficha.innerHTML =
       "<h4>" + esc(it[0]) + "</h4>" +

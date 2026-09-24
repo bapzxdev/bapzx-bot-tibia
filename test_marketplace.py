@@ -1124,8 +1124,17 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(ficha["nome"], "Hailstorm Rod")
         self.assertEqual(ficha["nivel"], "33")
         self.assertEqual(ficha["vocacao"], "Druids")
-        self.assertEqual(ficha["elemento"], "Ice")
-        self.assertEqual(ficha["atk"], "65")
+        self.assertEqual(ficha["tipo_dano"], "Ice")
+        self.assertEqual(ficha["dano_medio"], "65")
+
+    def test_ficha_local_capacete(self):
+        ficha = painel._ficha_local("Amazon Helmet")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["nome"], "Amazon Helmet")
+        self.assertEqual(ficha.get("tipo_dano", ""), "")
+        self.assertEqual(ficha["dano_medio"], "7")
+        self.assertEqual(ficha["tier"], "4")
+        self.assertEqual(ficha["slots"], "2")
 
     def test_ficha_local_item_fora_da_base_e_none(self):
         self.assertIsNone(painel._ficha_local("Sword of the Unknown"))
