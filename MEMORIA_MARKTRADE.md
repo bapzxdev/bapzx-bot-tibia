@@ -17,8 +17,14 @@ A página que vamos trabalhar AGORA é exclusivamente:
   volta via "← Voltar para os anúncios" (padrão do site), preservando os
   filtros da listagem em `sessionStorage`.
 
-### VERSÃO ATUAL (v2.10.5)
+### VERSÃO ATUAL (v2.10.6)
 
+- **Ficha do item (Wiki) voltou a aparecer**: `/api/item` consultava o TibiaWiki
+  com `action=parse` (prop=wikitext), que era **bloqueado (403) no servidor
+  Render** — o sprite usa `action=query` e por isso os cards tinham imagem mas a
+  ficha do detalhe vinha vazia. `_iteminfo_wiki` agora usa
+  `action=query&prop=revisions&rvprop=content` (mesmo mecanismo do sprite),
+  lendo `query.pages[].revisions[].slots.main.content` — `bapzx/painel.py`.
 - **Sprite pequeno no detalhe**: `.d-sprite img` usa `height:88px` (era 190px,
   ficava gigante) — `bapzx-portfolio/anuncio.html`.
 - **Chip de tier sobre o sprite**: classes `.d-tier-chip` (detalhe) e
