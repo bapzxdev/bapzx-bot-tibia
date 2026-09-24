@@ -20,8 +20,9 @@ from painel import bp as painel_bp
 from painel import _registra_invalidador_coins, _registra_invalidador_marketplace, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 import rbac as rbac
 import legais as legais
+from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.7"
+VERSION = "2.10.8"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -376,6 +377,127 @@ _MK_CAT_WIKI = [
     ("rotten blood", ["rotten blood"]),
     ("house", ["house", "guildhall", "apartment", "flat"]),
 ]
+
+_MK_ITENS_JSON = json.dumps(_MK_ITENS_DB, ensure_ascii=False)
+
+_MK_AC_CSS = """
+<style>
+.mk-pub-ac{position:relative}
+.mk-pub-ac-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:80;background:var(--panel-2);border:1px solid var(--border-2);border-radius:10px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.5);max-height:260px;overflow-y:auto}
+.mk-pub-ac-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;background:transparent;color:var(--text);font-size:14px;border-bottom:1px solid var(--border);text-align:left;width:100%}
+.mk-pub-ac-item:last-child{border-bottom:0}
+.mk-pub-ac-item:hover,.mk-pub-ac-item.on{background:rgba(96,165,250,.14)}
+.mk-pub-ac-item b{color:var(--green);font-weight:700}
+.mk-pub-ac-sub{margin-left:auto;color:var(--muted);font-size:12px;flex-shrink:0;white-space:nowrap}
+.mk-pub-ficha{display:none;margin-top:12px;background:var(--panel-2);border:1px solid var(--border-2);border-radius:10px;padding:14px;font-size:13px}
+.mk-pub-ficha.on{display:block}
+.mk-pub-ficha h4{margin:0 0 10px;font-family:'Sora',sans-serif;font-size:15px;color:var(--green)}
+.mk-pub-ficha .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px 16px}
+.mk-pub-ficha .st{display:flex;flex-direction:column;border-bottom:1px dashed var(--border);padding:3px 0}
+.mk-pub-ficha .st span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.mk-pub-ficha .st b{color:var(--text);font-size:13px;font-weight:600}
+</style>
+"""
+
+_MK_AC_SCRIPT = ("""
+<script>
+(function () {
+  var ITENS = __MK_ITENS_JSON__;
+  var campo = document.getElementById("item_name");
+  if (!campo) return;
+  var wrap = document.createElement("div");
+  wrap.className = "mk-pub-ac";
+  campo.parentNode.insertBefore(wrap, campo);
+  wrap.appendChild(campo);
+  var dd = document.createElement("div");
+  dd.className = "mk-pub-ac-drop";
+  dd.hidden = true;
+  wrap.appendChild(dd);
+  var ficha = document.createElement("div");
+  ficha.className = "mk-pub-ficha";
+  campo.parentNode.appendChild(ficha);
+  var sel = -1;
+  function norm(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+  }
+  function sedd() {
+    var q = norm(campo.value).replace(/\\s+/g, " ").trim();
+    if (q.length < 2) { dd.hidden = true; sel = -1; return; }
+    var res = [];
+    for (var i = 0; i < ITENS.length && res.length < 8; i++) {
+      if (norm(ITENS[i][0]).indexOf(q) !== -1) { var e = ITENS[i].slice(); e.i = i; res.push(e); }
+    }
+    if (!res.length) { dd.hidden = true; sel = -1; return; }
+    sel = -1;
+    dd.innerHTML = res.map(function (it, idx) {
+      var n = String(it[0]);
+      var k = norm(n).indexOf(q);
+      var str = "";
+      if (k < 0) { str = esc(n); } else {
+        str = esc(n.slice(0, k)) + "<b>" + esc(n.slice(k, k + q.length)) + "</b>" + esc(n.slice(k + q.length));
+      }
+      var extra = (it[1] && it[1] !== "0") ? ('<span class="mk-pub-ac-sub">Nv ' + esc(it[1]) + (it[2] ? " · " + esc(it[2]) : "") + "</span>") : "";
+      return '<button type="button" class="mk-pub-ac-item" data-i="' + it.i + '">' + str + extra + "</button>";
+    }).join("");
+    dd.hidden = false;
+    vzFirst();
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function vzFirst() {
+    var itens = dd.querySelectorAll(".mk-pub-ac-item");
+    if (itens.length && sel === -1) sel = 0;
+    for (var i = 0; i < itens.length; i++) itens[i].classList.toggle("on", i === sel);
+  }
+  function mover(dir) {
+    var itens = dd.querySelectorAll(".mk-pub-ac-item");
+    if (!itens.length) return;
+    if (sel < 0) sel = dir > 0 ? 0 : itens.length - 1; else sel = (sel + dir + itens.length) % itens.length;
+    for (var i = 0; i < itens.length; i++) itens[i].classList.toggle("on", i === sel);
+  }
+  function aplicar(it) {
+    if (!it) return;
+    campo.value = it[0];
+    dd.hidden = true;
+    var init = campo.value.charAt(0);
+    var linhas = [
+      ["Nível", it[1]], ["Vocação", it[2]], ["Elemento", it[3]], ["Bônus", it[4]],
+      ["Resistência", it[5]], ["Ataque", it[6]], ["Defesa", it[7]], ["Slots", it[8]], ["Peso", it[9]]
+    ].filter(function (p) { return p[1] !== "" && p[1] != null; });
+    ficha.innerHTML =
+      "<h4>" + esc(it[0]) + "</h4>" +
+      '<div class="g">' +
+      linhas.map(function (p) { return '<div class="st"><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b></div>'; }).join("") +
+      "</div>" +
+      (it[10] ? '<p style="margin:8px 0 0;color:var(--muted)"><b style="color:var(--purple)">Obtido de:</b> ' + esc(it[10]) + "</p>" : "");
+    ficha.classList.add("on");
+  }
+  campo.addEventListener("input", sedd);
+  campo.addEventListener("keydown", function (e) {
+    if (!dd.hidden && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      mover(e.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+    if (e.key === "Enter" && !dd.hidden && sel >= 0) {
+      e.preventDefault();
+      var items = dd.querySelectorAll(".mk-pub-ac-item");
+      if (items[sel]) aplicar(ITENS[Number(items[sel].getAttribute("data-i"))]);
+    }
+    if (e.key === "Escape" && !dd.hidden) { dd.hidden = true; sel = -1; }
+  });
+  dd.addEventListener("click", function (e) {
+    var item = e.target.closest(".mk-pub-ac-item");
+    if (!item) return;
+    aplicar(ITENS[Number(item.getAttribute("data-i"))]);
+  });
+  document.addEventListener("click", function (e) {
+    if (!dd.hidden && !e.target.closest(".mk-pub-ac")) { dd.hidden = true; sel = -1; }
+  });
+})();
+</script>
+""").replace("__MK_ITENS_JSON__", _MK_ITENS_JSON)
 
 
 def _mk_title_case(text):
@@ -3163,11 +3285,12 @@ def cliente_troca():
             f"<p class='note'>Publicação por <b>{_mk_brl(preco_pub)}</b> · Destaque VIP + <b>{_mk_brl(preco_des)}</b> · "
             f"o anúncio fica válido por <b>{_mk_duracao('duracao_publicacao_dias', 30)} dias</b>. "
             f"Você publica quando quiser (até <b>{limite} ativos</b> ao mesmo tempo).</p>"
-            "<form method='post' action='/cliente/troca/publicar'>"
+            + _MK_AC_CSS
+            + "<form method='post' action='/cliente/troca/publicar'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='grid2'>"
-            "<div><label>Item *</label><input name='item_name' required maxlength='120' "
-            "placeholder='Ex.: War Hammer'></div>"
+            "<div><label>Item *</label><input name='item_name' id='item_name' required maxlength='120' "
+            "placeholder='Ex.: War Hammer' autocomplete='off'></div>"
             "<div><label>Personagem *</label><input name='character_name' required maxlength='60' "
             "placeholder='Ex.: Bapz'></div>"
             "<div><label>Mundo *</label><select name='world' required>"
@@ -3202,7 +3325,9 @@ def cliente_troca():
             "<p><label><input type='checkbox' name='destaque' value='1'> "
             f"Destacar meu anúncio <b>(+ {_mk_brl(preco_des)}</b>) — fica no topo com tag de destaque</label></p>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Publicar agora</button></p>"
-            "</form></div>"
+            "</form>"
+            + _MK_AC_SCRIPT
+            + "</div>"
         )
 
         if mine:

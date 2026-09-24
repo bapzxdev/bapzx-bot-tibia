@@ -8,3 +8,4 @@ pedidos.json
 supabase_migracao_*.sql
 scripts/criar_tabela_supabase.sql
 scripts/migracao_status.sql
+_mk_*.py

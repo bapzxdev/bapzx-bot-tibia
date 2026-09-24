@@ -4,6 +4,32 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.10.8 (24/09, autocomplete de itens + ficha local no detalhe)**: a
+  pedido do dono, o campo "Item *" do formulário de Publicar anúncio
+  (`/cliente/troca`, form POST `/cliente/troca/publicar`) ganhou
+  **autocomplete + ficha do item** a partir de um banco de itens local. Novo
+  módulo **`mk_itens.py`** com `_MK_ITENS_DB` (54 itens: 14 Rods + 40 Wands,
+  campos nome/nivel/vocacao/elemento/bonus/resistencia/atk/def/slots/peso/drop);
+  o `bot.py` importa e injeta via `_MK_ITENS_JSON` (json.dumps) no
+  `_MK_AC_SCRIPT` (JS inline com dropdown filtrado, navegação por
+  setas/Enter/Escape, ficha com Nível/Vocação/Elemento/Bônus/Resistência/
+  Ataque/Defesa/Slots/Peso/Obtido de). O campo `item_name` virou
+  `id='item_name'` + `autocomplete='off'`; CSS `_MK_AC_CSS` (`.mk-pub-ac`,
+  `.mk-pub-ac-drop`, `.mk-pub-ficha`). Corrigido no JS o índice da lista
+  filtrada vs. array completo (data-i). **O autocomplete é SÓ no Publicar
+  anúncio** — o `troca.html` do portfólio foi REVERTIDO para o estado anterior
+  (busca sem dropdown/ficha). **Ficha local no Detalhes do anúncio**: o
+  `painel.py` ganhou `import unicodedata`, `from mk_itens import _MK_ITENS_DB`
+  e `_ficha_local(nome)` (normalização sem acentos; dict stringificado ou
+  `None`); GET `/api/item` devolve `ficha_local`; GET `/api/troca/<id>` inclui
+  `ficha_local` no payload. `anuncio.html` renderiza a seção "Ficha do item —
+  Dados da nossa base de itens" (Nível/Vocação/Elemento/Bônus/Resistência/
+  Ataque/Defesa/Slots/Peso/Obtido de) antes da ficha do Wiki. Testado ao vivo
+  (sangui → Sanguine Coil Nv 600 Sorcerers; hail → Hailstorm Rod Nv 33 Druids)
+  e detalhe mock id=99 renderiza ficha local completa no navegador.
+  VERSION bot.py e painel.py **2.10.8**. py_compile OK; test_marketplace **61
+  OK**; test_coins **26 OK**. Pendência: deploy no Render.
+
 - **v2.10.5 (23/09, página de detalhes do anúncio + info do item via Wiki)**: a pedido do dono, clicar em um anúncio na listagem agora abre uma **página de detalhes dinâmica** `anuncio.html` (novo, no portfolio) — novas rotas públicas no painel.py: **GET `/api/troca/<id>`** (anúncio individual com `status` incluído, usa `_fetch_public` com `id=eq.<id>&status=eq.ativa` `range_="0-0"`; 404 + CORS se não achar) e **GET `/api/item?nome=`** (cache 2min) que devolve `info` (tier/nível/vocação/armor/peso/imbuement/resistências/atributos/classificação/vende para/compra de/tipo_item via `parse` + `redirects=1` + parse da `{{Infobox_Item` no TibiaWiki server-side, limpeza de wikilinks via `_limpa_wiki`; retry com UA neutro em 403/429) e `referencia` (min/max/média/quantidade/última data calculado dos **anúncios ativos do mesmo item** no próprio marketplace via `ilike.*nome*` — nunca inventa preço; `None` sem dados). `troca.html`: cards viraram `<a href="anuncio.html?id=...">` (mantendo badge VIP/estilo; `a` com `text-decoration:none`), e **filtros persistidos em `sessionStorage`** (STORAGE_KEY `marktrade-filtros`, `saveState`/`restoreState` + `syncChips()` ao carregar) para o usuário voltar do detalhe com a lista como deixou. `anuncio.html`: visual dark igual troca.html, botão "← Voltar para os anúncios" no padrão do site, trata loading/erro/id inválido/404, mostra preço/ofertas, mundo, anunciante (verificado), contato, descrição, seção "Sobre o item" (ficha do Wiki) e "Preço de referência" (histórico dos anúncios do mesmo item); `status` "Ativo/Vendido/Expirado" com emoji; título da aba dinâmico. Testes: **+10 novos** em test_marketplace (api_troca detalhe encontrado/não encontrado/rate-limit/CORS origem fora, api_item sem nome/com info, iteminfo parseia infobox/sem tier/falha+vazio, ref_de_preco média/vazio). VERSION painel.py **2.10.5** (bot.py permanece 2.10.4 — sem mudança funcional no bot). py_compile OK; test_marketplace **56 OK**; test_coins **26 OK**; JS check troca.html + anuncio.html OK; navegador mock validado de ponta a ponta (listagem → filtro Soul Core → clique no card → detalhe com tier/atributos/preço referência → voltar → filtro restaurado; id inválido e 404 tratados). **Próximo passo (dono): re-deploy no Render (verde, v2.10.5 no /health) e validar ao vivo: clicar num anúncio real → página de detalhes com foto/atributos/preço de referência; usar o "Voltar" e confirmar filtros preservados.**
 
 - **v2.10.4-dados (23/09, troca.html dark + VIP no topo)**: página `troca.html` do

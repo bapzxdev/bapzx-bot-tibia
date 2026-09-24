@@ -1113,6 +1113,44 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(data["info"]["tier"], "3")
         self.assertEqual(data["referencia"]["media"], 300)
 
+    def test_api_item_com_ficha_local(self):
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False):
+            c = bot.app.test_client()
+            resp = c.get("/api/item?nome=Hailstorm%20Rod")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        ficha = data.get("ficha_local")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["nome"], "Hailstorm Rod")
+        self.assertEqual(ficha["nivel"], "33")
+        self.assertEqual(ficha["vocacao"], "Druids")
+        self.assertEqual(ficha["elemento"], "Ice")
+        self.assertEqual(ficha["atk"], "65")
+
+    def test_ficha_local_item_fora_da_base_e_none(self):
+        self.assertIsNone(painel._ficha_local("Sword of the Unknown"))
+        self.assertIsNone(painel._ficha_local(""))
+
+    def test_api_troca_detalhe_traz_ficha_local(self):
+        rows = [{
+            "id": 99, "tipo_anuncio": "venda", "item_name": "Sanguine Coil",
+            "description": "teste", "sprite": "", "preco": 123.0,
+            "aceita_ofertas": False, "world": "Belaria", "character_name": "Bapzx",
+            "category": "Wands", "contact": "@bapzx", "verificado": True,
+            "is_destaque": False, "destaque_until": "", "created_at": "2026-01-01T00:00:00",
+            "status": "ativa",
+        }]
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False), \
+             mock.patch.object(painel, "_fetch_public", return_value=rows):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca/99")
+        self.assertEqual(resp.status_code, 200)
+        ficha = resp.get_json()["anuncio"]["ficha_local"]
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["nome"], "Sanguine Coil")
+        self.assertEqual(ficha["nivel"], "600")
+        self.assertEqual(ficha["vocacao"], "Sorcerers")
+
     def test_iteminfo_wiki_parsea_infobox(self):
         wikitext = """{{Infobox_Item|List={{{1|}}}|GetValue={{{GetValue|}}}\n"
         | name           = Gnome Helmet

@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 import time
+import unicodedata
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
@@ -12,10 +13,15 @@ from flask import Blueprint, Response, jsonify, redirect, request, session
 
 import rbac
 
+try:
+    from mk_itens import _MK_ITENS_DB
+except Exception:
+    _MK_ITENS_DB = []
+
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.7"
+VERSION = "2.10.8"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3370,6 +3376,25 @@ def _iteminfo(item_name):
     return info
 
 
+def _ficha_local(item_name):
+    """Busca a ficha do item no banco local (mk_itens.py) e devolve dicionário
+    com as stats da nossa base (nível/vocação/elemento/bônus/resistência/atk/
+    def/slots/peso/drop) ou None se o item não estiver cadastrado."""
+    nome = (item_name or "").strip()
+    if not nome:
+        return None
+    def norm(s):
+        s = (s or "").strip().lower()
+        return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+    alvo = norm(nome)
+    campos = ["nome", "nivel", "vocacao", "elemento", "bonus", "resistencia", "atk", "def", "slots", "peso", "drop"]
+    for linha in _MK_ITENS_DB:
+        if norm(linha[0]) == alvo:
+            ficha = dict(zip(campos, [str(v or "") for v in linha]))
+            return {k: v for k, v in ficha.items() if v != "" or k == "nome"}
+    return None
+
+
 def _ref_de_preco(item_name):
     """Histórico/preço de referência a partir dos anúncios ativos do mesmo
     item no próprio marketplace (nunca inventa preço externo)."""
@@ -3442,6 +3467,7 @@ def api_troca_detalhe(aid):
         "criado_em": a.get("created_at") or "",
         "status": a.get("status") or "ativa",
         "tier": (_iteminfo(a.get("item_name") or "").get("tier") or ""),
+        "ficha_local": _ficha_local(a.get("item_name") or ""),
     }
     resposta = jsonify({"ok": True, "anuncio": payload})
     if origin and _cors_ok():
@@ -3461,6 +3487,7 @@ def api_item():
     if nome:
         payload["info"] = _iteminfo(nome)
         payload["referencia"] = _ref_de_preco(nome)
+        payload["ficha_local"] = _ficha_local(nome)
     if debug:
         payload["debug"] = {"wiki_diag": _WIKI_LAST_DIAG or "sem diagnóstico (usa cache?)"}
     response = jsonify(payload)
