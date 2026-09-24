@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _registra_invalidador_marketplac
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.10.4"
+VERSION = "2.10.5"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3117,7 +3117,8 @@ def cliente_troca():
     pagamentos = _mk_meus_pagamentos(email)
     pend = [l for l in mine if (l.get("status") or "") == "pendente"]
     ativas = [l for l in mine if (l.get("status") or "") in ("ativa", "pendente")]
-    vagas = max(0, limite - len(ativas))
+    ilimitado = email in MASTER_EMAILS
+    vagas = float("inf") if ilimitado else max(0, limite - len(ativas))
 
     kpis = (
         "<div class='kpis'>"
@@ -3126,7 +3127,7 @@ def cliente_troca():
         f"<div class='kpi blue'><div class='ic' aria-hidden='true'>&#11088;</div>"
         f"<div><div class='num'>{len(ativas)}</div><div class='lbl'>Ativos / pendentes</div></div></div>"
         f"<div class='kpi amber'><div class='ic' aria-hidden='true'>&#127919;</div>"
-        f"<div><div class='num'>{vagas}</div><div class='lbl'>Vagas (máx. {limite})</div></div></div>"
+        f"<div><div class='num'>{'∞' if ilimitado else vagas}</div><div class='lbl'>Vagas ({'ilimitadas' if ilimitado else f'máx. {limite}'})</div></div></div>"
         f"<div class='kpi purple'><div class='ic' aria-hidden='true'>&#128081;</div>"
         f"<div><div class='num'>{'ATIVO' if vip else '—'}</div><div class='lbl'>VIP BAPZX</div></div></div>"
         "</div>"
@@ -3341,7 +3342,7 @@ def cliente_troca_publicar():
 
     ativas = [l for l in _mk_minhas_listings(email) if (l.get("status") or "") in ("ativa", "pendente")]
     limite = _mk_limite()
-    if len(ativas) >= limite:
+    if email not in MASTER_EMAILS and len(ativas) >= limite:
         _mk_flash("erro", f"Você atingiu o limite de {limite} publicações ativas no MARKTRADE.")
         return redirect("/cliente/troca")
 

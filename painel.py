@@ -3230,6 +3230,7 @@ def api_troca():
             "is_destaque": bool(a.get("is_destaque")),
             "destaque_until": a.get("destaque_until") or "",
             "criado_em": a.get("created_at") or "",
+            "tier": (_iteminfo(a.get("item_name") or "").get("tier") or ""),
         }
         for a in anuncios
     ]
@@ -3409,6 +3410,7 @@ def api_troca_detalhe(aid):
         "destaque_until": a.get("destaque_until") or "",
         "criado_em": a.get("created_at") or "",
         "status": a.get("status") or "ativa",
+        "tier": (_iteminfo(a.get("item_name") or "").get("tier") or ""),
     }
     resposta = jsonify({"ok": True, "anuncio": payload})
     if origin and _cors_ok():
