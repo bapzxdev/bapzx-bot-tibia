@@ -4,6 +4,43 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
++- **v2.10.10 (24/09, armaduras no banco local)**: adicionadas as **165
++  armaduras** que o dono colou (`_mk_armas_dados.py`, gitignored — transcritas
++  do envio com arm/slots/tier/peso; sem coluna de sprite). Gerador
++  `_mk_gera_capacetes.py` agora lê as **54 armas do HEAD** (itens com
++  `tier=""`, pois capacetes/armaduras têm tier preenchido) + **151 capacetes**
++  do TSV + **165 armaduras** do módulo de dados. `mk_itens.py` reescrito com
++  **370 itens** (schema novo idêntico ao anterior: armas `tipo_dano`=elemento,
++  `dano_medio`=atk; capacetes/armaduras `tipo_dano=""`, `dano_medio`=Arm,
++  rótulo dinâmico "Armadura"). Caso especial mantido: Spectral Dress com `arm`
++  vazio (ficha mostra campo vazio). Nenhuma mudança de código/UI necessária
++  (lógica de rótulos já era dinâmica desde v2.10.9). Novos testes
++  `test_ficha_local_armadura` e `test_ficha_local_armadura_sem_arm`.
++  VERSION bot.py e painel.py **2.10.10**. Validado: py_compile OK;
++  test_marketplace **64 OK**; test_coins **26 OK** (90 total). Pendência:
++  re-deploy no Render e no GitHub Pages (Render ainda em v2.10.8); validar ao
++  vivo autocomplete em armadura (ex.: "amazon armor" → Armadura 13).
++
+ - **v2.10.9 (24/09, capacetes + schema unificado "nome level voc tipo de dano
+  bonus protecao dano medio slots tier peso dropa de")**: a pedido do dono, o
+  banco local `mk_itens.py` foi alinhado ao schema que ele usará: agora
+  **205 itens** (54 armas Rods/Wands + 151 capacetes). Schema novo por item:
+  `[nome, nivel, vocacao, tipo_dano, bonus, protecao, dano_medio, slots,
+  tier, peso, drop]` (`def` foi REMOVIDO; `tier` entrou; `elemento`→`tipo_dano`,
+  `resistencia`→`protecao`, `atk`→`dano_medio`). **Capacetes**: `tipo_dano=""`
+  e o campo `dano_medio` guarda o **Arm** (rótulo dinâmico "Armadura"); armas
+  mantêm atk (rótulo "Dano Médio"). Sem coluna de sprite (decisão do dono).
+  Geração via `_mk_gera_capacetes.py` (gitignored) a partir do TSV transcrito
+  da lista que o dono colou (`C:\Users\BapszX\AppData\Local\Temp\opencode\
+  capacetes.tsv`; corrigido typo "Nigém."→"Ninguém." e Demon Helmet lvl 3→0).
+  Botões: `painel._ficha_local` campos atualizados; `bot.py` `_MK_AC_SCRIPT`
+  (ficha no Publicar anúncio) com novos labels + tema dinâmico Dano Médio/
+  Armadura e Tier; `anuncio.html` (portfolio) `mapLbl`→etiq. dinâmica
+  (tipo_dano vazio ⇒ "Armadura"). VERSION bot.py e painel.py **2.10.9**.
+  Validado: py_compile OK; test_marketplace **62 OK** (+1 test_ficha_local_
+  capacete); test_coins **26 OK**. Pendência: re-deploy no Render e no GitHub
+  Pages; validar ao vivo autocomplete em capacete (ex.: "amazon" → Armadura 7).
+
 - **v2.10.8 (24/09, autocomplete de itens + ficha local no detalhe)**: a
   pedido do dono, o campo "Item *" do formulário de Publicar anúncio
   (`/cliente/troca`, form POST `/cliente/troca/publicar`) ganhou

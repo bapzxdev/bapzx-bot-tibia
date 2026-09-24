@@ -1136,6 +1136,21 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(ficha["tier"], "4")
         self.assertEqual(ficha["slots"], "2")
 
+    def test_ficha_local_armadura(self):
+        ficha = painel._ficha_local("Amazon Armor")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["nome"], "Amazon Armor")
+        self.assertEqual(ficha.get("tipo_dano", ""), "")
+        self.assertEqual(ficha["dano_medio"], "13")
+        self.assertEqual(ficha["tier"], "4")
+        self.assertEqual(ficha["slots"], "2")
+
+    def test_ficha_local_armadura_sem_arm(self):
+        ficha = painel._ficha_local("Spectral Dress")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha.get("tipo_dano", ""), "")
+        self.assertEqual(ficha.get("dano_medio", ""), "")
+
     def test_ficha_local_item_fora_da_base_e_none(self):
         self.assertIsNone(painel._ficha_local("Sword of the Unknown"))
         self.assertIsNone(painel._ficha_local(""))

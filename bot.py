@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.9"
+VERSION = "2.10.10"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
