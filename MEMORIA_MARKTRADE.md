@@ -17,6 +17,16 @@ A página que vamos trabalhar AGORA é exclusivamente:
   volta via "← Voltar para os anúncios" (padrão do site), preservando os
   filtros da listagem em `sessionStorage`.
 
+### VERSÃO ATUAL (v2.10.5)
+
+- **Sprite pequeno no detalhe**: `.d-sprite img` usa `height:88px` (era 190px,
+  ficava gigante) — `bapzx-portfolio/anuncio.html`.
+- **Chip de tier sobre o sprite**: classes `.d-tier-chip` (detalhe) e
+  `.mk-tier-chip` (card da listagem) mostram o tier real do item.
+- **API `/api/troca` e `/api/troca/<id>`** agora retornam `tier` por anúncio
+  (via `_iteminfo`, cache 2 min) — `bapzx/painel.py`.
+- Card da listagem (`troca.html`) injeta o chip de tier usando `a.tier`.
+
 ### REGRA PRINCIPAL
 
 - **NÃO** avance para nenhuma outra página do projeto até o dono responder
