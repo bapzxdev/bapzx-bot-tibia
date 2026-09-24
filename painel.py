@@ -1,4 +1,4 @@
-import html
+﻿import html
 import json
 import os
 import re
@@ -15,7 +15,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.6"
+VERSION = "2.10.7"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3242,27 +3242,48 @@ def api_troca():
 
 
 _WIKI_BASE = "https://www.tibiawiki.com.br/api.php"
-_WIKI_UA = "BAPZX-MARKTRADE/2.10.5 (público; contato BAPZX)"
+_WIKI_UA = "BAPZX-MARKTRADE/2.10.6 (público; contato BAPZX)"
 _ITEMINFO_CACHE = {}
+_WIKI_LAST_DIAG = ""
 
 
 def _wiki_get(params, timeout=(5, 15)):
     """GET na API pública do TibiaWiki com redirects; nunca derruba.
-    Em 403/429 (rate limit) tenta uma vez com User-Agent neutro."""
+    Em 403/429 (rate limit) tenta mais de uma vez com User-Agent neutro e, por
+    último, com um UA de navegador (o Wiki pode bloquear IPs de datacenter).
+    Devolve (dados, diagnostico) onde diagnostico é um texto curto útil em
+    depuração (status real / erro)."""
     query = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
     url = f"{_WIKI_BASE}?{query}"
-    for ua in (_WIKI_UA, "BAPZX-PORTFOLIO/1.0 (contato: lucascristianini1@gmail.com)"):
+    ultimo = ""
+    for ua in (
+        _WIKI_UA,
+        "BAPZX-PORTFOLIO/1.0 (contato: lucascristianini1@gmail.com)",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    ):
         try:
             response = requests.get(
                 url, headers={"User-Agent": ua}, timeout=timeout
             )
             if response.status_code in (403, 429):
+                ultimo = f"status {response.status_code}"
                 continue
-            response.raise_for_status()
-            return response.json() or {}
-        except Exception:
+            if response.status_code != 200:
+                ultimo = f"status {response.status_code}"
+                continue
+            try:
+                dados = response.json()
+            except Exception:
+                ultimo = "json inválido (html/waf?)"
+                continue
+            if not isinstance(dados, dict):
+                ultimo = "json não-dict"
+                continue
+            return dados, "ok"
+        except Exception as exc:
+            ultimo = type(exc).__name__
             continue
-    return {}
+    return {}, ultimo or "sem resposta"
 
 
 def _limpa_wiki(v):
@@ -3280,7 +3301,7 @@ def _iteminfo_wiki(item_name):
     if not nome:
         return {}
     try:
-        data = _wiki_get(
+        data, diag = _wiki_get(
             {
                 "action": "query",
                 "redirects": "1",
@@ -3292,13 +3313,16 @@ def _iteminfo_wiki(item_name):
                 "formatversion": "2",
             }
         )
+        if diag != "ok":
+            _WIKI_LAST_DIAG = diag + " in " + _WIKI_BASE
         wikitext = ""
         for page in (data.get("query") or {}).get("pages") or []:
             revs = page.get("revisions") or []
             if revs:
                 wikitext = (revs[0].get("slots") or {}).get("main", {}).get("content") or revs[0].get("content") or ""
                 break
-    except Exception:
+    except Exception as exc:
+        _WIKI_LAST_DIAG = "exc " + type(exc).__name__
         return {}
     i = wikitext.find("{{Infobox_Item")
     if i < 0:
@@ -3432,10 +3456,13 @@ def api_item():
         return jsonify({"ok": False, "error": "rate limit"}), 429
     origin = request.headers.get("Origin") or ""
     nome = (request.args.get("nome") or "").strip()
+    debug = request.args.get("debug") == "1"
     payload = {"item": nome, "ok": True}
     if nome:
         payload["info"] = _iteminfo(nome)
         payload["referencia"] = _ref_de_preco(nome)
+    if debug:
+        payload["debug"] = {"wiki_diag": _WIKI_LAST_DIAG or "sem diagnóstico (usa cache?)"}
     response = jsonify(payload)
     if origin and _cors_ok():
         response.headers["Access-Control-Allow-Origin"] = origin
