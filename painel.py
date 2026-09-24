@@ -15,7 +15,7 @@ import rbac
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.5"
+VERSION = "2.10.6"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3282,15 +3282,22 @@ def _iteminfo_wiki(item_name):
     try:
         data = _wiki_get(
             {
-                "action": "parse",
+                "action": "query",
                 "redirects": "1",
-                "page": nome,
-                "prop": "wikitext",
+                "titles": nome,
+                "prop": "revisions",
+                "rvprop": "content",
+                "rvslots": "main",
                 "format": "json",
                 "formatversion": "2",
             }
         )
-        wikitext = ((data.get("parse") or {}).get("wikitext")) or ""
+        wikitext = ""
+        for page in (data.get("query") or {}).get("pages") or []:
+            revs = page.get("revisions") or []
+            if revs:
+                wikitext = (revs[0].get("slots") or {}).get("main", {}).get("content") or revs[0].get("content") or ""
+                break
     except Exception:
         return {}
     i = wikitext.find("{{Infobox_Item")

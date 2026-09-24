@@ -21,7 +21,7 @@ from painel import _registra_invalidador_coins, _registra_invalidador_marketplac
 import rbac as rbac
 import legais as legais
 
-VERSION = "2.10.5"
+VERSION = "2.10.6"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"

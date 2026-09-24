@@ -881,6 +881,94 @@ class TestMkBot(unittest.TestCase):
         self.assertTrue(ativacao, "deve ativar o anúncio via PATCH no Supabase")
         self.assertEqual(ativacao[0]["status"], "ativa")
 
+    def test_publicar_master_ignora_limite_atingido(self):
+        # MASTER com o limite já atingido: mesmo assim publica (modo teste de
+        # validação do dono, sem bloquear na checagem de limite).
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        posts = []
+        patches = []
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def fakepost(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            posts.append(body)
+            if url.rstrip("/").endswith("marketplace_listings"):
+                r = _FakeResp()
+                r.json = lambda: [{"id": 1001}]
+                return r
+            return _FakeResp()
+
+        def fakepatch(url, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            patches.append(body)
+            return _FakeResp()
+
+        def lista_com_limite_atingido(email):
+            return [{"status": "ativa"} for _ in range(10)]
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lista_com_limite_atingido), \
+             mock.patch.object(bot, "_mk_limite", lambda: 3), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost), \
+             mock.patch.object(bot.requests, "patch", side_effect=fakepatch), \
+             mock.patch.object(bot, "create_marketplace_pix", side_effect=lambda *a, **k: (_ for _ in ()).throw(Exception("nao deve gerar QR"))):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "@bapzx",
+                "category": "Rares",
+            })
+        self.assertEqual(resp.status_code, 302)
+        ativacao = [p for p in patches if "/marketplace_listings?id=eq." in p.get("_url", "")]
+        self.assertTrue(ativacao, "MASTER deve publicar mesmo com limite atingido")
+        self.assertEqual(ativacao[0]["status"], "ativa")
+        self.assertFalse([p for p in posts if "marketplace_pagamentos" in p.get("_url", "")],
+                         "modo teste não deve criar pagamento/QR")
+
+    def test_publicar_nao_master_atinge_limite_bloqueia(self):
+        # Cliente comum com o limite atingido: bloqueia e volta com flash de erro.
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def lista_com_limite_atingido(email):
+            return [{"status": "ativa"} for _ in range(4)]
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "jogador@example.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lista_com_limite_atingido), \
+             mock.patch.object(bot, "_mk_limite", lambda: 3), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=lambda url, **kw: (_ for _ in ()).throw(AssertionError("não deve postar"))):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "War Hammer",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "@bapzx",
+                "category": "Rares",
+            })
+        self.assertEqual(resp.status_code, 302)
+        with c.session_transaction() as sess:
+            msg = sess.get("_mk_msg") or []
+            self.assertEqual(msg[0], "erro")
+            self.assertIn("Você atingiu o limite de 3 publicações ativas", (msg[1] or ""))
+
     def test_publicar_master_com_destaque_sem_qr(self):
         c = bot.app.test_client()
         bot._SPRITE_CACHE.clear()
@@ -1035,7 +1123,7 @@ class TestMkBot(unittest.TestCase):
         | resist         = [[Physical]] +3%, [[Energy]] +8%
         }}"""
         resp = _FakeResp()
-        resp.json = lambda: {"parse": {"wikitext": wikitext}}
+        resp.json = lambda: {"query": {"pages": [{"pageid": 1, "revisions": [{"content": wikitext}]}]}}
 
         with mock.patch.object(painel.requests, "get", return_value=resp):
             info = painel._iteminfo_wiki("Gnome Helmet")
@@ -1048,7 +1136,7 @@ class TestMkBot(unittest.TestCase):
     def test_iteminfo_wiki_sem_tier_deixa_vazio(self):
         wikitext = "{{Infobox_Item|List={{{1|}}}\n| name = Coisa\n| weight = 1}}"
         resp = _FakeResp()
-        resp.json = lambda: {"parse": {"wikitext": wikitext}}
+        resp.json = lambda: {"query": {"pages": [{"pageid": 1, "revisions": [{"content": wikitext}]}]}}
 
         with mock.patch.object(painel.requests, "get", return_value=resp):
             info = painel._iteminfo_wiki("Coisa")
