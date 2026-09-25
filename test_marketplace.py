@@ -696,6 +696,66 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(pl["item_name"], "War Hammer")
         self.assertNotIn("tipo_pvp", pl)
 
+    def test_publicar_sprite_vazio_busca_auto_e_grava(self):
+        c = bot.app.test_client()
+        posts = []
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_itemsprite", lambda item_name: "https://www.tibiawiki.com.br/images/Z/Za/Mace.gif"), \
+             mock.patch.object(bot, "_mk_itemcategory", lambda item_name: "Rares"), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "Mace",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "(19) 98765-4321",
+            })
+        self.assertEqual(resp.status_code, 500)
+        self.assertTrue(posts, "deve chegar ao Supabase")
+        self.assertEqual(posts[0]["sprite"], "https://www.tibiawiki.com.br/images/Z/Za/Mace.gif")
+        self.assertEqual(posts[0]["category"], "Rares")
+
+    def test_publicar_sprite_do_form_tem_prioridade(self):
+        c = bot.app.test_client()
+        posts = []
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_itemsprite", side_effect=AssertionError("nao deve buscar se veio do form")), \
+             mock.patch.object(bot, "_mk_itemcategory", lambda item_name: "Rares"), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "Mace",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "(19) 98765-4321",
+                "sprite": "https://exemplo.com/mace.gif",
+            })
+        self.assertEqual(resp.status_code, 500)
+        self.assertTrue(posts, "deve chegar ao Supabase")
+        self.assertEqual(posts[0]["sprite"], "https://exemplo.com/mace.gif")
+
     def test_publicar_contato_invalido_rejeita(self):
         c = bot.app.test_client()
         posts = []

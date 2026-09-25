@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.17"
+VERSION = "2.10.18"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3518,6 +3518,8 @@ def cliente_troca_publicar():
     sprite = (request.form.get("sprite") or "").strip()[:300]
     if sprite and not (sprite.startswith("http://") or sprite.startswith("https://")):
         sprite = ""
+    if not sprite:
+        sprite = _mk_itemsprite(item_name)
     if tipo not in ("venda", "compra", "troca"):
         return "Tipo de anúncio inválido.", 400
     if not item_name or not character_name or not world:

@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.17"
+VERSION = "2.10.18"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3225,7 +3225,7 @@ def api_troca():
             "tipo": a.get("tipo_anuncio") or "venda",
             "nome": a.get("item_name") or "",
             "descricao": a.get("description") or "",
-            "sprite": a.get("sprite") or "",
+            "sprite": _mk_sprite_cdn(a.get("sprite") or ""),
             "preco": a.get("preco"),
             "aceita_ofertas": bool(a.get("aceita_ofertas")),
             "world": a.get("world") or "",
@@ -3251,6 +3251,17 @@ _WIKI_BASE = "https://www.tibiawiki.com.br/api.php"
 _WIKI_UA = "BAPZX-MARKTRADE/2.10.6 (público; contato BAPZX)"
 _ITEMINFO_CACHE = {}
 _WIKI_LAST_DIAG = ""
+
+_MK_IMG_CDN_BASE = os.environ.get("MK_IMG_CDN_BASE", "").rstrip("/")
+
+
+def _mk_sprite_cdn(url):
+    """Serve o sprite pelo Cloudinary (image/fetch) quando a env MK_IMG_CDN_BASE
+    estiver configurada (ex.: https://res.cloudinary.com/<cloud>). Sem ela,
+    devolve a URL original do Tibia Wiki — gatilho anti-bloqueio de hotlink."""
+    if not url or not _MK_IMG_CDN_BASE:
+        return url or ""
+    return f"{_MK_IMG_CDN_BASE}/image/fetch/{url}"
 
 
 def _wiki_get(params, timeout=(5, 15)):
@@ -3456,7 +3467,7 @@ def api_troca_detalhe(aid):
         "tipo": a.get("tipo_anuncio") or "venda",
         "nome": a.get("item_name") or "",
         "descricao": a.get("description") or "",
-        "sprite": a.get("sprite") or "",
+        "sprite": _mk_sprite_cdn(a.get("sprite") or ""),
         "preco": a.get("preco"),
         "aceita_ofertas": bool(a.get("aceita_ofertas")),
         "world": a.get("world") or "",
