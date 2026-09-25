@@ -4,6 +4,38 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **v2.10.13 (24/09, Publicar anúncio reformulado)**: a pedido do dono, a
+  página "Publicar anúncio" (`/cliente/troca` GET/POST) foi reformulada:
+  **(1)** removida a busca automática de sprite no Wiki Tibia no publish
+  (`sprite = _mk_itemsprite(item_name)` saiu do POST; o campo virou "URL da
+  imagem (opcional)" com nota "Opcional. Cole a URL direta de uma imagem para
+  exibir no anúncio." — o helper `_mk_itemsprite` continua existindo para os
+  scripts `_mk_*`); **(2)** campo **descrição removido** (textarea e campo do
+  payload `description` saíram do documento e do POST — anúncios novos ficam
+  sem descrição, portfolio só renderiza se houver valor); **(3)** contato
+  agora é **WhatsApp com DDD obrigatório** com máscara `(99) 9XXXX-XXXX` no
+  front (`mk_contato`, inputmode numeric, maxlength 16) e validação no backend
+  via novo helper `_mk_whatsapp(value)` (normaliza "(19) 98765-4321" / 10 ou
+  11 dígitos; inválido rejeita com flash "WhatsApp válido com DDD"); label
+  antigo "(discord/telegram/whypixels)" removido; **(4)** "Aceito ofertas"
+  virou cards segmentados "Preço fixo / Aceito ofertas" (`mk-seg`,
+  `modo_preco` hidden; preço fixo exige preço, aceito ofertas dispensa);
+  **(5)** "Destacar meu anúncio" virou card estilizado `mk-destaque-box`;
+  **(6)** portfolio: `anuncio.html` bloco "Quer negociar este item?" agora é
+  link real `https://wa.me/55<digitos>` (target _blank) quando o contato tem
+  número (mini-contact continua chip dentro de <a>, sem link aninhado).
+  VERSION bot.py e painel.py **2.10.13**. Validado: py_compile OK;
+  test_marketplace **75 OK** (74 antigos −1 sprite auto +2 novos:
+  test_publicar_contato_invalido_rejeita e test_publicar_contato_normaliza_whatsapp;
+  posts de publish atualizados para contato "(19) 98765-4321");
+  test_coins **26 OK**; GET da página conferido por script (mk-seg, mk_contato,
+  name='contact' required, sem textarea de descrição, sem nota de busca
+  automática). `_mk_whatsapp` conferido manualmente (11 dígitos → "9XXXX-XXXX",
+  10 → "XXXX-XXXX", "@bapzx"/"" → ""). Testes do painel/outros intactos.
+  Pendência: re-deploy no Render + GitHub Pages (Render ainda em v2.10.8 —
+  agora 5 versões atrás), validar ao vivo máscara de WhatsApp e cards de
+  preço/destaque, e conferir 8 anúncios de teste (ids 14-21).
+
 - **v2.10.12 (24/09, todas as categorias do envio: pernas, spellbooks, botas,
   aljavas e fetiches no banco local)**: coladas as 4 seções restantes do envio
   do dono e transcritas nos módulos gitignored `_mk_pernas_dados.py` (66

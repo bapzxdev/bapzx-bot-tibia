@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.12"
+VERSION = "2.10.13"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -504,6 +504,73 @@ _MK_AC_SCRIPT = ("""
 })();
 </script>
 """).replace("__MK_ITENS_JSON__", _MK_ITENS_JSON)
+
+_MK_FORM_CSS = """
+<style>
+.mk-seg{display:flex;gap:8px;margin:6px 0 10px}
+.mk-seg-opt{flex:1;padding:10px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;transition:.15s}
+.mk-seg-opt:hover{border-color:var(--purple)}
+.mk-seg-opt.on{background:rgba(167,139,250,.16);border-color:var(--purple);color:var(--purple)}
+.mk-destaque{display:flex;align-items:center;gap:10px;margin-top:12px;cursor:pointer;width:100%}
+.mk-destaque input{accent-color:var(--green);width:18px;height:18px;flex-shrink:0}
+.mk-destaque-box{display:flex;align-items:center;gap:10px;border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;background:var(--panel-2);transition:.15s;width:100%}
+.mk-destaque:hover .mk-destaque-box{border-color:var(--purple)}
+.mk-destaque-box b{color:var(--green)}
+.mk-destaque-note{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:2px}
+</style>
+"""
+
+_MK_FORM_JS = """
+<script>
+(function () {
+  var contato = document.getElementById("mk_contato");
+  var modo = document.getElementById("mk_modo_preco");
+  var blocoPreco = document.getElementById("mk_bloco_preco");
+  var preco = document.getElementById("mk_preco");
+  var opts = document.querySelectorAll(".mk-seg-opt");
+  function appl(v) {
+    if (!modo || !blocoPreco || !preco) return;
+    var fixo = v === "preco_fixo";
+    blocoPreco.style.display = fixo ? "" : "none";
+    preco.required = fixo;
+    preco.disabled = !fixo;
+    for (var i = 0; i < opts.length; i++) {
+      opts[i].classList.toggle("on", opts[i].getAttribute("data-target") === v);
+    }
+  }
+  for (var i = 0; i < opts.length; i++) {
+    (function (o) {
+      o.addEventListener("click", function () { appl(o.getAttribute("data-target")); });
+    })(opts[i]);
+  }
+  appl(modo ? modo.value : "preco_fixo");
+  function fone() {
+    if (!contato) return;
+    var d = String(contato.value || "").replace(/\\D/g, "").slice(0, 11);
+    if (d.length > 6) contato.value = "(" + d.slice(0, 2) + ") " + d.slice(2, 7) + "-" + d.slice(7);
+    else if (d.length > 2) contato.value = "(" + d.slice(0, 2) + ") " + d.slice(2);
+    else contato.value = d;
+  }
+  if (contato) contato.addEventListener("input", fone);
+})();
+</script>
+"""
+
+
+def _mk_whatsapp(value):
+    """Valida e normaliza WhatsApp brasileiro com DDD.
+
+    Aceita 10 ou 11 dígitos (com ou sem máscara, ex. "19987654321" ou
+    "(19) 98765-4321"). Devolve "(99) 9XXXX-XXXX" / "(99) XXXX-XXXX",
+    ou "" se inválido. Nunca derruba."""
+    if not value:
+        return ""
+    dig = re.sub(r"\D", "", str(value))
+    if len(dig) == 11:
+        return f"({dig[:2]}) {dig[2:7]}-{dig[7:]}"
+    if len(dig) == 10:
+        return f"({dig[:2]}) {dig[2:6]}-{dig[6:]}"
+    return ""
 
 
 def _mk_title_case(text):
@@ -3292,7 +3359,8 @@ def cliente_troca():
             f"o anúncio fica válido por <b>{_mk_duracao('duracao_publicacao_dias', 30)} dias</b>. "
             f"Você publica quando quiser (até <b>{limite} ativos</b> ao mesmo tempo).</p>"
             + _MK_AC_CSS
-            + "<form method='post' action='/cliente/troca/publicar'>"
+            + _MK_FORM_CSS
+            + "<form method='post' action='/cliente/troca/publicar' class='mk-form'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='grid2'>"
             "<div><label>Item *</label><input name='item_name' id='item_name' required maxlength='120' "
@@ -3307,32 +3375,40 @@ def cliente_troca():
             "<option value=''>Automático (Wiki Tibia)</option>"
             + "".join(f"<option value='{html.escape(c)}'>{html.escape(c)}</option>" for c in _MK_ITEM_CATEGORIAS)
             + "</select></div>"
-            "<div><label>Contato * (discord/telegram/whypixels)</label>"
-            "<input name='contact' required maxlength='200' placeholder='Ex.: @bapzx'></div>"
             "</div>"
             "<p class='note' style='margin-top:2px'>O nome do item é padronizado automaticamente "
-            "(ex.: WAR HAMMER vira <b>War Hammer</b>). Se não escolher a categoria, tentamos "
-            "descobrir a do item no Wiki Tibia.</p>"
+            "(ex.: WAR HAMMER vira <b>War Hammer</b>). Se não escolher a categoria, o sistema "
+            "descobre a do item no Wiki Tibia.</p>"
             "<label>Tipo de anúncio</label><select name='tipo_anuncio'>"
             "<option value='venda'>Vendendo</option>"
             "<option value='compra'>Comprando</option>"
             "<option value='troca'>Quer trocar</option>"
             "</select>"
-            "<label>Descrição</label>"
-            "<textarea name='description' rows='3' maxlength='1000' "
-            "placeholder='Detalhes do item, condição, negociação...'></textarea>"
-            "<div><label>Preço em gp (ou deixe vazio para aceitar ofertas)</label>"
-            "<input name='preco' type='text' placeholder='Ex.: 250000'></div>"
-            "<p><label><input type='checkbox' name='aceita_ofertas' value='1' checked> "
-            "Aceito ofertas / negociação</label></p>"
+            "<label>Como quer negociar?</label>"
+            "<div class='mk-seg'>"
+            "<button type='button' class='mk-seg-opt on' data-target='preco_fixo'>Preço fixo</button>"
+            "<button type='button' class='mk-seg-opt' data-target='aceito_ofertas'>Aceito ofertas</button>"
+            "</div>"
+            "<input type='hidden' name='modo_preco' id='mk_modo_preco' value='preco_fixo'>"
+            "<div id='mk_bloco_preco'><label>Preço em gp *</label>"
+            "<input name='preco' id='mk_preco' type='text' required placeholder='Ex.: 250000'></div>"
+            "<div><label>WhatsApp com DDD *</label>"
+            "<input name='contact' required id='mk_contato' maxlength='16' inputmode='numeric' "
+            "autocomplete='tel' placeholder='(19) 98765-4321'>"
+            "<p class='note' style='margin-top:2px'>Só aceitamos WhatsApp com DDD — ex.: <b>(19) 98765-4321</b>.</p></div>"
             "<label>URL da imagem do item (opcional)</label>"
             "<input name='sprite' type='url' maxlength='300' placeholder='https://...'>"
-            "<p class='note' style='margin-top:4px'>Deixe em branco para buscar a imagem automaticamente no Wiki Tibia.</p>"
-            "<p><label><input type='checkbox' name='destaque' value='1'> "
-            f"Destacar meu anúncio <b>(+ {_mk_brl(preco_des)}</b>) — fica no topo com tag de destaque</label></p>"
+            "<p class='note' style='margin-top:4px'>Opcional. Cole a URL direta de uma imagem para exibir no anúncio.</p>"
+            "<p><label class='mk-destaque'>"
+            "<input type='checkbox' name='destaque' value='1'>"
+            "<span class='mk-destaque-box'><span>&#11088;</span><span>Destacar meu anúncio "
+            f"<b>(+ {_mk_brl(preco_des)})</b>"
+            "<span class='mk-destaque-note'>Fica no topo da lista pública do MARKTRADE com a tag de destaque.</span>"
+            "</span></span></label></p>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Publicar agora</button></p>"
             "</form>"
             + _MK_AC_SCRIPT
+            + _MK_FORM_JS
             + "</div>"
         )
 
@@ -3435,9 +3511,8 @@ def cliente_troca_publicar():
     item_name = _mk_title_case((request.form.get("item_name") or "").strip())[:120]
     character_name = (request.form.get("character_name") or "").strip()[:60]
     world = (request.form.get("world") or "").strip()
-    contact = (request.form.get("contact") or "").strip()[:200]
+    contact = _mk_whatsapp(request.form.get("contact"))
     category = (request.form.get("category") or "").strip()[:60]
-    description = (request.form.get("description") or "").strip()[:1000]
     tipo = (request.form.get("tipo_anuncio") or "venda").strip().lower()
     sprite = (request.form.get("sprite") or "").strip()[:300]
     if sprite and not (sprite.startswith("http://") or sprite.startswith("https://")):
@@ -3448,7 +3523,7 @@ def cliente_troca_publicar():
         _mk_flash("erro", "Informe o item, o personagem e o mundo.")
         return redirect("/cliente/troca")
     if not contact:
-        _mk_flash("erro", "Informe um contato para quem quiser negociar com você.")
+        _mk_flash("erro", "Informe um WhatsApp válido com DDD — ex.: (19) 98765-4321.")
         return redirect("/cliente/troca")
     if world not in _MK_MUNDOS:
         _mk_flash("erro", "Selecione um mundo válido para o anúncio.")
@@ -3459,11 +3534,13 @@ def cliente_troca_publicar():
             (c for c in _MK_ITEM_CATEGORIAS if c.lower() == category.lower()),
             categoria_detectada,
         )
-    if not sprite:
-        sprite = _mk_itemsprite(item_name)
 
+    modo_preco = (request.form.get("modo_preco") or "").strip().lower()
     preco = _mk_num_br(request.form.get("preco"))
-    aceita_ofertas = request.form.get("aceita_ofertas") == "1"
+    aceita_ofertas = request.form.get("aceita_ofertas") == "1" or modo_preco == "aceito_ofertas"
+    if modo_preco == "preco_fixo" and preco is None and not aceita_ofertas:
+        _mk_flash("erro", "Defina o preço em gp ou escolha 'Aceito ofertas'.")
+        return redirect("/cliente/troca")
     if preco is not None and preco < 0:
         _mk_flash("erro", "Preço não pode ser negativo.")
         return redirect("/cliente/troca")
@@ -3481,7 +3558,6 @@ def cliente_troca_publicar():
     payload = {
         "user_id": email,
         "item_name": item_name,
-        "description": description,
         "character_name": character_name,
         "world": world,
         "contact": contact,
