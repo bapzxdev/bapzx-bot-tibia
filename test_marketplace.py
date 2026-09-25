@@ -518,6 +518,43 @@ class TestMkBot(unittest.TestCase):
                              "https://www.tibiawiki.com.br/images/2/26/Mace.gif")
         bot._MK_CACHE["ts"] = 0.0
 
+    def test_mk_sprite_host_lista_tenta_ordem_e_cai_no_direto(self):
+        bot._MK_CACHE["ts"] = 0.0
+        chamadas = []
+
+        def fake_get(url, **kw):
+            chamadas.append(("get", url))
+            r = _FakeResp()
+            r.status_code = 200
+            r.content = b"b"
+            return r
+
+        def fake_post(url, **kw):
+            status = kw.get("_status") or 500
+            r = _FakeResp()
+            r.status_code = status
+            r.content = b""
+            r.text = "x"
+            return r
+
+        # lista 'cloudinary,supabase': cloudinary nao tem credencial -> nao
+        # tenta cl ou supa; tudo falha -> hotlink direto da URL original
+        with mock.patch.dict(os.environ, {"MK_SPRITE_HOST": "cloudinary,supabase"}, clear=False), \
+                mock.patch.object(bot.requests, "get", side_effect=fake_get), \
+                mock.patch.object(bot.requests, "post", side_effect=fake_post):
+            resultado = bot._mk_sprite_host("https://www.tibiawiki.com.br/images/2/26/Mace.gif")
+        self.assertEqual(resultado, "https://www.tibiawiki.com.br/images/2/26/Mace.gif")
+        self.assertTrue(any(c[0] == "get" for c in chamadas))
+        bot._MK_CACHE["ts"] = 0.0
+
+    def test_mk_sprite_host_lista_ignora_provedor_desconhecido(self):
+        bot._MK_CACHE["ts"] = 0.0
+        with mock.patch.dict(os.environ, {"MK_SPRITE_HOST": "wiki,whatsapp,"}, clear=False), \
+                mock.patch.object(bot.requests, "get", side_effect=AssertionError("nao deve baixar")):
+            self.assertEqual(bot._mk_sprite_host("https://www.tibiawiki.com.br/images/2/26/Mace.gif"),
+                             "https://www.tibiawiki.com.br/images/2/26/Mace.gif")
+        bot._MK_CACHE["ts"] = 0.0
+
     def test_mk_sprite_host_cloudinary_sem_env_cai_no_direto(self):
         bot._MK_CACHE["ts"] = 0.0
         url = "https://www.tibiawiki.com.br/images/2/26/Mace.gif"

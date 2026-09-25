@@ -712,26 +712,37 @@ def _mk_itemsprite(item_name):
 def _mk_sprite_host(url):
     """Hospeda o GIF do item numa CDN quando configurado (cascata).
 
-    Env MK_SPRITE_HOST controla o provedor: 'supabase' (padrão quando não
-    vazio), 'cloudinary' ou 'wiki' (hotlink direto). Fluxo:
-      1) 'supabase'  -> baixa do Wiki e sobe num bucket público do Supabase;
-      2) 'cloudinary' -> baixa do Wiki e sobe no Cloudinary (image/upload);
-      3) senão -> devolve a URL original do Wiki (hotlink direto).
-    Nunca derruba: se o provedor escolhido falhar, devolve a URL original."""
+    A env MK_SPRITE_HOST aceita uma lista separada por vírgula na ordem de
+    prioridade — ex.: 'cloudinary,supabase' (tenta Cloudinary primeiro; se
+    falhar, tenta Supabase). Provedores suportados:
+      'supabase'   -> baixa do Wiki e sobe num bucket público do Supabase;
+      'cloudinary' -> baixa do Wiki e sobe no Cloudinary (image/upload);
+    Se nenhum deles funcionar (ou a env não listar ninguém), devolve a URL
+    original do Wiki (hotlink direto). Nunca derruba."""
     if not url or not url.startswith("http"):
         return url or ""
-    provedor = (os.environ.get("MK_SPRITE_HOST") or "").strip().lower()
-    try:
-        if provedor in ("supabase", "cloudinary"):
-            blob = requests.get(url, timeout=20, headers={"User-Agent": f"BAPZX-MARKTRADE/{VERSION}/host"}).content
+    provedores = [
+        p.strip().lower()
+        for p in (os.environ.get("MK_SPRITE_HOST") or "").split(",")
+        if p.strip().lower() in ("supabase", "cloudinary")
+    ]
+    if not provedores:
+        return url
+    for provedor in provedores:
+        try:
+            blob = requests.get(
+                url,
+                timeout=20,
+                headers={"User-Agent": f"BAPZX-MARKTRADE/{VERSION}/host"},
+            ).content
             if provedor == "supabase":
                 novo = _mk_sprite_host_supabase(blob, url)
             else:
                 novo = _mk_sprite_host_cloudinary(blob, url)
             if novo:
                 return novo
-    except Exception:
-        pass
+        except Exception:
+            continue
     return url
 
 
