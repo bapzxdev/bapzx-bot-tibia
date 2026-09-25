@@ -5,6 +5,7 @@
 
 import unittest
 import time
+import os
 from unittest import mock
 
 import bot
@@ -447,6 +448,83 @@ class TestMkBot(unittest.TestCase):
             self.assertEqual(bot._mk_itemsprite("Algum Item"), "")
         self.assertEqual(bot._mk_itemsprite(""), "")
         self.assertEqual(bot._mk_itemsprite("  "), "")
+
+    # ---------- cascata de hospedagem do sprite ----------
+
+    def test_mk_sprite_host_sem_enum_volta_direto(self):
+        bot._MK_CACHE["ts"] = 0.0
+        url = "https://www.tibiawiki.com.br/images/2/26/Mace.gif"
+        with mock.patch.dict(os.environ, {}, clear=False):
+            with mock.patch.object(bot.requests, "get", side_effect=AssertionError("nao deve baixar")):
+                self.assertEqual(bot._mk_sprite_host(url), url)
+        bot._MK_CACHE["ts"] = 0.0
+        with mock.patch.dict(os.environ, {"MK_SPRITE_HOST": ""}, clear=False):
+            self.assertEqual(bot._mk_sprite_host(""), "")
+
+    def test_mk_sprite_host_supabase_sobe_no_bucket(self):
+        bot._MK_CACHE["ts"] = 0.0
+        import json as _json
+        supabase_ok = _FakeResp()
+        supabase_ok.status_code = 200
+        supabase_ok.content = b"gif"
+        supabase_ok.json = lambda: {"Key": "x"}
+        alvos = []
+
+        def fake_get(url, **kw):
+            alvos.append(url)
+            r = _FakeResp()
+            r.status_code = 200
+            r.content = b"\x47\x49\x46\x38"
+            return r
+
+        def fake_post(url, **kw):
+            r = _FakeResp()
+            r.status_code = 201
+            r.content = b"ok"
+            r.json = lambda: {}
+            headers = kw.get("headers") or {}
+            alvos.append(("POST", url, headers.get("Content-Type")))
+            return r
+
+        with mock.patch.dict(os.environ, {"MK_SPRITE_HOST": "supabase"}, clear=False), \
+                mock.patch.object(bot.requests, "get", side_effect=fake_get), \
+                mock.patch.object(bot.requests, "post", side_effect=fake_post):
+            resultado = bot._mk_sprite_host("https://www.tibiawiki.com.br/images/2/26/Mace.gif")
+        self.assertTrue(resultado.startswith("https://") and "/storage/v1/object/public/mk-sprites/" in resultado)
+        posts = [t for t in alvos if isinstance(t, tuple) and t[0] == "POST"]
+        self.assertEqual(len(posts), 1)
+        self.assertEqual(posts[0][1].split("/")[-2], "mk-sprites")
+        self.assertEqual(posts[0][2], "image/gif")
+
+    def test_mk_sprite_host_supabase_falha_cai_no_direto(self):
+        bot._MK_CACHE["ts"] = 0.0
+
+        def fake_get(url, **kw):
+            r = _FakeResp()
+            r.status_code = 200
+            r.content = b"x"
+            return r
+
+        def fake_post(url, **kw):
+            r = _FakeResp()
+            r.status_code = 500
+            r.text = "erro"
+            return r
+
+        with mock.patch.dict(os.environ, {"MK_SPRITE_HOST": "supabase"}, clear=False), \
+                mock.patch.object(bot.requests, "get", side_effect=fake_get), \
+                mock.patch.object(bot.requests, "post", side_effect=fake_post):
+            self.assertEqual(bot._mk_sprite_host("https://www.tibiawiki.com.br/images/2/26/Mace.gif"),
+                             "https://www.tibiawiki.com.br/images/2/26/Mace.gif")
+        bot._MK_CACHE["ts"] = 0.0
+
+    def test_mk_sprite_host_cloudinary_sem_env_cai_no_direto(self):
+        bot._MK_CACHE["ts"] = 0.0
+        url = "https://www.tibiawiki.com.br/images/2/26/Mace.gif"
+        with mock.patch.dict(os.environ, {"MK_SPRITE_HOST": "cloudinary"}, clear=False), \
+                mock.patch.object(bot.requests, "get", side_effect=AssertionError("nao deve baixar sem env")):
+            self.assertEqual(bot._mk_sprite_host(url), url)
+        bot._MK_CACHE["ts"] = 0.0
 
     # ---------- helpers ----------
 

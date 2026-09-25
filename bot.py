@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.18"
+VERSION = "2.10.19"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -707,6 +707,102 @@ def _mk_itemsprite(item_name):
         _SPRITE_CACHE.clear()
     _SPRITE_CACHE[chave] = resultado
     return resultado
+
+
+def _mk_sprite_host(url):
+    """Hospeda o GIF do item numa CDN quando configurado (cascata).
+
+    Env MK_SPRITE_HOST controla o provedor: 'supabase' (padrão quando não
+    vazio), 'cloudinary' ou 'wiki' (hotlink direto). Fluxo:
+      1) 'supabase'  -> baixa do Wiki e sobe num bucket público do Supabase;
+      2) 'cloudinary' -> baixa do Wiki e sobe no Cloudinary (image/upload);
+      3) senão -> devolve a URL original do Wiki (hotlink direto).
+    Nunca derruba: se o provedor escolhido falhar, devolve a URL original."""
+    if not url or not url.startswith("http"):
+        return url or ""
+    provedor = (os.environ.get("MK_SPRITE_HOST") or "").strip().lower()
+    try:
+        if provedor in ("supabase", "cloudinary"):
+            blob = requests.get(url, timeout=20, headers={"User-Agent": f"BAPZX-MARKTRADE/{VERSION}/host"}).content
+            if provedor == "supabase":
+                novo = _mk_sprite_host_supabase(blob, url)
+            else:
+                novo = _mk_sprite_host_cloudinary(blob, url)
+            if novo:
+                return novo
+    except Exception:
+        pass
+    return url
+
+
+def _mk_sprite_host_supabase(blob, original_url):
+    """Sobe os bytes do GIF num bucket público do Supabase e devolve a URL."""
+    from painel import SUPA_URL, SUPA_KEY
+    if not SUPA_URL or not SUPA_KEY:
+        return ""
+    try:
+        from urllib.parse import urlparse
+        ext = (os.path.splitext(urlparse(original_url).path)[1] or ".gif").lower()
+        if ext not in (".gif", ".png", ".jpg", ".jpeg", ".webp"):
+            ext = ".gif"
+        mime = {
+            ".gif": "image/gif", ".png": "image/png", ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg", ".webp": "image/webp",
+        }.get(ext, "image/gif")
+        nome = f"mk-sprite-{secrets.token_hex(8)}{ext}"
+        resposta = requests.post(
+            f"{SUPA_URL}/storage/v1/object/mk-sprites/{nome}",
+            headers={
+                "apikey": SUPA_KEY,
+                "Authorization": f"Bearer {SUPA_KEY}",
+                "Content-Type": mime,
+            },
+            data=blob,
+            timeout=40,
+        )
+        if resposta.status_code in (200, 201):
+            return f"{SUPA_URL}/storage/v1/object/public/mk-sprites/{nome}"
+    except Exception:
+        pass
+    return ""
+
+
+def _mk_sprite_host_cloudinary(blob, original_url):
+    """Sobe os bytes do GIF no Cloudinary (image/upload, não image/fetch).
+
+    Requer envs CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e
+    CLOUDINARY_API_SECRET. Sem elas, devolve "". Nunca derruba."""
+    cloud = (os.environ.get("CLOUDINARY_CLOUD_NAME") or "").strip()
+    api_key = (os.environ.get("CLOUDINARY_API_KEY") or "").strip()
+    api_secret = (os.environ.get("CLOUDINARY_API_SECRET") or "").strip()
+    if not cloud or not api_key or not api_secret:
+        return ""
+    try:
+        import hashlib
+        from urllib.parse import urlparse
+        ts = int(time.time())
+        folder = "mk-sprites"
+        public_id = f"mk-{ts}"
+        params = {
+            "folder": folder,
+            "public_id": public_id,
+            "timestamp": str(ts),
+        }
+        msg = "&".join(f"{k}={v}" for k, v in sorted(params.items())) + api_secret
+        params["api_key"] = api_key
+        params["signature"] = hashlib.sha1(msg.encode("utf-8")).hexdigest()
+        resposta = requests.post(
+            f"https://api.cloudinary.com/v1_1/{cloud}/image/upload",
+            data=params,
+            files={"file": (os.path.basename(urlparse(original_url).path) or "sprite.gif", blob)},
+            timeout=40,
+        )
+        dados = resposta.json() or {}
+        if resposta.status_code in (200, 201) and dados.get("secure_url"):
+            return dados["secure_url"]
+    except Exception:
+        pass
+    return ""
 
 
 def _mk_parse_dt(value):
@@ -3520,6 +3616,8 @@ def cliente_troca_publicar():
         sprite = ""
     if not sprite:
         sprite = _mk_itemsprite(item_name)
+    if sprite:
+        sprite = _mk_sprite_host(sprite)
     if tipo not in ("venda", "compra", "troca"):
         return "Tipo de anúncio inválido.", 400
     if not item_name or not character_name or not world:

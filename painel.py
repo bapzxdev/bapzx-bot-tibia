@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.18"
+VERSION = "2.10.19"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3256,12 +3256,14 @@ _MK_IMG_CDN_BASE = os.environ.get("MK_IMG_CDN_BASE", "").rstrip("/")
 
 
 def _mk_sprite_cdn(url):
-    """Serve o sprite pelo Cloudinary (image/fetch) quando a env MK_IMG_CDN_BASE
-    estiver configurada (ex.: https://res.cloudinary.com/<cloud>). Sem ela,
-    devolve a URL original do Tibia Wiki — gatilho anti-bloqueio de hotlink."""
-    if not url or not _MK_IMG_CDN_BASE:
-        return url or ""
-    return f"{_MK_IMG_CDN_BASE}/image/fetch/{url}"
+    """Passa o sprite direto (sem reescrita).
+
+    Antes reescrevia para Cloudinary /image/fetch quando MK_IMG_CDN_BASE estava
+    setada, mas o Tibia Wiki devolve 403 para o fetch do Cloudinary (hotlink
+    direto no navegador funciona). A hospedagem em CDN agora é feita no publish
+    (bot._mk_sprite_host: Supabase Storage ou Cloudinary image/upload) e a URL
+    final já vai gravada no banco — aqui basta devolver a URL gravada."""
+    return url or ""
 
 
 def _wiki_get(params, timeout=(5, 15)):
