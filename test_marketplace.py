@@ -632,12 +632,13 @@ class TestMkBot(unittest.TestCase):
         self.assertIn("Você ainda não publicou nada", html)
         self.assertIn("MARKTRADE", html)
         self.assertIn("<select name='world'", html)
-        self.assertIn("<select name='category'", html)
-        self.assertIn("Automático (Wiki Tibia)", html)
+        self.assertNotIn("<select name='category'", html)
+        self.assertNotIn("Automático (Wiki Tibia)", html)
+        self.assertNotIn("name='sprite'", html)
+        self.assertNotIn("URL da imagem do item", html)
         self.assertIn("name='contact' required", html)
         self.assertIn(">Auroria<", html)
         self.assertIn(">Infernum I<", html)
-        self.assertIn("Wiki Tibia", html)
         self.assertNotIn("tipo_pvp", html)
 
     # ---------- POST /cliente/troca/publicar ----------

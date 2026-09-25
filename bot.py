@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.14"
+VERSION = "2.10.15"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3343,14 +3343,9 @@ def cliente_troca():
             "<option value=''>Selecione o mundo...</option>"
             + "".join(f"<option value='{html.escape(m)}'>{html.escape(m)}</option>" for m in _MK_MUNDOS)
             + "</select></div>"
-            "<div><label>Categoria</label><select name='category'>"
-            "<option value=''>Automático (Wiki Tibia)</option>"
-            + "".join(f"<option value='{html.escape(c)}'>{html.escape(c)}</option>" for c in _MK_ITEM_CATEGORIAS)
-            + "</select></div>"
             "</div>"
             "<p class='note' style='margin-top:2px'>O nome do item é padronizado automaticamente "
-            "(ex.: WAR HAMMER vira <b>War Hammer</b>). Se não escolher a categoria, o sistema "
-            "descobre a do item no Wiki Tibia.</p>"
+            "(ex.: WAR HAMMER vira <b>War Hammer</b>).</p>"
             "<label>Tipo de anúncio</label><select name='tipo_anuncio'>"
             "<option value='venda'>Vendendo</option>"
             "<option value='compra'>Comprando</option>"
@@ -3368,9 +3363,6 @@ def cliente_troca():
             "<input name='contact' required id='mk_contato' maxlength='16' inputmode='numeric' "
             "autocomplete='tel' placeholder='(19) 98765-4321'>"
             "<p class='note' style='margin-top:2px'>Só aceitamos WhatsApp com DDD — ex.: <b>(19) 98765-4321</b>.</p></div>"
-            "<label>URL da imagem do item (opcional)</label>"
-            "<input name='sprite' type='url' maxlength='300' placeholder='https://...'>"
-            "<p class='note' style='margin-top:4px'>Opcional. Cole a URL direta de uma imagem para exibir no anúncio.</p>"
             "<p><label class='mk-destaque'>"
             "<input type='checkbox' name='destaque' value='1'>"
             "<span class='mk-destaque-box'><span>&#11088;</span><span>Destacar meu anúncio "
