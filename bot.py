@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.13"
+VERSION = "2.10.14"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -389,13 +389,6 @@ _MK_AC_CSS = """
 .mk-pub-ac-item:hover,.mk-pub-ac-item.on{background:rgba(96,165,250,.14)}
 .mk-pub-ac-item b{color:var(--green);font-weight:700}
 .mk-pub-ac-sub{margin-left:auto;color:var(--muted);font-size:12px;flex-shrink:0;white-space:nowrap}
-.mk-pub-ficha{display:none;margin-top:12px;background:var(--panel-2);border:1px solid var(--border-2);border-radius:10px;padding:14px;font-size:13px}
-.mk-pub-ficha.on{display:block}
-.mk-pub-ficha h4{margin:0 0 10px;font-family:'Sora',sans-serif;font-size:15px;color:var(--green)}
-.mk-pub-ficha .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px 16px}
-.mk-pub-ficha .st{display:flex;flex-direction:column;border-bottom:1px dashed var(--border);padding:3px 0}
-.mk-pub-ficha .st span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
-.mk-pub-ficha .st b{color:var(--text);font-size:13px;font-weight:600}
 </style>
 """
 
@@ -413,9 +406,6 @@ _MK_AC_SCRIPT = ("""
   dd.className = "mk-pub-ac-drop";
   dd.hidden = true;
   wrap.appendChild(dd);
-  var ficha = document.createElement("div");
-  ficha.className = "mk-pub-ficha";
-  campo.parentNode.appendChild(ficha);
   var sel = -1;
   function norm(s) {
     return String(s || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
@@ -460,24 +450,6 @@ _MK_AC_SCRIPT = ("""
     if (!it) return;
     campo.value = it[0];
     dd.hidden = true;
-    function rotuloDano(e) {
-      if (!e[11]) return e[3] ? "Dano Médio" : "Armadura";
-      if (e[11] === "Armas") return "Dano Médio";
-      if (e[11] === "Escudos" || e[11] === "Spellbooks") return "Defesa";
-      if (e[11] === "Aljavas") return "Volume";
-      return "Armadura";
-    }
-    var linhas = [
-      ["Nível", it[1]], ["Vocação", it[2]], ["Tipo de dano", it[3]], ["Bônus", it[4]],
-      ["Proteção", it[5]], [rotuloDano(it), it[6]], ["Slots", it[7]], ["Tier", it[8]], ["Peso", it[9]]
-    ].filter(function (p) { return p[1] !== "" && p[1] != null; });
-    ficha.innerHTML =
-      "<h4>" + esc(it[0]) + "</h4>" +
-      '<div class="g">' +
-      linhas.map(function (p) { return '<div class="st"><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b></div>'; }).join("") +
-      "</div>" +
-      (it[10] ? '<p style="margin:8px 0 0;color:var(--muted)"><b style="color:var(--purple)">Obtido de:</b> ' + esc(it[10]) + "</p>" : "");
-    ficha.classList.add("on");
   }
   campo.addEventListener("input", sedd);
   campo.addEventListener("keydown", function (e) {

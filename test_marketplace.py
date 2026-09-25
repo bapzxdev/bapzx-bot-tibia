@@ -1181,16 +1181,17 @@ class TestMkBot(unittest.TestCase):
         nomes = [it[0].lower() for it in bot._MK_ITENS_DB]
         self.assertEqual(len(nomes), len(set(nomes)), "nomes duplicados no mk_itens.py")
         for it in bot._MK_ITENS_DB:
-            self.assertEqual(len(it), 12, it[0])
+            self.assertIn(len(it), (12, 15), it[0])
             self.assertIn(
                 it[11],
                 (
                     "Armas", "Capacetes", "Armaduras", "Escudos",
                     "Pernas", "Spellbooks", "Botas", "Aljavas", "Fetiches",
+                    "Armas de Arremesso", "Bestas", "Arcos",
                 ),
                 it[0],
             )
-        self.assertEqual(len(bot._MK_ITENS_DB), 701)
+        self.assertEqual(len(bot._MK_ITENS_DB), 1169)
 
     def test_ficha_local_perna(self):
         ficha = painel._ficha_local("Fabulous Legs")

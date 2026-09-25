@@ -4,37 +4,39 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
-- **v2.10.13 (24/09, Publicar anúncio reformulado)**: a pedido do dono, a
-  página "Publicar anúncio" (`/cliente/troca` GET/POST) foi reformulada:
-  **(1)** removida a busca automática de sprite no Wiki Tibia no publish
-  (`sprite = _mk_itemsprite(item_name)` saiu do POST; o campo virou "URL da
-  imagem (opcional)" com nota "Opcional. Cole a URL direta de uma imagem para
-  exibir no anúncio." — o helper `_mk_itemsprite` continua existindo para os
-  scripts `_mk_*`); **(2)** campo **descrição removido** (textarea e campo do
-  payload `description` saíram do documento e do POST — anúncios novos ficam
-  sem descrição, portfolio só renderiza se houver valor); **(3)** contato
-  agora é **WhatsApp com DDD obrigatório** com máscara `(99) 9XXXX-XXXX` no
-  front (`mk_contato`, inputmode numeric, maxlength 16) e validação no backend
-  via novo helper `_mk_whatsapp(value)` (normaliza "(19) 98765-4321" / 10 ou
-  11 dígitos; inválido rejeita com flash "WhatsApp válido com DDD"); label
-  antigo "(discord/telegram/whypixels)" removido; **(4)** "Aceito ofertas"
-  virou cards segmentados "Preço fixo / Aceito ofertas" (`mk-seg`,
-  `modo_preco` hidden; preço fixo exige preço, aceito ofertas dispensa);
-  **(5)** "Destacar meu anúncio" virou card estilizado `mk-destaque-box`;
-  **(6)** portfolio: `anuncio.html` bloco "Quer negociar este item?" agora é
-  link real `https://wa.me/55<digitos>` (target _blank) quando o contato tem
-  número (mini-contact continua chip dentro de <a>, sem link aninhado).
-  VERSION bot.py e painel.py **2.10.13**. Validado: py_compile OK;
-  test_marketplace **75 OK** (74 antigos −1 sprite auto +2 novos:
-  test_publicar_contato_invalido_rejeita e test_publicar_contato_normaliza_whatsapp;
-  posts de publish atualizados para contato "(19) 98765-4321");
-  test_coins **26 OK**; GET da página conferido por script (mk-seg, mk_contato,
-  name='contact' required, sem textarea de descrição, sem nota de busca
-  automática). `_mk_whatsapp` conferido manualmente (11 dígitos → "9XXXX-XXXX",
-  10 → "XXXX-XXXX", "@bapzx"/"" → ""). Testes do painel/outros intactos.
-  Pendência: re-deploy no Render + GitHub Pages (Render ainda em v2.10.8 —
-  agora 5 versões atrás), validar ao vivo máscara de WhatsApp e cards de
-  preço/destaque, e conferir 8 anúncios de teste (ids 14-21).
+- **v2.10.14 (25/09, distância + punhos no banco local e Publicar anúncio sem
+  ficha)**: **(1)** adicionadas ao banco local `mk_itens.py` as **armas de
+  distância** (18 Armas de Arremesso + 28 Bestas + 36 Arcos, categorias novas
+  "Armas de Arremesso"/"Bestas"/"Arcos" no schema de 15 campos: extras
+  `maos`/`alcance`/`hit`) e os **punhos** (36 itens, categoria "Armas",
+  formato combat weapon com extras `maos`/`def`/`mod_def`). TSVs transcritos
+  em `C:\Users\BapszX\AppData\Local\Temp\opencode\` (arremesso.tsv, bestas.tsv,
+  arcos.tsv, punhos.tsv). Gerador `_mk_gera_capacetes.py` com `TSV_ARMAS_DIST`
+  + `parse_distancia_tsv`; `linha()` grava SEMPRE os 3 extras das armas para
+  não deslocar índices. `mk_itens.py` agora com **1169 itens** (522 armas).
+  Rótulos dinâmicos no bot.py (`rotuloDano`) e painel `_ficha_local` cobrem as
+  categorias novas: distância → rótulo "Ataque" (campo 6) + linhas "Mãos"/
+  "Alcance"/"Hit%"; combate → "Dano Médio"; painel `_ficha_local` usa extras
+  `maos/alcance/hit` quando distância, senão `maos/def/mod_def`. Zero
+  divergências na transcrição das 4 seções (18/18, 28/28, 36/36, 36/36).
+  **(2)** a pedido do dono, removido o **card de detalhes (`mk-pub-ficha`)** do
+  formulário Publicar anúncio (`/cliente/troca`): o autocomplete de nomes
+  continua (dropdown `mk-pub-ac-drop`), mas ao aplicar o item agora só preenche
+  o campo `item_name` — o CSS `.mk-pub-ficha` (9 linhas) e o bloco de
+  renderização da ficha (`rotuloDano` + linhas + `ficha.innerHTML`) foram
+  removidos de `_MK_AC_CSS`/`_MK_AC_SCRIPT` (bot.py). **(3)** os **8 anúncios
+  de teste (ids 14-21)** foram removidos do Supabase e **8 novos (ids 22-29)**
+  criados via script `_mk_renova_8.py` (NÃO versionar) com itens da base local
+  para validar a ficha no Detalhes: War Hammer (Dano Médio 45), Cobra Crossbow
+  (Ataque +7), Royal Star (Ataque 64), Amazon Helmet (Armadura 7), Demon
+  Shield (Defesa 46, troca/destaque), Worn Soft Boots (destaque), Black
+  Candle (Fetiches), Spellbook of Enlightenment (Defesa 29). VERSION bot.py e
+  painel.py **2.10.14**. Validado: py_compile OK; script `_mk_renova_8.py`
+  removeu 14-21 (204) e criou 22-29; listagem confirmada (10 rows: 2 encerradas
+  + 8 ativas novas); ficha local confirmada para os 8 itens; test_marketplace
+  + test_coins **101 OK**. Pendência: re-deploy no Render (ainda em v2.10.8,
+  agora 6 versões atrás) + GitHub Pages, validar ao vivo autocomplete sem
+  ficha e a ficha local dos 8 anúncios novos no Detalhes.
 
 - **v2.10.12 (24/09, todas as categorias do envio: pernas, spellbooks, botas,
   aljavas e fetiches no banco local)**: coladas as 4 seções restantes do envio

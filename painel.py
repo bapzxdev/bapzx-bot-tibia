@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.13"
+VERSION = "2.10.14"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3391,7 +3391,8 @@ def _ficha_local(item_name):
     campos = ["nome", "nivel", "vocacao", "tipo_dano", "bonus", "protecao", "dano_medio", "slots", "tier", "peso", "drop", "categoria"]
     for linha in _MK_ITENS_DB:
         if norm(linha[0]) == alvo:
-            ficha = dict(zip(campos, [str(v or "") for v in linha]))
+            campos_extras = ["maos", "alcance", "hit"] if len(linha) > 12 and linha[11] in ("Armas de Arremesso", "Bestas", "Arcos") else ["maos", "def", "mod_def"]
+            ficha = dict(zip(campos + campos_extras[:len(linha) - 12], [str(v or "") for v in linha]))
             return {k: v for k, v in ficha.items() if v != "" or k == "nome"}
     return None
 
