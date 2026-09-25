@@ -1234,6 +1234,58 @@ class TestMkBot(unittest.TestCase):
 
     # ---------- GET /api/troca/<id> (detalhe público) ----------
 
+    def test_publicar_aceito_ofertas_sem_preco_nao_exige_dinheiro(self):
+        # Usuário escolhe "Aceito ofertas" (mode=aceito_ofertas, sem preco):
+        # não deve pedir dinheiro nem validar preço. Bug v2.10.19 (JS não
+        # propagava o modo para o hidden; aqui testamos o fluxo do servidor).
+        c = bot.app.test_client()
+        posts = []
+
+        def fakepost(url, **kw):
+            posts.append(kw.get("json") or {})
+            return _FakeResp()
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_itemsprite", lambda item_name: ""), \
+             mock.patch.object(bot, "_mk_itemcategory", lambda item_name: "Rares"), \
+             mock.patch.object(bot.requests, "post", side_effect=fakepost):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "Mace",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "(19) 98765-4321",
+                "modo_preco": "aceito_ofertas",
+            })
+        self.assertEqual(resp.status_code, 500)
+        self.assertTrue(posts, "deve chegar ao Supabase (não foi bloqueado pedindo preço)")
+        pl = posts[0]
+        self.assertIsNone(pl.get("preco"))
+        self.assertTrue(pl["aceita_ofertas"])
+
+    def test_publicar_modo_preco_fixo_sem_preco_pede_dinheiro(self):
+        # Preço fixo marcado, mas sem preço e sem aceitar ofertas: bloqueia.
+        c = bot.app.test_client()
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True):
+            resp = c.post("/cliente/troca/publicar", data={
+                "_csrf": "tokenteste",
+                "item_name": "Mace",
+                "character_name": "Bapz",
+                "world": "Auroria",
+                "contact": "(19) 98765-4321",
+                "modo_preco": "preco_fixo",
+            })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
+
     def test_api_troca_detalhe_encontra(self):
         lista = [dict(LISTING, status="ativa")]
         with mock.patch.object(painel, "_rate_limited", lambda *a: False), \

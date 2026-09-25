@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.19"
+VERSION = "2.10.20"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -5041,3 +5041,4 @@ def admin_seguranca_encerrar(sid):
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/seguranca")
+

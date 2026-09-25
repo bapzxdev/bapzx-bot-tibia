@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.19"
+VERSION = "2.10.20"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -535,6 +535,7 @@ _MK_FORM_JS = """
   function appl(v) {
     if (!modo || !blocoPreco || !preco) return;
     var fixo = v === "preco_fixo";
+    modo.value = v;
     blocoPreco.style.display = fixo ? "" : "none";
     preco.required = fixo;
     preco.disabled = !fixo;
@@ -548,6 +549,11 @@ _MK_FORM_JS = """
     })(opts[i]);
   }
   appl(modo ? modo.value : "preco_fixo");
+  function somenteDigitos() {
+    if (!preco) return;
+    preco.value = String(preco.value || "").replace(/\\D/g, "").slice(0, 9);
+  }
+  if (preco) preco.addEventListener("input", somenteDigitos);
   function fone() {
     if (!contato) return;
     var d = String(contato.value || "").replace(/\\D/g, "").slice(0, 11);
@@ -3497,7 +3503,7 @@ def cliente_troca():
             "</div>"
             "<input type='hidden' name='modo_preco' id='mk_modo_preco' value='preco_fixo'>"
             "<div id='mk_bloco_preco'><label>Preço em gp *</label>"
-            "<input name='preco' id='mk_preco' type='text' required placeholder='Ex.: 250000'></div>"
+            "<input name='preco' id='mk_preco' type='text' inputmode='numeric' required placeholder='Ex.: 250000'></div>"
             "<div><label>WhatsApp com DDD *</label>"
             "<input name='contact' required id='mk_contato' maxlength='16' inputmode='numeric' "
             "autocomplete='tel' placeholder='(19) 98765-4321'>"
