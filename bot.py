@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.15"
+VERSION = "2.10.16"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -483,12 +483,24 @@ _MK_FORM_CSS = """
 .mk-seg-opt{flex:1;padding:10px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;transition:.15s}
 .mk-seg-opt:hover{border-color:var(--purple)}
 .mk-seg-opt.on{background:rgba(167,139,250,.16);border-color:var(--purple);color:var(--purple)}
-.mk-destaque{display:flex;align-items:center;gap:10px;margin-top:12px;cursor:pointer;width:100%}
-.mk-destaque input{accent-color:var(--green);width:18px;height:18px;flex-shrink:0}
-.mk-destaque-box{display:flex;align-items:center;gap:10px;border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;background:var(--panel-2);transition:.15s;width:100%}
-.mk-destaque:hover .mk-destaque-box{border-color:var(--purple)}
-.mk-destaque-box b{color:var(--green)}
-.mk-destaque-note{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:2px}
+.mk-destaque{position:relative;display:flex;align-items:center;gap:12px;margin-top:14px;cursor:pointer;width:100%}
+.mk-destaque input{position:absolute;opacity:0;width:0;height:0}
+.mk-destaque-box{display:flex;align-items:center;gap:14px;border:1px solid rgba(212,175,55,.30);background:linear-gradient(180deg,#18233a 0%,#101a2c 100%);border-radius:16px;padding:16px 18px;width:100%;box-shadow:0 12px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04);transition:.18s}
+.mk-destaque:hover .mk-destaque-box{border-color:rgba(212,175,55,.55);box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 18px rgba(212,175,55,.12)}
+.mk-destaque input:checked ~ .mk-destaque-box{border-color:rgba(212,175,55,.75);box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 22px rgba(212,175,55,.22)}
+.mk-destaque-dot{width:22px;height:22px;border-radius:50%;background:#0b0f1a;border:2px solid #3a4a6b;position:relative;flex-shrink:0;transition:.18s}
+.mk-destaque-dot::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;opacity:0;transform:scale(.5);transition:.15s}
+.mk-destaque input:checked ~ .mk-destaque-box .mk-destaque-dot{background:linear-gradient(135deg,#34d399,#22d3ee);border-color:rgba(255,255,255,.40);box-shadow:0 0 12px rgba(52,211,153,.50)}
+.mk-destaque input:checked ~ .mk-destaque-box .mk-destaque-dot::after{opacity:1;transform:scale(1)}
+.mk-destaque-star{display:inline-flex;flex-shrink:0;filter:drop-shadow(0 0 6px rgba(251,191,36,.60))}
+.mk-destaque-star svg{display:block}
+.mk-destaque-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mk-destaque-title{color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;letter-spacing:.2px}
+.mk-destaque-price{color:#4ade80;font-weight:800;font-size:14.5px}
+.mk-destaque-note{color:#8ea0b8;font-size:12.5px;font-weight:400}
+.mk-publish-btn{width:100%;text-align:center;font-family:'Sora',sans-serif;font-size:16px;font-weight:700;letter-spacing:.3px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#059669 0%,#10b981 45%,#06b6d4 100%);color:#fff;border:0;cursor:pointer;box-shadow:0 12px 28px rgba(5,150,105,.35);transition:filter .15s,transform .05s}
+.mk-publish-btn:hover{filter:brightness(1.12);box-shadow:0 14px 32px rgba(5,150,105,.45)}
+.mk-publish-btn:active{transform:scale(.98)}
 </style>
 """
 
@@ -3363,13 +3375,17 @@ def cliente_troca():
             "<input name='contact' required id='mk_contato' maxlength='16' inputmode='numeric' "
             "autocomplete='tel' placeholder='(19) 98765-4321'>"
             "<p class='note' style='margin-top:2px'>Só aceitamos WhatsApp com DDD — ex.: <b>(19) 98765-4321</b>.</p></div>"
-            "<p><label class='mk-destaque'>"
+"<p><label class='mk-destaque'>"
             "<input type='checkbox' name='destaque' value='1'>"
-            "<span class='mk-destaque-box'><span>&#11088;</span><span>Destacar meu anúncio "
-            f"<b>(+ {_mk_brl(preco_des)})</b>"
+            "<span class='mk-destaque-box'>"
+            "<span class='mk-destaque-dot' aria-hidden='true'></span>"
+            "<span class='mk-destaque-star' aria-hidden='true'><svg viewBox='0 0 24 24' width='24' height='24'><path fill='#fbbf24' d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z'/></svg></span>"
+            "<span class='mk-destaque-txt'>"
+            "<span class='mk-destaque-title'>Destacar meu anúncio "
+            f"<b class='mk-destaque-price'>(+ {_mk_brl(preco_des)})</b></span>"
             "<span class='mk-destaque-note'>Fica no topo da lista pública do MARKTRADE com a tag de destaque.</span>"
             "</span></span></label></p>"
-            "<p style='margin-top:14px'><button class='btn' type='submit'>Publicar agora</button></p>"
+            "<p style='margin-top:14px'><button class='btn mk-publish-btn' type='submit'>Publicar agora</button></p>"
             "</form>"
             + _MK_AC_SCRIPT
             + _MK_FORM_JS
