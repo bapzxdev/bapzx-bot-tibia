@@ -4,7 +4,38 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
-- **v2.10.11 (24/09, escudos + schema de 12 campos com categoria)**: a pedido
+- **v2.10.12 (24/09, todas as categorias do envio: pernas, spellbooks, botas,
+  aljavas e fetiches no banco local)**: coladas as 4 seções restantes do envio
+  do dono e transcritas nos módulos gitignored `_mk_pernas_dados.py` (66
+  pernas), `_mk_spellbooks_dados.py` (30), `_mk_botas_dados.py` (66),
+  `_mk_aljavas_dados.py` (8) e `_mk_fetiches_dados.py` (76). `mk_itens.py`
+  agora com **701 itens** (54 armas + 151 capacetes + 165 armaduras + 85
+  escudos + 66 pernas + 30 spellbooks + 66 botas + 8 aljavas + 76 fetiches),
+  schema de 12 campos com `categoria` completa. Gerador
+  `_mk_gera_capacetes.py` ganhou as 5 categorias novas e o merge de fetiches
+  (`_fk_bonus`: Bônus vence; se "Nenhum."/"Nenhum"/"" usa Atributos; se ambos
+  none, vazio). Layout por categoria (decisão): pernas/botas `arm`→dano_medio
+  (rótulo Armadura) + tier; spellbooks `def`→dano_medio (rótulo Defesa), sem
+  tier; aljavas `volume`→dano_medio (rótulo Volume), sem slots/tier; fetiches
+  nivel "0", vocação "Todas", sem dano_medio/slots/tier, bonus = Atributos
+  quando Bônus none. Rótulo dinâmico do bot.py e do anuncio.html já cobria
+  todos (Spellbooks→Defesa, Aljavas→Volume, demais→Armadura) — sem mudança de
+  JS. Casos especiais mantidos: Boots of Waterwalking/Pair of Soft Boots/Worn
+  Soft Boots com arm vazio; Cursed Coin bonus vazio; Torch com "Pirate Gunner"
+  duplicado no drop; Pumpkinhead peso "(apagada) 9.50 oz - (acesa) 12.50".
+  VERSION bot.py e painel.py **2.10.12**. Validado: py_compile OK; node
+  --check no JS (bot + anuncio) OK; rótulos conferidos fim-a-fim via node (6
+  casos: Pernas→Armadura, Spellbooks→Defesa, Aljavas→Volume, Botas→Armadura,
+  Fetiches→Armadura, Escudos→Defesa); test_marketplace **74 OK** (+7: schema
+  12 campos com as 9 categorias e total 701, perna, botas, botas sem arm,
+  spellbook, aljava, fetiche com bonus de Atributos, fetiche sem bonus);
+  test_coins **26 OK** (100 total). Pendência: re-deploy no Render + GitHub
+  Pages (Render ainda em v2.10.8 — agora 4 versões atrás: 2.10.9, 2.10.10,
+  2.10.11 e 2.10.12) e validar ao vivo o autocomplete/ficha das novas
+  categorias (ex.: "spellbook" → Defesa 23, "quiver" → Volume 6, "fabulous" →
+  Fabulous Legs Armadura 9).
+
++ - **v2.10.11 (24/09, escudos + schema de 12 campos com categoria)**: a pedido
   do dono, adicionados os **85 escudos** colados por ele ao banco local —
   `mk_itens.py` agora com **455 itens** (54 armas + 151 capacetes + 165
   armaduras + 85 escudos). Dados em `_mk_escudos_dados.py` (gitignored,

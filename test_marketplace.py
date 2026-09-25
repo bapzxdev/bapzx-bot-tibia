@@ -1172,7 +1172,62 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(len(nomes), len(set(nomes)), "nomes duplicados no mk_itens.py")
         for it in bot._MK_ITENS_DB:
             self.assertEqual(len(it), 12, it[0])
-            self.assertIn(it[11], ("Armas", "Capacetes", "Armaduras", "Escudos"), it[0])
+            self.assertIn(
+                it[11],
+                (
+                    "Armas", "Capacetes", "Armaduras", "Escudos",
+                    "Pernas", "Spellbooks", "Botas", "Aljavas", "Fetiches",
+                ),
+                it[0],
+            )
+        self.assertEqual(len(bot._MK_ITENS_DB), 701)
+
+    def test_ficha_local_perna(self):
+        ficha = painel._ficha_local("Fabulous Legs")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Pernas")
+        self.assertEqual(ficha["dano_medio"], "9")
+        self.assertEqual(ficha["tier"], "3")
+
+    def test_ficha_local_botas(self):
+        ficha = painel._ficha_local("Boots of Haste")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Botas")
+        self.assertEqual(ficha["dano_medio"], "0")
+        self.assertEqual(ficha["bonus"], "Speed +20")
+
+    def test_ficha_local_botas_sem_arm(self):
+        ficha = painel._ficha_local("Worn Soft Boots")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Botas")
+        self.assertNotIn("dano_medio", ficha)
+
+    def test_ficha_local_spellbook(self):
+        ficha = painel._ficha_local("Spellbook of Enlightenment")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Spellbooks")
+        self.assertEqual(ficha["dano_medio"], "29")
+        self.assertNotIn("tier", ficha)
+
+    def test_ficha_local_aljava(self):
+        ficha = painel._ficha_local("Alicorn Quiver")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Aljavas")
+        self.assertEqual(ficha["dano_medio"], "12")
+        self.assertEqual(ficha["bonus"], "Magic Level +1")
+
+    def test_ficha_local_fetiche_bonus_atributos(self):
+        ficha = painel._ficha_local("Black Candle")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Fetiches")
+        self.assertIn("luz vermelha", ficha["bonus"])
+
+    def test_ficha_local_fetiche_sem_bonus(self):
+        ficha = painel._ficha_local("Cursed Coin")
+        self.assertIsNotNone(ficha)
+        self.assertEqual(ficha["categoria"], "Fetiches")
+        self.assertNotIn("dano_medio", ficha)
+        self.assertIn("critical hit", ficha["protecao"])
 
     def test_ficha_local_item_fora_da_base_e_none(self):
         self.assertIsNone(painel._ficha_local("Sword of the Unknown"))
