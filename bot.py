@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.16"
+VERSION = "2.10.17"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -498,9 +498,29 @@ _MK_FORM_CSS = """
 .mk-destaque-title{color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;letter-spacing:.2px}
 .mk-destaque-price{color:#4ade80;font-weight:800;font-size:14.5px}
 .mk-destaque-note{color:#8ea0b8;font-size:12.5px;font-weight:400}
-.mk-publish-btn{width:100%;text-align:center;font-family:'Sora',sans-serif;font-size:16px;font-weight:700;letter-spacing:.3px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#059669 0%,#10b981 45%,#06b6d4 100%);color:#fff;border:0;cursor:pointer;box-shadow:0 12px 28px rgba(5,150,105,.35);transition:filter .15s,transform .05s}
-.mk-publish-btn:hover{filter:brightness(1.12);box-shadow:0 14px 32px rgba(5,150,105,.45)}
+.mk-publish-btn{width:100%;text-align:center;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;letter-spacing:.3px;padding:12px 16px;border-radius:11px;background:linear-gradient(135deg,#059669 0%,#10b981 45%,#06b6d4 100%);color:#fff;border:0;cursor:pointer;box-shadow:0 11px 24px rgba(5,150,105,.32);transition:filter .15s,transform .05s}
+.mk-publish-btn:hover{filter:brightness(1.12);box-shadow:0 13px 28px rgba(5,150,105,.42)}
 .mk-publish-btn:active{transform:scale(.98)}
+</style>
+"""
+
+_MK_PAGE_CSS = """
+<style>
+.welcome{border:1px solid rgba(212,175,55,.30);background:linear-gradient(180deg,#18233a 0%,#101a2c 100%);box-shadow:0 12px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04)}
+.welcome h2{text-shadow:0 0 18px rgba(52,211,153,.45)}
+.welcome .btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;background:linear-gradient(135deg,#059669 0%,#10b981 45%,#06b6d4 100%);color:#fff;border:0;font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:.2px;padding:11px 18px;border-radius:11px;box-shadow:0 10px 22px rgba(5,150,105,.32);transition:filter .15s,transform .05s}
+.welcome .btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.kpi{background:linear-gradient(180deg,#18233a 0%,#101a2c 100%);border:1px solid rgba(212,175,55,.24);border-radius:16px;box-shadow:0 12px 28px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.04);transition:border-color .15s,transform .1s,box-shadow .15s}
+.kpi:hover{border-color:rgba(212,175,55,.55);box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 16px rgba(212,175,55,.12)}
+.kpi .num{text-shadow:0 0 14px rgba(74,222,128,.35)}
+.kpi.amber .num{text-shadow:0 0 14px rgba(251,191,36,.35)}
+.kpi.blue .num{text-shadow:0 0 14px rgba(96,165,250,.35)}
+.kpi.purple .num{text-shadow:0 0 14px rgba(167,139,250,.40)}
+.panel{background:linear-gradient(180deg,#18233a 0%,#101a2c 100%);border:1px solid rgba(212,175,55,.24);border-radius:18px;box-shadow:0 14px 30px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.04)}
+.panel-hd a.btn,.panel-hd a.btn.ghost.small{display:inline-flex;align-items:center;gap:7px;justify-content:center;background:linear-gradient(135deg,#059669 0%,#10b981 45%,#06b6d4 100%);color:#fff;border:0;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;letter-spacing:.2px;padding:9px 15px;border-radius:10px;box-shadow:0 8px 18px rgba(5,150,105,.30);transition:filter .15s}
+.panel-hd a.btn:hover,.panel-hd a.btn.ghost.small:hover{filter:brightness(1.12)}
+.table-wrap{border-color:rgba(212,175,55,.18);border-radius:14px}
+th{background:rgba(16,26,44,.60)}
 </style>
 """
 
@@ -3457,7 +3477,8 @@ def cliente_troca():
         tables = form + meus
 
     body = (
-        "<div class='welcome'>"
+        _MK_PAGE_CSS
+        + "<div class='welcome'>"
         "<div><h2>MARKTRADE &#128176;</h2>"
         "<p>Troca de itens do Tibia — publique venda, compra ou troca e negocie entre jogadores.</p></div>"
         f"<a class='btn' target='_blank' rel='noopener' href='{PORTFOLIO_URL}troca.html'>Ver anúncios públicos</a>"
