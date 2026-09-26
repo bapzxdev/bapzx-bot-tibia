@@ -827,7 +827,6 @@ class TestMkBot(unittest.TestCase):
              mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
              mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
              mock.patch.object(bot, "_mk_itemsprite", lambda item_name: "https://www.tibiawiki.com.br/images/Z/Za/Mace.gif"), \
-             mock.patch.object(bot, "_mk_itemcategory", lambda item_name: "Rares"), \
              mock.patch.object(bot.requests, "post", side_effect=fakepost):
             resp = c.post("/cliente/troca/publicar", data={
                 "_csrf": "tokenteste",
@@ -839,7 +838,7 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(resp.status_code, 500)
         self.assertTrue(posts, "deve chegar ao Supabase")
         self.assertEqual(posts[0]["sprite"], "https://www.tibiawiki.com.br/images/Z/Za/Mace.gif")
-        self.assertEqual(posts[0]["category"], "Rares")
+        self.assertNotIn("category", posts[0], "publicar não envia mais categoria")
 
     def test_publicar_sprite_do_form_tem_prioridade(self):
         c = bot.app.test_client()
@@ -857,7 +856,6 @@ class TestMkBot(unittest.TestCase):
              mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
              mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
              mock.patch.object(bot, "_mk_itemsprite", side_effect=AssertionError("nao deve buscar se veio do form")), \
-             mock.patch.object(bot, "_mk_itemcategory", lambda item_name: "Rares"), \
              mock.patch.object(bot.requests, "post", side_effect=fakepost):
             resp = c.post("/cliente/troca/publicar", data={
                 "_csrf": "tokenteste",
@@ -936,22 +934,6 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(bot._mk_title_case(""), "")
         self.assertEqual(bot._mk_title_case("blue robe"), "Blue Robe")
 
-    def test_mk_itemcategory_detecta(self):
-        resp = _FakeResp()
-        resp.json = lambda: {
-            "query": {"pages": {"1": {"categories": [
-                {"title": "Category:Itens"},
-                {"title": "Category:Soul Core",
-                 }]}}}
-        }
-        with mock.patch.object(bot.requests, "get", return_value=resp):
-            self.assertEqual(bot._mk_itemcategory("Exalted Core"), "Soul Core")
-
-    def test_mk_itemcategory_falha_e_vazio(self):
-        with mock.patch.object(bot.requests, "get", side_effect=Exception("boom")):
-            self.assertEqual(bot._mk_itemcategory("Algum Item"), "")
-        self.assertEqual(bot._mk_itemcategory(""), "")
-
     def test_publicar_contato_obrigatorio(self):
         c = bot.app.test_client()
         posts = []
@@ -975,7 +957,7 @@ class TestMkBot(unittest.TestCase):
         self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
         self.assertFalse(posts, "não deve publicar sem contato")
 
-    def test_publicar_normaliza_item_e_categoria_manual(self):
+    def test_publicar_normaliza_item_sem_categoria(self):
         c = bot.app.test_client()
         bot._SPRITE_CACHE.clear()
         posts = []
@@ -1002,13 +984,12 @@ class TestMkBot(unittest.TestCase):
                 "character_name": "Bapz",
                 "world": "Auroria",
                 "contact": "(19) 98765-4321",
-                "category": "rares",
             })
         self.assertEqual(resp.status_code, 500)
         self.assertTrue(posts)
         pl = posts[0]
         self.assertEqual(pl["item_name"], "War Hammer")
-        self.assertEqual(pl["category"], "Rares")
+        self.assertNotIn("category", pl, "publicar não envia mais categoria")
         self.assertEqual(pl["contact"], "(19) 98765-4321")
 
     def test_publicar_master_sem_qr_ativa_direto(self):
@@ -1055,7 +1036,6 @@ class TestMkBot(unittest.TestCase):
                 "character_name": "Bapz",
                 "world": "Auroria",
                 "contact": "(19) 98765-4321",
-                "category": "Rares",
             })
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/cliente/troca", resp.headers.get("Location", ""))
@@ -1114,7 +1094,6 @@ class TestMkBot(unittest.TestCase):
                 "character_name": "Bapz",
                 "world": "Auroria",
                 "contact": "(19) 98765-4321",
-                "category": "Rares",
             })
         self.assertEqual(resp.status_code, 302)
         ativacao = [p for p in patches if "/marketplace_listings?id=eq." in p.get("_url", "")]
@@ -1147,7 +1126,6 @@ class TestMkBot(unittest.TestCase):
                 "character_name": "Bapz",
                 "world": "Auroria",
                 "contact": "(19) 98765-4321",
-                "category": "Rares",
             })
         self.assertEqual(resp.status_code, 302)
         with c.session_transaction() as sess:
@@ -1197,7 +1175,6 @@ class TestMkBot(unittest.TestCase):
                 "character_name": "Bapz",
                 "world": "Auroria",
                 "contact": "(19) 98765-4321",
-                "category": "Rares",
                 "destaque": "1",
             })
         self.assertEqual(resp.status_code, 302)
@@ -1253,7 +1230,6 @@ class TestMkBot(unittest.TestCase):
              mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
              mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
              mock.patch.object(bot, "_mk_itemsprite", lambda item_name: ""), \
-             mock.patch.object(bot, "_mk_itemcategory", lambda item_name: "Rares"), \
              mock.patch.object(bot.requests, "post", side_effect=fakepost):
             resp = c.post("/cliente/troca/publicar", data={
                 "_csrf": "tokenteste",

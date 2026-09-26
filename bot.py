@@ -22,7 +22,7 @@ import rbac as rbac
 import legais as legais
 from mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.20"
+VERSION = "2.10.22"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -363,21 +363,6 @@ _MK_CONECTIVOS = {
     "the", "of", "and", "or", "to", "in", "on", "at", "for", "from", "with",
     "into", "onto", "van", "von",
 }
-_MK_ITEM_CATEGORIAS = [
-    "Item", "House", "Soul Core", "Make Believe", "Rares", "Primal Ordeal",
-    "Fansite", "Soul War", "Rotten Blood",
-]
-_MK_CAT_WIKI = [
-    ("soul core", ["soul core"]),
-    ("make believe", ["make believe"]),
-    ("rares", ["rare"]),
-    ("primal ordeal", ["primal ordeal", "wrath"]),
-    ("fansite", ["fansite"]),
-    ("soul war", ["soul war"]),
-    ("rotten blood", ["rotten blood"]),
-    ("house", ["house", "guildhall", "apartment", "flat"]),
-]
-
 _MK_ITENS_JSON = json.dumps(_MK_ITENS_DB, ensure_ascii=False)
 
 _MK_AC_CSS = """
@@ -599,46 +584,6 @@ def _mk_title_case(text):
             base = base.lower()
         saida.append(base)
     return " ".join(saida)
-
-
-def _mk_itemcategory(item_name):
-    """Tenta descobrir a categoria do item no Wiki Tibia a partir do nome.
-
-    Consulta prop=categories da página do item e mapeia pelas categorias
-    conhecidas do MARKTRADE. Nunca derruba: sem resultado devolve ""."""
-    nome = (item_name or "").strip()
-    if not nome:
-        return ""
-    try:
-        from urllib.parse import quote
-
-        base = "https://www.tibiawiki.com.br/api.php"
-        headers = {"User-Agent": f"BAPZX-MARKTRADE/{VERSION}"}
-        qs = "&".join(f"{k}={quote(str(v))}" for k, v in {
-            "action": "query",
-            "format": "json",
-            "redirects": "1",
-            "prop": "categories",
-            "cllimit": "500",
-            "titles": _mk_title_case(nome),
-        }.items())
-        r = requests.get(f"{base}?{qs}", timeout=8, headers=headers)
-        r.raise_for_status()
-        dados = r.json() or {}
-        texto = " ".join(
-            (c.get("title") or "")
-            for page in ((dados.get("query") or {}).get("pages") or {}).values()
-            for c in (page.get("categories") or [])
-        ).lower()
-        for chave, termos in _MK_CAT_WIKI:
-            if any(t in texto for t in termos):
-                return next(
-                    (c for c in _MK_ITEM_CATEGORIAS if c.lower() == chave),
-                    chave,
-                )
-    except Exception:
-        pass
-    return ""
 
 
 def _mk_itemsprite(item_name):
@@ -3626,7 +3571,6 @@ def cliente_troca_publicar():
     character_name = (request.form.get("character_name") or "").strip()[:60]
     world = (request.form.get("world") or "").strip()
     contact = _mk_whatsapp(request.form.get("contact"))
-    category = (request.form.get("category") or "").strip()[:60]
     tipo = (request.form.get("tipo_anuncio") or "venda").strip().lower()
     sprite = (request.form.get("sprite") or "").strip()[:300]
     if sprite and not (sprite.startswith("http://") or sprite.startswith("https://")):
@@ -3646,12 +3590,6 @@ def cliente_troca_publicar():
     if world not in _MK_MUNDOS:
         _mk_flash("erro", "Selecione um mundo válido para o anúncio.")
         return redirect("/cliente/troca")
-    if category not in _MK_ITEM_CATEGORIAS:
-        categoria_detectada = _mk_itemcategory(item_name)
-        category = next(
-            (c for c in _MK_ITEM_CATEGORIAS if c.lower() == category.lower()),
-            categoria_detectada,
-        )
 
     modo_preco = (request.form.get("modo_preco") or "").strip().lower()
     preco = _mk_num_br(request.form.get("preco"))
@@ -3679,7 +3617,6 @@ def cliente_troca_publicar():
         "character_name": character_name,
         "world": world,
         "contact": contact,
-        "category": category,
         "tipo_anuncio": tipo,
         "status": "pendente",
         "is_destaque": False,

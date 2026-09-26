@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.21"
+VERSION = "2.10.22"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3230,7 +3230,6 @@ def api_troca():
             "aceita_ofertas": bool(a.get("aceita_ofertas")),
             "world": a.get("world") or "",
             "jogador": a.get("character_name") or "",
-            "categoria": a.get("category") or "",
             "contato": a.get("contact") or "",
             "verificado": bool(a.get("verificado")),
             "is_destaque": bool(a.get("is_destaque")),
@@ -3510,7 +3509,6 @@ def api_troca_detalhe(aid):
         "aceita_ofertas": bool(a.get("aceita_ofertas")),
         "world": a.get("world") or "",
         "jogador": a.get("character_name") or "",
-        "categoria": a.get("category") or "",
         "contato": a.get("contact") or "",
         "verificado": bool(a.get("verificado")),
         "is_destaque": bool(a.get("is_destaque")),
