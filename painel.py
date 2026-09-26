@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.20"
+VERSION = "2.10.21"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3237,6 +3237,7 @@ def api_troca():
             "destaque_until": a.get("destaque_until") or "",
             "criado_em": a.get("created_at") or "",
             "tier": (_iteminfo(a.get("item_name") or "").get("tier") or ""),
+            "voc": _mk_vocs(a.get("item_name") or ""),
         }
         for a in anuncios
     ]
@@ -3408,6 +3409,41 @@ def _ficha_local(item_name):
             ficha = dict(zip(campos + campos_extras[:len(linha) - 12], [str(v or "") for v in linha]))
             return {k: v for k, v in ficha.items() if v != "" or k == "nome"}
     return None
+
+
+_VOC_SINGULAR = {
+    "knight": "knight", "knights": "knight",
+    "paladin": "paladin", "paladins": "paladin",
+    "sorcerer": "sorcerer", "sorcerers": "sorcerer",
+    "druid": "druid", "druids": "druid",
+    "monk": "monk", "monks": "monk",
+}
+
+
+def _mk_vocs(item_name):
+    """Vocações do item normalizadas (ex.: ["knight"]) para o filtro da vitrine.
+
+    Fonte 1: ficha local (mk_itens, campo "vocacao": "Knights", "Sorcerers"...).
+    Fonte 2 (fallback): Wiki (campo "vocacoes", ex. "Knight, Paladin").
+    Sem vocação conhecida devolve [] (o filtro de vocação então exclui o item)."""
+    bruto = ""
+    try:
+        ficha = _ficha_local(item_name)
+        if ficha:
+            bruto = ficha.get("vocacao") or ""
+    except Exception:
+        bruto = ""
+    if not bruto:
+        try:
+            bruto = _iteminfo(item_name).get("vocacoes") or ""
+        except Exception:
+            bruto = ""
+    vocs = []
+    for parte in re.split(r"[,/;]", str(bruto or "")):
+        sing = _VOC_SINGULAR.get(parte.strip().lower())
+        if sing and sing not in vocs:
+            vocs.append(sing)
+    return vocs
 
 
 def _ref_de_preco(item_name):

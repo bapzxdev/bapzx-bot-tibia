@@ -1492,6 +1492,32 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(ficha["nivel"], "600")
         self.assertEqual(ficha["vocacao"], "Sorcerers")
 
+    def test_mk_vocs_ficha_local(self):
+        self.assertEqual(painel._mk_vocs("Sanguine Coil"), ["sorcerer"])
+
+    def test_mk_vocs_wiki_fallback(self):
+        with mock.patch.object(painel, "_ficha_local", return_value=None), \
+             mock.patch.object(painel, "_iteminfo", return_value={"vocacoes": "Knight, Paladin"}):
+            self.assertEqual(painel._mk_vocs("Item Qualquer"), ["knight", "paladin"])
+
+    def test_mk_vocs_sem_fonte_vazio(self):
+        with mock.patch.object(painel, "_ficha_local", return_value=None), \
+             mock.patch.object(painel, "_iteminfo", return_value={}):
+            self.assertEqual(painel._mk_vocs("Item Qualquer"), [])
+        self.assertEqual(painel._mk_vocs(""), [])
+
+    def test_api_troca_lista_traz_voc(self):
+        rows = [dict(LISTING, status="ativa", item_name="Sanguine Coil")]
+        with mock.patch.object(painel, "_rate_limited", lambda *a: False), \
+             mock.patch.object(painel, "_fetch_public", return_value=rows), \
+             mock.patch.object(painel, "_iteminfo", return_value={}):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca", headers={"Origin": "https://bapzxdev.github.io"})
+        self.assertEqual(resp.status_code, 200)
+        an = resp.get_json()["anuncios"][0]
+        self.assertIn("voc", an)
+        self.assertEqual(an["voc"], ["sorcerer"])
+
     def test_iteminfo_wiki_parsea_infobox(self):
         wikitext = """{{Infobox_Item|List={{{1|}}}|GetValue={{{GetValue|}}}\n"
         | name           = Gnome Helmet
