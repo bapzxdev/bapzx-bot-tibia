@@ -12,7 +12,7 @@ Fluxo testado (em ordem), contra um app que ja tenha o painel no ar:
      duplicar). Repetir editando pix (garantir que limpa o prefixo).
 
 Uso:
-    python teste_qtd_coins.py --base https://SEU-RENDER --admin-url /admin/services
+    python tests/e2e/e2e_qtd_coins.py --base https://SEU-RENDER --admin-url /admin/services
     Opcionais: --user EMAIL --headful (ver o navegador), --zap URL (scan rapido)
 
 Requisitos: pip install playwright && playwright install chromium

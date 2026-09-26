@@ -19,7 +19,7 @@ git — é a sua organização local para se encontrar (tudo num lugar só).
   - `migracao_status.sql` — checks de migração/estado do banco.
 - **Repo `bapzx`** — NÃO versionar .sql de Supabase. Se um arquivo SQL novo
   for gerado, criá-lo direto em `C:\DEV\Supabase`.
-- **`scripts/migrar_pedidos.py`** — ficou NO repo: é script Python que roda
+- **`tools/migrar_pedidos.py`** — ficou NO repo: é script Python que roda
   junto do projeto (migração de `pedidos.json` → Supabase via código), não é
   SQL.
 

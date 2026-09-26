@@ -4,6 +4,8 @@
 
 ## PROTOCOLO DE REENTRADA (atualizado no último check-out)
 
+- **26/09 (reorg por responsabilidade, fase 1 — sem fatiar god modules)**: nova árvore por contexto: `acesso/rbac.py`, `vendas/{pedidos.py,persona.txt}`, `legal/legais.py`, `marktrade/dados/{mk_itens.py,etl/}`, `tools/` (7 ops + `migrar_pedidos.py`), `tests/{test_marketplace,test_coins,e2e/e2e_qtd_coins}`, `docs/memoria/` (7), `integracoes/sheets/` (renomeado de `integrations/`), `docs/{audits,runbooks}` (anterior). Imports atualizados em bot.py/painel.py/testes; bootstrap `sys.path` nos testes e nos 5 ops (2 já tinham, viraram relativo); gerador com paths ancorados na raiz; `__init__.py` nos 5 pacotes; docs vivos atualizados (PROTOCOLO, manual, MEMORIA Estrutura/COMPRA/MIGRATION). NÃO movido (fase 2): fatiar `bot.py`/`painel.py` (exige validar start command no Render), `db/migrations` (vetado duplicar SQLs), renames cosméticos, README/.env.example/lock. Validado: py_compile OK, 87 + 26 OK, imports + persona OK (1169 itens), zero refs vivas restantes.
+
 - **26/09 (reorg segura, sem mudar código)**: a pedido do dono, aplicada só a parte da auditoria arquitetural que não quebra nada — via `git mv` (histórico preservado): `planilha-clientes/` → `integrations/sheets/`, audits → `docs/audits/`, guia OAuth → `docs/runbooks/`; refs vivas atualizadas (`manual.txt` 2x, `LEMBRETE.md` 1x). Resto (código, testes, `_mk_*`, `scripts/`, `persona.txt`, `MEMORIA*.md`) ficou no lugar — motivos no relatório da sessão. Validado: py_compile OK, 87 + 26 OK, zero refs a `planilha-clientes/`.
 
 - **v2.10.22 (26/09, categoria do anúncio DELETADA — sem uso, a pedido do dono)**: removida a `category` do anúncio (Soul Core/Rares/... com auto-detect no Wiki via `_mk_itemcategory`): deletados `_MK_ITEM_CATEGORIAS`, `_MK_CAT_WIKI`, `_mk_itemcategory()` e a leitura/validação/gravação no POST `cliente_troca_publicar` (bot.py — publicar fica 1 chamada Wiki mais leve); campo `"categoria"` removido dos payloads `/api/troca` e `/api/troca/<id>` (painel.py); chip de categoria removido do card (`troca.html`) e do detalhe (`anuncio.html`) + CSS órfão; JSON-LD do detalhe com `"category": "Item de Tibia"` fixo. MANTIDO (tem uso): `categoria` da ficha local (Armas/Escudos/..., rótulos Dano Médio/Ataque/Defesa/Volume) e `categoria` do catálogo itens/serviços. Coluna `category` segue no banco (sem migration; novos anúncios gravam sem ela). VERSION bot+painel **2.10.22**. Validado: py_compile OK; test_marketplace **87 OK** (2 testes do `_mk_itemcategory` deletados, `test_publicar_normaliza_item_sem_categoria` recriado, asserts `assertNotIn("category")` no payload) + test_coins **26 OK**; node --check troca.html + anuncio.html OK. Pendência: re-deploy no Render (v2.10.22) + GitHub Pages e validar ao vivo (publicar sem categoria, cards/detalhe sem chip).
@@ -408,8 +410,8 @@ Versão atual do bot: 2.10.0.
 ## Estrutura
 
 - `bot.py` â€” webhook Flask: `/` (landing page pÃºblica de vendas), `/health` (ok + versÃ£o), `/webhook` (mensagens), `/webhook/mp` (notificaÃ§Ãµes do Mercado Pago), `/pedidos` e `/dashboard` (protegidos por chave), comandos `/id`. Landing gerada por `landing_page()` (preÃ§os, como comprar, botÃ£o + QR para t.me/bapzx_bot).
-- `storage.py` â€” `OrderStore`: salva/lista pedidos em Supabase (persistente) com fallback em `pedidos.json`.
-- `persona.txt` â€” persona da loja e regras de atendimento.
+- `vendas/pedidos.py` â€” `OrderStore`: salva/lista pedidos em Supabase (persistente) com fallback em `pedidos.json`.
+- `vendas/persona.txt` â€” persona da loja e regras de atendimento.
 - `pedidos.json` â€” pedidos salvos (runtime, fora do git, usado como fallback).
 - `scripts/criar_tabela_supabase.sql` â€” DDL da tabela `public.pedidos` para o Supabase.
 - `requirements.txt` â€” flask, requests, google-genai.

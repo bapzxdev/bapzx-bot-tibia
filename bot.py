@@ -15,12 +15,12 @@ import requests
 from flask import Flask, request, redirect, session
 from werkzeug.exceptions import HTTPException
 
-from storage import OrderStore
+from vendas.pedidos import OrderStore
 from painel import bp as painel_bp
 from painel import _registra_invalidador_coins, _registra_invalidador_marketplace, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
-import rbac as rbac
-import legais as legais
-from mk_itens import _MK_ITENS_DB
+from acesso import rbac as rbac
+from legal import legais as legais
+from marktrade.dados.mk_itens import _MK_ITENS_DB
 
 VERSION = "2.10.22"
 
@@ -1001,7 +1001,7 @@ def _persona_precos():
 
 
 def load_persona():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "persona.txt")
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendas", "persona.txt")
     if os.path.isfile(path):
         with open(path, "r", encoding="utf-8") as f:
             persona = f.read().strip()

@@ -11,10 +11,10 @@ from urllib.parse import quote
 import requests
 from flask import Blueprint, Response, jsonify, redirect, request, session
 
-import rbac
+from acesso import rbac
 
 try:
-    from mk_itens import _MK_ITENS_DB
+    from marktrade.dados.mk_itens import _MK_ITENS_DB
 except Exception:
     _MK_ITENS_DB = []
 

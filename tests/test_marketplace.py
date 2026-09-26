@@ -1,17 +1,20 @@
 # Testes do módulo MARKTRADE (marketplace) — v2.10.1.
 # Painel /admin/marketplace + integração no bot (client, webhook, confirm).
 # Padrão: test client do painel com mocks, igual ao test_coins.py.
-# Rodar: .venv\Scripts\python.exe test_marketplace.py
+# Rodar: .venv\Scripts\python.exe tests/test_marketplace.py (da raiz do projeto)
 
 import unittest
 import time
 import os
+import sys
 from unittest import mock
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import bot
 import painel
-import rbac
-import storage
+from acesso import rbac
+from vendas import pedidos as storage
 
 CFG = {
     "id": 1,

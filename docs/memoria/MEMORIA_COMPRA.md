@@ -59,6 +59,6 @@ Outros exemplos:
    grava o preco calculado (dinâmico via preco_mil) na criacao do pedido —
    o preco fica congelado na ordem.
 4. Tabelas de preco do bot (bot.py -> price_table_text / price_table_compact)
-   e a persona (persona.txt via load_persona/_persona_precos): sempre usam o
+    e a persona (vendas/persona.txt via load_persona/_persona_precos): sempre usam o
    preco_mil atual.
 5. Este arquivo funciona como memoria do projeto junto com o MEMORIA.md.

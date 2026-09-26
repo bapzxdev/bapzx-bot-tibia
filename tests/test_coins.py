@@ -1,15 +1,19 @@
 # Testes do módulo COINS (v2.8.0): painel /admin/coins + integração no bot.
 # Padrão usado nas versões anteriores: test client do painel com mocks.
-# Rodar: python test_coins.py
+# Rodar: python tests/test_coins.py (da raiz do projeto)
 
 import unittest
 import time
+import os
+import sys
 from unittest import mock
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import bot
 import painel
-import rbac
-import storage
+from acesso import rbac
+from vendas import pedidos as storage
 
 CONFIG = {
     "estoque": 150000.0,
