@@ -1594,7 +1594,8 @@ class TestMkBot(unittest.TestCase):
         html = resp.get_data(as_text=True)
         self.assertIn("<select name='tier'", html)
         self.assertIn("Normal (sem upgrade)", html)
-        self.assertIn("id='mk_tier_hint'", html)
+        self.assertNotIn("id='mk_tier_hint'", html)
+        self.assertNotIn("padronizado automaticamente", html)
 
     def _publicar_tier(self, form_extra, fakepost=None):
         c = bot.app.test_client()
@@ -1710,6 +1711,49 @@ class TestMkBot(unittest.TestCase):
         html = resp.get_data(as_text=True)
         self.assertIn(".mk-form label", html)
         self.assertIn(".mk-form input:focus", html)
+
+    def test_excluir_tudo_master_apaga(self):
+        c = bot.app.test_client()
+        deletes = []
+
+        def fakeget(url, **kw):
+            r = _FakeResp()
+            r.json = lambda: [{"id": 1}, {"id": 2}, {"id": 3}]
+            return r
+
+        def fakedelete(url, **kw):
+            deletes.append(url)
+            r = _FakeResp()
+            r.status_code = 204
+            return r
+
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "delete", side_effect=fakedelete):
+            resp = c.post("/cliente/troca/excluir-tudo", data={"_csrf": "tokenteste"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(len(deletes), 3)
+        self.assertTrue(all("marketplace_listings?id=eq." in u for u in deletes))
+        with c.session_transaction() as sess:
+            msg = sess.get("_mk_msg") or []
+            self.assertEqual(msg[0], "ok")
+            self.assertIn("3 anúncio(s) excluído(s)", (msg[1] or ""))
+
+    def test_excluir_tudo_nao_master_403(self):
+        c = bot.app.test_client()
+        with mock.patch.object(bot, "current_user", lambda: {"email": "jogador@example.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot.requests, "delete", side_effect=AssertionError("não deve apagar")):
+            resp = c.post("/cliente/troca/excluir-tudo", data={"_csrf": "tokenteste"})
+        self.assertEqual(resp.status_code, 403)
+
+    def test_excluir_tudo_csrf_invalido_403(self):
+        c = bot.app.test_client()
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: False):
+            resp = c.post("/cliente/troca/excluir-tudo", data={"_csrf": "ruim"})
+        self.assertEqual(resp.status_code, 403)
 
     def test_api_troca_lista_tier_guardado(self):
         rows = [

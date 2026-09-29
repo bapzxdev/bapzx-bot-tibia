@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.25"
+VERSION = "2.10.26"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3556,7 +3556,7 @@ def cliente_troca():
             "<div class='panel-hd'><h2>&#128722; Publicar anúncio</h2>"
             f"<span class='badge pago'>{_mk_brl(preco_pub)}</span>"
             "</div>"
-            f"<p class='note'>Publicação por <b>{_mk_brl(preco_pub)}</b> · Destaque VIP + <b>{_mk_brl(preco_des)}</b> · "
+            f"<p class='note' style='font-weight:700'>Publicação por <b>{_mk_brl(preco_pub)}</b> · Destaque VIP + <b>{_mk_brl(preco_des)}</b> · "
             f"o anúncio fica válido por <b>{_mk_duracao('duracao_publicacao_dias', 30)} dias</b>. "
             f"Você publica quando quiser (até <b>{limite} ativos</b> ao mesmo tempo).</p>"
             + _MK_AC_CSS
@@ -3575,8 +3575,6 @@ def cliente_troca():
             + "".join(f"<option value='{html.escape(m)}'>{html.escape(m)}</option>" for m in _MK_MUNDOS)
             + "</select></div>"
             "</div>"
-            "<p class='note' style='margin-top:2px'>O nome do item é padronizado automaticamente "
-            "(ex.: WAR HAMMER vira <b>War Hammer</b>).</p>"
             "<label>Tipo de anúncio</label><select name='tipo_anuncio'>"
             "<option value='venda'>Vendendo</option>"
             "<option value='compra'>Comprando</option>"
@@ -3586,8 +3584,7 @@ def cliente_troca():
             "<option value='0' selected>0 — Normal (sem upgrade)</option>"
             + "".join(f"<option value='{t}'>Tier {t}</option>" for t in range(1, 11))
             + "</select>"
-            "<p class='note' id='mk_tier_hint' style='margin-top:2px'>Itens normais usam <b>tier 0</b>. "
-            "O máximo vai pela classificação do item (classe <b>1 → 1</b>, <b>2 → 2</b>, <b>3 → 3</b>, <b>4 → 10</b>).</p></div>"
+            "</div>"
             "<label>Como quer negociar?</label>"
             "<div class='mk-seg'>"
             "<button type='button' class='mk-seg-opt on' data-target='preco_fixo'>Preço fixo</button>"
@@ -3672,8 +3669,17 @@ def cliente_troca():
                 )
 
             tabela = "".join(_linha(l) for l in mine)
+            wipe_btn = (
+                f"<form method='post' action='/cliente/troca/excluir-tudo' style='display:inline;margin-left:auto' "
+                f"onsubmit=\"return confirm('Excluir TODOS os anúncios? Não tem volta!')\">"
+                f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+                "<button class='btn ghost small' style='color:#f87171;border-color:rgba(248,113,113,.5)'>"
+                "EXCLUIR TUDO</button></form>"
+                if email in MASTER_EMAILS else ""
+            )
             meus = (
-                "<div class='panel'><div class='panel-hd'><h2>&#128203; Meus anúncios</h2></div>"
+                "<div class='panel'><div class='panel-hd'><h2>&#128203; Meus anúncios</h2>"
+                + wipe_btn + "</div>"
                 "<div class='table-wrap'><table>"
                 "<tr><th>#</th><th>Item</th><th>Tipo</th><th>Tier</th><th>Preço</th><th>Mundo</th><th>Publicado</th>"
                 "<th>Status</th><th>Ação</th></tr>"
@@ -4051,6 +4057,42 @@ def cliente_troca_cancelar(lid):
     except Exception as exc:
         return f"Falha ao encerrar: {exc}", 500
     _mk_flash("ok", "Anúncio encerrado.")
+    return redirect("/cliente/troca")
+
+
+@app.route("/cliente/troca/excluir-tudo", methods=["POST"])
+def cliente_troca_excluir_tudo():
+    """Apaga TODOS os anúncios (modo teste do dono). Só MASTER."""
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    email = user["email"].lower()
+    if email not in MASTER_EMAILS:
+        return "Acesso restrito ao dono.", 403
+    try:
+        got = requests.get(
+            f"{STORE.url}/rest/v1/marketplace_listings?select=id&limit=1000",
+            headers=STORE._headers(),
+            timeout=20,
+        )
+        ids = [r.get("id") for r in (got.json() or []) if r.get("id") is not None]
+    except Exception as exc:
+        return f"Falha ao listar: {exc}", 500
+    apagados = 0
+    for lid in ids:
+        try:
+            resp = requests.delete(
+                f"{STORE.url}/rest/v1/marketplace_listings?id=eq.{lid}",
+                headers=STORE._headers(),
+                timeout=15,
+            )
+            if resp.status_code in (200, 204):
+                apagados += 1
+        except Exception:
+            continue
+    _mk_flash("ok", f"{apagados} anúncio(s) excluído(s).")
     return redirect("/cliente/troca")
 
 
