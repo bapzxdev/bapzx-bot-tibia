@@ -1,0 +1,647 @@
+================================================================================
+                        MANUAL DA ÃREA DE TRABALHO - MEUS PROJETOS
+================================================================================
+VersÃ£o do manual: 1.9.7
+Ãšltima atualizaÃ§Ã£o: 11/09/2026
+===============================================================================
+
+CONTINUIDADE (obrigatÃ³rio em toda sessÃ£o, ver PROTOCOLO.md e ROADMAP-15DIAS.md):
+  - CHECK-IN: declarar projeto e dia; ler AGENTS.md + PROTOCOLO.md +
+    ROADMAP-15DIAS.md + memÃ³rias do projeto + bloco PROTOCOLO DE REENTRADA.
+  - CHECK-OUT: atualizar bloco de reentrada no docs/memoria/MEMORIA.md, registrar o dia
+    no ROADMAP, commit + push, encerrar com "FIM DE SESSÃƒO".=
+
+Este manual Ã© o guia principal de tudo que existe na pasta "MEUS PROJETOS".
+Ele explica, passo a passo, a organizaÃ§Ã£o, as regras, o sistema de backup e
+cada um dos projetos. Leia este arquivo antes de mexer em qualquer coisa.
+
+
+--------------------------------------------------------------------------------
+1. VISÃƒO GERAL
+--------------------------------------------------------------------------------
+
+A pasta "MEUS PROJETOS" Ã© um workspace com vÃ¡rios projetos independentes de
+desenvolvimento (bem como acessÃ³rios, imagens, knowledge base e ferramentas).
+Tudo Ã© versionado em um repositÃ³rio Git e enviado (backup) ao GitHub.
+
+Arquivos principais no topo da pasta:
+
+  - AGENTS.md            -> regras gerais da Ã¡rea de trabalho para os agentes
+                            de IA (leia sempre antes de alterar cÃ³digo).
+  - .gitignore           -> controla o que NÃƒO Ã© versionado/enviado ao GitHub.
+  - crash_log.txt        -> log de erros crÃ­ticos registrado pelos programas.
+  - app_log.txt          -> log de execuÃ§Ã£o da aplicaÃ§Ã£o BAPSX.
+  - manual.txt           -> ESTE ARQUIVO. Manual completo da Ã¡rea de trabalho.
+
+
+--------------------------------------------------------------------------------
+2. ESTRUTURA DAS PASTAS
+--------------------------------------------------------------------------------
+
+  BAPZX CLIENT/
+    ExecutÃ¡veis prontos (bapzX-Client.exe e bapzX-Launcher.exe).
+    Usados pelo lanÃ§ador de atualizaÃ§Ã£o automÃ¡tica.
+
+  BAPZX KNOWLEDGE BASE/
+    Base de conhecimento central (vault Foam): regras, notas, projetos,
+    templates e Ã­ndice. Ã‰ a memÃ³ria das decisÃµes e padrÃµes.
+
+  POKEMON/
+    Pasta de referÃªncia com imagens de PokÃ©mon (tipos agua, fogo, etc.).
+    Apenas material de apoio, sem cÃ³digo.
+
+  programa/
+    Projeto do launcher/automatizador que verifica atualizaÃ§Ã£o no GitHub
+    (bapzX-Launcher / versao.json) e inicia o bapzX-Client.exe.
+
+  Programa bapzX - Poke Idle v1.1.0/
+    PROJETO PRINCIPAL atual: MultiClient do jogo Poke Idle
+    (https://poke.idleworld.online/login) com 4 contas simultÃ¢neas (c1..c4),
+    perfis/sessÃµes isolados e injeÃ§Ã£o automÃ¡tica de userscripts.
+
+  ULTIMATE BAPZ - POKE IDLE/
+    Workspace Foguete (Foam) que documenta o userscript "POKE IDLE - ULTIMATE
+    BAPZX.txt" (Painel flutuante, mercado, hunts, estatÃ­sticas etc). Possui
+    notas de decisÃµes, testes e reconnect.
+
+  WEB DIVULGADOR/
+    Projeto do bot de divulgaÃ§Ã£o via WhatsApp (v1.1.1 "WebDivulgador").
+    Usa PySide6 + Playwright para enviar mensagens para contatos em massa.
+
+  gemini-cli/
+    CLI de chat com o Gemini (gemini-3.6-flash) rodando no terminal/VSCode.
+    "CÃ©rebro" com 2 bases de conhecimento em markdown: knowledge/ (pessoal)
+    e knowledge-bapzx/ (bot do Poke Idle). Chave da API no .env local (ignorado).
+    Acesso rÃ¡pido pelo gemini.bat.
+
+  browser-use-test/
+    Teste do browser-use (automaÃ§Ã£o de navegador com IA). Ambiente venv.
+
+  langflow-test/
+    Teste do Langflow (construÃ§Ã£o visual de fluxos de IA) com Gemini.
+    Servidor local em http://localhost:7860.
+
+  bot-negocio/ (BAPZX Tibia Coins)
+    Bot de atendimento de vendas (Tibia Coins) no Telegram, com IA (Gemini)
+    rodando de graÃ§a 24h na nuvem (Render.com, plano free, webhook).
+    CÃ³digo publicado em: github.com/bapzxdev/bapzx-bot-tibia
+
+  (pastas removidas por limpeza de duplicados, preservadas no git:
+   dev - backup/, POKE PIXEL/, POKEPIXEL 2.0/, PROJETOS GERMINI/)
+
+
+--------------------------------------------------------------------------------
+3. REGRAS GERAIS (AGENTS.md da raiz)
+--------------------------------------------------------------------------------
+
+As regras abaixo valem para TODA alteraÃ§Ã£o feita na Ã¡rea de trabalho
+(manuais ou IA):
+
+  1. Antes de alterar o cÃ³digo de um projeto, verifique se ele possui
+     documentaÃ§Ã£o de memÃ³ria ou decisÃµes e leia os arquivos relevantes.
+  2. ApÃ³s uma alteraÃ§Ã£o importante, atualize a documentaÃ§Ã£o daquele projeto
+     (quando existir) com decisÃµes, testes feitos e pendÃªncias.
+  3. Sempre que houver uma alteraÃ§Ã£o funcional no cÃ³digo, INCREMENTE a versÃ£o
+     exibida do programa correspondente.
+  4. NUNCA coloque senhas, tokens ou chaves de API no cÃ³digo, documentaÃ§Ã£o
+     ou backup.
+
+
+--------------------------------------------------------------------------------
+4. .GITIGNORE (sistema de seguranÃ§a e backup)
+--------------------------------------------------------------------------------
+
+O .gitignore usa uma estratÃ©gia de "whitelist":
+
+  - `/*`            -> ignora tudo na raiz, por padrÃ£o.
+  - `!/nome/`       -> libera (whitelist) uma pasta especÃ­fica.
+  - `!/nome/**`     -> libera todos os arquivos dentro dessa pasta.
+  - `!/.gitignore`  -> o prÃ³prio .gitignore sempre Ã© versionado.
+  - `!/AGENTS.md`   -> as regras sempre sÃ£o versionadas.
+
+AlÃ©m disso, hÃ¡ bloqueios de seguranÃ§a que NUNCA sobem ao GitHub:
+  .venv/, venv/, node_modules/, __pycache__/, .idea/, .env, .env.*,
+  sessions/, sessions_playwright/, sessions_wa/, sessao_whatsapp/,
+  session-state/, logs/, backups/, build/,
+  *.key, *.pem, *.p12, *.pfx, *credentials*, *secrets*, *cookies*,
+  *trust tokens*, *.sqlite, *.db, *.exe, *.dll, *.zip, *.log,
+  *crash*.txt, *erro*.txt
+
+REGRAS DE OURO do backup:
+  - SÃ³ vai ao GitHub o que estÃ¡ na whitelist E nÃ£o estÃ¡ bloqueado.
+  - Nunca envie senhas, tokens, chaves, cookies, sessÃµes, venv, bancos ou logs.
+  - Antes de cada commit, revise os arquivos staged procurando segredos.
+
+COMO LIBERAR uma nova pasta no backup:
+  1. Adicione `!/NOME-DA-PASTA/` e `!/NOME-DA-PASTA/**` na seÃ§Ã£o Whitelist.
+  2. Confirme que nÃ£o contÃ©m itens da lista de bloqueio.
+  3. Rode `git status` e revise o que serÃ¡ committado.
+
+
+--------------------------------------------------------------------------------
+5. BAPZX KNOWLEDGE BASE (memÃ³ria e aprendizagem da Ã¡rea de trabalho)
+--------------------------------------------------------------------------------
+
+Objetivo: registrar ideias, decisÃµes e padrÃµes reutilizÃ¡veis; manter regras de
+programaÃ§Ã£o e ciberseguranÃ§a versionadas; relacionar cada projeto Ã s regras que
+ele deve seguir.
+
+Estrutura:
+  notes/       -> ideias, decisÃµes e registros de aprendizado.
+  rules/programacao/    -> regras de qualidade e engenharia de software.
+  rules/ciberseguranca/ -> regras defensivas de seguranÃ§a.
+  projects/    -> ficha de integraÃ§Ã£o de cada projeto.
+  templates/   -> modelos para novas notas, regras e projetos.
+  index.md     -> Ã­ndice navegÃ¡vel da base (links [[...]] do Foam).
+
+FLUXO RECOMENDADO (passo a passo):
+  1. Identifique o projeto, objetivo, arquivos envolvidos e regras aplicÃ¡veis.
+  2. Leia a documentaÃ§Ã£o de decisÃµes e testes existente.
+  3. Para mudanÃ§as relevantes, faÃ§a primeiro uma anÃ¡lise/plano SEM editar.
+  4. FaÃ§a alteraÃ§Ãµes pequenas e relacionadas ao pedido.
+  5. Execute as validaÃ§Ãµes existentes e registre limitaÃ§Ãµes.
+  6. Atualize a documentaÃ§Ã£o do projeto e da Knowledge Base em toda mudanÃ§a
+     funcional (decisÃ£o, comportamento, testes e pendÃªncias).
+  7. Atualize o index.md quando criar uma nota, regra ou Ã¡rea nova.
+  8. Registre erros e bugs reproduzÃ­veis (impacto, causa, correÃ§Ã£o, validaÃ§Ã£o).
+
+PAPÃ‰IS DAS IAs:
+  - Codex      -> implementaÃ§Ã£o, execuÃ§Ã£o e correÃ§Ã£o.
+  - Gemini     -> revisÃ£o independente de bugs, regressÃµes e seguranÃ§a.
+  - Copilot    -> autocomplete e consultas rÃ¡pidas.
+  - OpenCode   -> exploraÃ§Ã£o, planejamento e implementaÃ§Ã£o assistida,
+                  sempre respeitando o AGENTS.md e estas instruÃ§Ãµes.
+
+REGRA DE INTEGRAÃ‡ÃƒO:
+  Consulte a BAPZX Knowledge Base antes de alterar um projeto e siga as regras
+  vinculadas Ã  ficha desse projeto (projects/).
+
+
+--------------------------------------------------------------------------------
+6. REGRAS DE PROGRAMAÃ‡ÃƒO (BAPZX KNOWLEDGE BASE)
+--------------------------------------------------------------------------------
+
+PROG-001 - Qualidade e manutenÃ§Ã£o
+  FaÃ§a mudanÃ§as pequenas, coerentes com os padrÃµes existentes e sem alterar
+  arquivos nÃ£o relacionados. Reutilize helpers antes de duplicar lÃ³gica.
+
+PROG-002 - Testes e validaÃ§Ã£o
+  Valide a menor superfÃ­cie que cobre a mudanÃ§a e confirme o comportamento
+  esperado (nÃ£o apenas ausÃªncia de erro). Execute o teste/verificaÃ§Ã£o existente
+  mais especÃ­fico; cubra sucesso e erro; registre limitaÃ§Ãµes.
+
+PROG-003 - Design simples e coesÃ£o        (rules/programacao/design-simples-e-coesao.md)
+PROG-004 - RefatoraÃ§Ã£o segura             (rules/programacao/refatoracao-segura.md)
+PROG-005 - Observabilidade e erros        (rules/programacao/observabilidade-e-erros.md)
+PROG-006 - DocumentaÃ§Ã£o sempre            (rules/programacao/documentacao-sempre.md)
+PROG-007 - RelatÃ³rio de bugs              (rules/programacao/relatorio-de-bugs.md)
+
+Detalhes completos de cada regra estÃ£o dentro da BAPZX KNOWLEDGE BASE em
+rules/programacao/. Leia o arquivo especÃ­fico da regra antes de aplicÃ¡-la.
+
+
+--------------------------------------------------------------------------------
+7. REGRAS DE CIBERSEGURANÃ‡A (BAPZX KNOWLEDGE BASE)
+--------------------------------------------------------------------------------
+
+SEC-001 - Segredos e credenciais
+  NUNCA salve senhas, tokens, chaves de API, cookies de sessÃ£o ou dados
+  pessoais na base, no cÃ³digo, em notas ou em backups. Use arquivos locais
+  ignorados pelo versionamento e variÃ¡veis de ambiente. Se uma credencial
+  vazar, revogue imediatamente.
+
+SEC-002 - Entrada e dados                 (rules/ciberseguranca/entrada-e-dados.md)
+SEC-003 - Modelagem de ameaÃ§as            (rules/ciberseguranca/modelagem-de-ameacas.md)
+SEC-004 - Identidade e menor privilÃ©gio   (rules/ciberseguranca/identidade-e-menor-privilegio.md)
+SEC-005 - DependÃªncias e recuperaÃ§Ã£o      (rules/ciberseguranca/dependencias-e-recuperacao.md)
+SEC-006 - Aleatoriedade criptogrÃ¡fica     (rules/ciberseguranca/aleatoriedade-criptografica.md)
+SEC-007 - AutomaÃ§Ã£o responsÃ¡vel           (rules/ciberseguranca/automacao-responsavel.md)
+
+ATENÃ‡ÃƒO: a base inclui regra de automaÃ§Ã£o responsÃ¡vel. NÃ£o implemente evasÃ£o
+de anti-cheat, CAPTCHA, autenticaÃ§Ã£o, limites ou controles de acesso.
+
+
+--------------------------------------------------------------------------------
+8. PROJETO PRINCIPAL: Programa bapzX - Poke Idle v1.1.0
+--------------------------------------------------------------------------------
+
+MultiClient para o jogo Poke Idle (poke.idleworld.online). Abre 4 contas
+simultÃ¢neas em uma Ãºnica janela (grid 2x2), cada uma com perfil/sessÃ£o
+isolado, e injeta userscripts automaticamente.
+
+Arquivos:
+  main-pokeidle2.0.py  -> ponto de entrada principal (executar com .venv).
+  launcher.py          -> iniciador com auto-update via GitHub (bapzX-updates).
+  scripts_config.json  -> lista de userscripts injetados nas 4 contas.
+  sessions/            -> dados persistentes por conta (c1..c4).
+  docs/                -> decisÃµes e memÃ³ria do projeto.
+  .venv/               -> ambiente virtual (dependÃªncias).
+
+Recursos principais:
+  - 4 contas em grid e perfis isolados (cookies nÃ£o se misturam).
+  - Gerenciador de scripts estilo Tampermonkey (Painel de Scripts).
+  - OtimizaÃ§Ã£o de memÃ³ria: ao minimizar/bandeja, as views vÃ£o para
+    about:blank (libera RAM das renderizaÃ§Ãµes WebGL) e voltam ao restaurar.
+  - Auto-update no launcher: compara versÃ£o no GitHub e baixa novo .exe.
+
+COMO EXECUTAR:
+  1. Abra a pasta no terminal (programa com venv).
+  2. Ative o venv:  .venv\Scripts\activate
+  3. Rode:          python main-pokeidle2.0.py
+     (ou "python launcher.py" para usar o fluxo de atualizaÃ§Ã£o)
+
+COMO TROCAR O USERSCRIPT (4 contas):
+  1. Edite scripts_config.json com o caminho completo do .js/.txt.
+  2. Rode o programa. O script serÃ¡ injetado automaticamente em c1..c4.
+  3. Use "Gerenciar Scripts" dentro do app para ativar/desativar/remover.
+
+PENDÃŠNCIA LOGAD:
+  O repositÃ³rio bapzX-updates/versao.json aponta hoje para bapzX-Client.exe
+  (de outro projeto). Para o launcher do Poke Idle Ã© preciso um Release/
+  versao.json dedicado apontando para bapzX-PokeIdle.exe.
+
+
+--------------------------------------------------------------------------------
+9. PROJETO: ULTIMATE BAPZ - POKE IDLE (userscript)
+--------------------------------------------------------------------------------
+
+Arquivo principal: "POKE IDLE - ULTIMATE BAPZX.txt" (userscript v11.1.21).
+Esse script Ã© injetado pelo programa principal (seÃ§Ã£o 8) nas 4 contas.
+
+Principais mÃ³dulos:
+  - Painel flutuante com atalhos (mercado, loja, venda, depot).
+  - Logs e estatÃ­sticas em modais prÃ³prios.
+  - Engrenagem de configuraÃ§Ãµes embutida.
+  - PÃ­lula de status ao minimizar.
+  - Trava de venda para lendÃ¡rios/mÃ­ticos/divinos/shiny.
+  - IntegraÃ§Ã£o com socket do jogo, mercado global, hunt, pokÃ©dex.
+
+Workspace Foam com decisoes.md, testes.md e reconnect-bapzx.md em notes/.
+Atualize esses arquivos a cada alteraÃ§Ã£o do userscript.
+
+
+--------------------------------------------------------------------------------
+10. PROJETO: programa (launcher genÃ©rico)
+--------------------------------------------------------------------------------
+
+ContÃ©m launcher.py que:
+  1. Verifica a versÃ£o local (VERSAO_LOCAL) contra a versÃ£o remota
+     (version.txt / versao.json no GitHub).
+  2. Se houver versÃ£o nova, mostra janela perguntando se quer atualizar.
+  3. Baixa o novo executÃ¡vel com barra de progresso e substitui com seguranÃ§a.
+  4. Se sem internet, abre o jogo normalmente (fallback offline).
+
+Arquivos: launcher.py, DEV/, docs/ e spec de build (PyInstaller).
+
+
+--------------------------------------------------------------------------------
+11. PROJETO: WEB DIVULGADOR (bot de WhatsApp - v1.1.1)
+--------------------------------------------------------------------------------
+
+Bot de divulgaÃ§Ã£o em massa via WhatsApp Web. Usa PySide6 (interface)
+e Playwright (automaÃ§Ã£o do navegador).
+
+Arquivos principais:
+  main-whatsapp.py             -> app principal.
+  requirements.txt             -> dependÃªncias.
+  script para envio.txt        -> instruÃ§Ãµes de envio.
+  SCRIPT PRA DEBUGG - WHATSAPP.txt -> guia de depuraÃ§Ã£o.
+  sessions_playwright/         -> sessÃµes de login (nÃ£o versionado).
+
+Estrutura de cÃ³digo:
+  JanelaPreviewWhatsApp        -> preview das mensagens.
+  WorkerSinal                  -> sinais Qt para eventos em thread.
+  WhatsAppPlaywrightManager    -> automaÃ§Ã£o com Playwright.
+  WhatsAppBotDashboard         -> interface principal.
+
+NOTA: existe proibiÃ§Ã£o no AGENTS/knowledge base sobre usar automaÃ§Ã£o para
+evadir controles de acesso do WhatsApp. Use apenas conforme as regras do
+projeto e aplicativo.
+
+
+--------------------------------------------------------------------------------
+12. PROJETO: gemini-cli (cÃ©rebro pessoal + BAPZX)
+--------------------------------------------------------------------------------
+
+CLI de conversa com o Gemini (models/gemini-3.6-flash) para usar no terminal
+ou VSCode sem abrir o Langflow.
+
+Arquivos:
+  chat.py          -> script principal (loop de conversa).
+  gemini.bat       -> atalho: no terminal, rode gemini-cli\gemini.bat.
+  .env             -> GOOGLE_API_KEY=<chave> (LOCAL, ignorado no git).
+  .venv/           -> ambiente virtual (dependÃªncias, nÃ£o versionado).
+  knowledge/       -> base do cÃ©rebro PESSOAL (.md/.txt, carregados como contexto).
+  knowledge-bapzx/ -> base do cÃ©rebro do BOT Poke Idle (knowledge/bapzx.md).
+
+COMO EXECUTAR:
+  1. No terminal do VSCode:  gemini-cli\gemini.bat
+  2. Converse normalmente. Comandos:
+       /bapzx   -> troca para a base do bot (Poke Idle).
+       /pessoal -> volta para a base pessoal (padrÃ£o).
+       /limpar  -> reinicia a conversa.
+       /sair    -> fecha.
+
+COMO FUNCIONA O "CÃ‰REBRO":
+  - Todo arquivo .md/.txt dentro da base ativa Ã© injetado como contexto nas
+    mensagens (igual Ã  memÃ³ria de notas do BAPZX).
+  - Para manter a memÃ³ria sempre em dia, edite/crie arquivos nessas pastas a
+    cada mudanÃ§a relevante.
+  - Nunca colocar a chave da API em chat.py, manual, notas ou git; ela fica
+    sÃ³ no .env local.
+
+MODELOS E QUEDA DE CONEXÃƒO:
+  - O script tenta a lista de modelos em ordem: gemini-3.6-flash,
+    3.5-flash, 3-flash-preview e 2.5-flash. Se o modelo estiver
+    congestionado (erro 503), ele tenta o prÃ³ximo automaticamente.
+
+RELACIONADO: Langflow (seÃ§Ã£o 15) pode servir o mesmo Gemini via UI visual.
+
+
+
+--------------------------------------------------------------------------------
+13. PROJETO: bot-negocio (RUBINI COINS / BAPZX - vendas online no Telegram)
+--------------------------------------------------------------------------------
+
+Bot de atendimento comercial no Telegram: atende clientes com IA (Gemini),
+apresenta a loja de Tibia Coins "RUBINI COINS" (Ã¡rea de vendas online da
+empresa BAPZX), tabela de preÃ§os, roteia pedidos (char/mundo/pagamento),
+o ServiÃ§o BAPZX (R$20/h pelo WhatsApp (19) 99181-3598) e encaminha vendas
+para atendimento humano quando preciso.
+
+ARQUITETURA (escolhida por custo zero e robustez):
+  - Webhook (nÃ£o polling): o Telegram chama o bot via POST em /webhook.
+    Assim o servidor free do Render nunca "dorme" (dormiria 15min sem
+    trÃ¡fego se usasse polling, acordando lento).
+  - Roda NO NUVEM (Render.com, plano free), 24h sem o PC ligado.
+
+COMANDOS DO BOT:
+  /start ou /ajuda -> lista de comandos + os 4 dados de compra
+                      (char, quantidade TC, mundo, pagamento Pix)
+  /preco           -> tabela de preÃ§os oficial (da tabela PRICES no cÃ³digo)
+  /servico         -> ServiÃ§o BAPZX (R$20 por hora; contato WhatsApp)
+  /quemsomos       -> sobre a loja
+  /vendedor        -> solicita atendente humano (avisa o dono via chat)
+  /id              -> mostra o chat_id do usuÃ¡rio
+  /pago <id>       -> (sÃ³ dono) marca pedido como pago; avisa o cliente
+  /entregue <id>   -> (sÃ³ dono) marca como entregue; avisa o cliente
+
+ARQUIVOS (bot-negocio/):
+  bot.py           -> app Flask com / (LANDING page pÃºblica de vendas),
+                      /health, /webhook, /webhook/mp (Mercado Pago),
+                      /dashboard e /pedidos (protegidos por chave).
+                      Chama o Gemini e extrai dados estruturados do pedido.
+  vendas/pedidos.py -> OrderStore: salva/lista pedidos em Supabase (REST)
+                      com fallback em pedidos.json.
+  vendas/persona.txt      -> "persona" da loja: nome, preÃ§os, pagamento, entrega,
+                      regras de seguranÃ§a e de pedido. EDITE aqui, sem tocar
+                      no cÃ³digo. (PreÃ§os reais ficam aqui - o bot nÃ£o inventa.)
+  docs/memoria/MEMORIA.md -> memÃ³ria do projeto: decisÃµes, testes e pendÃªncias
+                      (atualizar a cada alteraÃ§Ã£o importante).
+  C:\DEV\Supabase\criar_tabela_supabase.sql -> DDL da tabela public.pedidos
+                      (todos os .sql do Supabase ficam em C:\DEV\Supabase,
+                      ver MEMORIA_MIGRATION.md).
+  requirements.txt -> flask, requests, google-genai.
+  .env             -> TELEGRAM_BOT_TOKEN, TELEGRAM_OWNER_CHAT_ID,
+                      SUPABASE_URL, SUPABASE_KEY, MP_ACCESS_TOKEN, RENDER_URL,
+                      DASHBOARD_KEY, SHEET_WEBAPP_URL e SHEET_TOKEN
+                      (LOCAL, ignorado no git).
+  .gitignore       -> bloqueia .env, .venv/ etc.
+  GitHub: bapzxdev/bapzx-bot-tibia (pÃºblico).
+  VersÃ£o atual: 1.8.0 (base 1.1.0; v1.2.0/1.2.1 = pedidos estruturados +
+  persistÃªncia Supabase; v1.3.0/1.3.1 = comandos e 4 dados de compra;
+  v1.4.0 = dashboard; v1.4.1 = regra de preÃ§o 1.000 TC = R$90; v1.5.0 =
+  fluxo de pagamento status pendente/pago/entregue + /pago e /entregue;
+  v1.6.0 = Pix automÃ¡tico via Mercado Pago (pede e-mail, gera QR Code,
+  webhook /webhook/mp confirma pagamento sozinho); v1.7.0 = landing pÃºblica
+  no /, /health, dashboard protegido com DASHBOARD_KEY, rate limit anti-spam,
+  extraÃ§Ã£o de char corrigida e expiraÃ§Ã£o do pedido de e-mail);
+  v1.8.0 = PLANILHA DE CLIENTES AUTOMÃTICA: o bot envia pedido e status
+  (pago/entregue) ao Google Sheets via Apps Script Web App (POST com token;
+  arquivos em bapzx/integrations/sheets/: CODIGO_APPS_SCRIPT.js + instruÃ§Ãµes).
+  Sem SHEET_WEBAPP_URL/SHEET_TOKEN configurados, o envio Ã© pulado sem quebrar.
+  v1.9.0 = REBRAND: empresa = BAPZX (main); loja = RUBINI COINS (opÃ§Ã£o "BAPZX
+  RUBINOT"); ServiÃ§o BAPZX R$20/h via WhatsApp (/servico); entrega padrÃ£o atÃ©
+  10 min apÃ³s pagamento; resumo do pedido junto com o QR. Confirmar nÂº do
+  WhatsApp e valor R$20/h com o dono.
+   v1.11.0 = Google Login OAuth (cliente/admin), /cliente e /admin no bot, pedido grava email
+   v1.10.0 = PRECOS proporcionais a R$ 90/1.000 RC (100=R$9,00; 250=R$22,50; 500=R$45; 1.000=R$90; 2.500=R$225); moeda vira RC (Rubini Coins, RubinOT) em todo o bot; Service BAPZX R$20/h (BRL), dedicado a UP level no RubinOT.
+
+CHAVES USADAS:
+  - TELEGRAM_BOT_TOKEN: criado no @BotFather (Token de bot "123...:AAF...").
+    NUNCA versionar; fica no .env local E nas Environment Variables do Render.
+  - TELEGRAM_OWNER_CHAT_ID: chat do dono para aviso de novo pedido
+    (obtido com /id no bot). Configurado no .env local e no Render.
+  - GOOGLE_API_KEY: chave da API Gemini. Fica no .env do gemini-cli/
+    (o bot.py tambÃ©m lÃª de lÃ¡ como fallback, em dev) e nas Environmental
+    Variables do Render. NUNCA colocar no cÃ³digo, notas ou git.
+  - SUPABASE_URL e SUPABASE_KEY: persistÃªncia em nuvem (opcional). Sem elas
+    o bot grava sÃ³ no pedidos.json local (mode arquivo). Usar a service role
+    key LEGADA (JWT) - as chaves novas sb_secret_*/sb_publishable_* deram
+    401/404 neste projeto. Configurar no .env local E no Render.
+  - MP_ACCESS_TOKEN: Access Token de PRODUÃ‡ÃƒO (APP_USR-...) da conta pessoal
+    do Mercado Pago do dono (aplicaÃ§Ã£o "bapzx", Checkout Transparente + API
+    de pagamentos). Gera o QR Pix das vendas e recebe confirmaÃ§Ãµes em
+    /webhook/mp. NUNCA versionar; fica no .env local E no Render.
+  - RENDER_URL: https://BAPZX-bot-tibia.onrender.com (base de redirecionamento
+    usado pelo bot para webhooks/URLs - ex: notification_url do Mercado Pago).
+  - DASHBOARD_KEY: chave de acesso do /dashboard e /pedidos (query ?key= ou
+    header X-Dashboard-Key). Sem ela as rotas negam acesso (fail-closed).
+    Valor gerado localmente, fica no .env local E no Render â€” nunca em
+    cÃ³digo, manual, notas ou git (SEC-001).
+  - SHEET_WEBAPP_URL e SHEET_TOKEN: alimentaÃ§Ã£o automÃ¡tica da planilha de
+    clientes (Google Sheets) via Apps Script Web App. SHEET_WEBAPP_URL Ã© a
+    URL do deploy (https://script.google.com/macros/s/.../exec); SHEET_TOKEN
+    Ã© o token compartilhado entre o bot e o script (PropertiesService). Os
+    dois ficam no .env local E no Render. Se nÃ£o configurados, o bot apenas
+    pula o envio (nÃ£o quebra). Setup passo a passo em
+    bapzx/integrations/sheets/CODIGO_APPS_SCRIPT.js (cabeÃ§alho do arquivo).
+
+MODELOS (fallback automÃ¡tico, ordem):
+  gemini-3.6-flash -> gemini-3-flash-preview -> gemini-3.5-flash.
+  Se o modelo responde 503/429 (congestionado/cota), o bot tenta o prÃ³ximo.
+
+DEPLOY (como subir de novo, ex: PC novo):
+  1. git clone https://github.com/bapzxdev/bapzx-bot-tibia
+     (ou trabalhe na pasta local e faÃ§a commit + push para o mesmo repo).
+  2. Render (render.com) -> New + -> Web Service -> conectar repo
+     bapzx-bot-tibia.
+     Name: bapzx-bot-tibia | Environment: Python 3
+     Build: pip install -r requirements.txt
+     Start: python bot.py
+     Instance: Free
+Environment Variables: TELEGRAM_BOT_TOKEN, TELEGRAM_OWNER_CHAT_ID,
+      GOOGLE_API_KEY, SUPABASE_URL, SUPABASE_KEY, MP_ACCESS_TOKEN,
+      RENDER_URL, DASHBOARD_KEY, SHEET_WEBAPP_URL e SHEET_TOKEN.
+  3. Deploy: status vira "Live" e a URL vira https://bapzx-bot-tibia.onrender.com
+  4. Registrar webhook (no terminal local, uma vez por URL):
+       .\.venv\Scripts\python.exe -c "import bot; bot.set_webhook('
+       https://BAPZX-bot-tibia.onrender.com/webhook')"
+     (no Windows, rode em uma linha sÃ³).
+
+COMANDOS LOCAIS (dev):
+  Rodar local:  .\.venv\Scripts\python.exe bot.py
+  Parar:        Ctrl+C.
+
+PENDÃŠNCIAS / PRÃ“XIMOS PASSOS:
+  - Rotacionar TELEGRAM_BOT_TOKEN (foi exposto no terminal durante uma
+    sessÃ£o de ajuste; gerar novo no BotFather e atualizar .env + Render).
+  - Teste real end-to-end: mensagem real do Telegram -> resposta da IA +
+    aviso ao dono.
+  - Pedido assÃ­ncrono: cliente informa mundo/char depois do valor
+    (merge com pedido anterior do mesmo chat).
+  - Comandos especiais no bot (/preco, /vendedor).
+  - Rota de "atendimento humano": encaminhar para um contato/telegram fixo.
+  - Migrar Webhook para Docker + Coolify (WSL2) quando quiser sair do free.
+
+TESTES FEITOS (10/09/2026):
+  - Local: pedido de teste "quero comprar 500 tc" registrado (2 pedidos)
+    e aviso enviado.
+  - Render: health 200 "bot ok"; webhook respondeu 200 a "quero comprar
+    250 tc"; /pedidos == 1 (filesystem do deploy Ã© separado do local).
+  - Webhook ativo em https://bapzx-bot-tibia.onrender.com/webhook.
+  - v1.2.0 (10/09): "quero comprar 1000 tc, pagamento pix, mundo pacera,
+    char Nap Lord" -> tc=1000, preco=R$90, pag=Pix, mundo=pacera,
+    char=nap lord em pedidos.json. Health exibe "bot ok v1.2.0".
+  - v1.2.1 (10/09): Supabase configurado (projeto wtgzsurppwwrzhctnnfa,
+    tabela public.pedidos criada). Pedido gravado no Supabase com
+    tc=500, preco=R$45, mundo=pacera, char=nap lord; /pedidos contando
+    do banco. Access: service role key JWT (legada).
+  - v1.2.1 no Render (10/09): apÃ³s configurar as 5 Environment Variables no
+    serviÃ§o, pedido via webhook do deploy ("quero comprar 250 tc, mundo
+    ferobra") gravado no Supabase (id=3, tc=250, ferobra) â€” persistÃªncia
+    em nuvem confirmada.
+  - Teste real end-to-end (10/09): mensagem de dentro do Telegram
+    ("quero comprar 500 tc, mundo pacera, char Teste Real") gravou no
+    Supabase id=5 (tc=500, preco=R$45, mundo=pacera, char=teste real).
+    GOOGLE_API_KEY corrigida no Render (a anterior era invÃ¡lida; a correta
+    fica no gemini-cli/.env, formato AQ.).
+  - v1.3.0 (10/09): comandos /start /preco /quemsomos /vendedor /help
+    testados local; pedido "quero comprar 1000 tc, pix, mundo antica,
+    char Rei Leao" gravou no Supabase id=6 (tc=1000, R$90, Pix, antica,
+    rei leao). IA recebe a tabela oficial no prompt e responde sem
+    asteriscos.
+  - v1.3.1 (10/09): ajuda e IA pedem os 4 dados de compra (char,
+    quantidade, mundo, Pix) com exemplo no /start.
+  - v1.4.0 (10/09): dashboard /dashboard (faturado, pedidos, clientes,
+    14 dias, Ãºltimos 10) lendo do Supabase via OrderStore.list(); teste
+    local com 5 pedidos, R$247,50, 1 cliente.
+  - v1.4.1 (10/09): MEMORIA_COMPRA.md com a regra de preÃ§o (1.000 TC =
+    R$ 90) aplicada na IA (passo a passo p/ quantidades fora da tabela)
+    e no cÃ¡lculo do pedido (calc_price). Teste local: 600 TC -> R$54,00
+    gravado no Supabase id=7.
+
+REGRA DE CÃLCULO DE PREÃ‡O (memoria de compra):
+  - Tabela oficial: 100=11,50 / 250=22,50 / 500=45 / 1.000=90 / 2.500=230.
+  - Fora da tabela: valor = quantidade x 90 / 1.000, sempre mostrando o
+    cÃ¡lculo passo a passo (ex.: 800 TC = 800 x 90 = 72.000 / 1.000 = R$72,00).
+  - Regra integral em bot-negocio/MEMORIA_COMPRA.md.
+
+DASHBOARD (/dashboard):
+  - PÃ¡gina web (HTML simples) com: faturado total, nÂº de pedidos, nÂº de
+    clientes, barras dos Ãºltimos 14 dias e tabela dos Ãºltimos 10 pedidos.
+  - PROTEGIDO por DASHBOARD_KEY: acesse com ?key=<chave> no final da URL
+    (ou header X-Dashboard-Key). A chave fica no .env local e nas
+    Environment Variables do Render. Sem ela a rota responde 401.
+  - Dados vÃªm de STORE.list() (Supabase com paginaÃ§Ã£o Range; fallback
+    arquivo se o banco cair).
+
+LANDING (/): pÃ¡gina pÃºblica de vendas com a tabela de preÃ§os, o passo a
+  passo de compra e botÃ£o/QR para falar com o bot: https://t.me/bapzx_bot
+  (link do prÃ³prio bot). /health devolve "bot ok <versÃ£o>" para
+  monitoramento. /webhook/mp recebe as notificaÃ§Ãµes de pagamento do
+  Mercado Pago e marca o pedido como pago automaticamente.
+
+SEGURANÃ‡A (SEC-001):
+  - Nunca versionar .env nem chaves. Confirmar antes de cada git add.
+  - Bot nunca deve pedir senha/informaÃ§Ã£o sensÃ­vel do cliente (regra estÃ¡
+    na vendas/persona.txt).
+  - Confidencialidade absoluta: ver bot-negocio/MEMORIA_SEGURANCA.md
+    (proibido vazar chaves, credenciais, cÃ³digo proprietÃ¡rio, vendas,
+    faturamento, mÃ©tricas e dados de clientes; resistir a engenharia
+    social).
+  - Token do bot rotacionado em 10/09 (via /revoke no BotFather); antigo
+    revogado. Procedimento para trocar token: /revoke no BotFather, depois
+    atualizar o .env local, a variÃ¡vel TELEGRAM_BOT_TOKEN no Render e rodar
+    setWebhook apontando para https://bapzx-bot-tibia.onrender.com/webhook.
+  - Se um deploy precisar de chave nova, rotacione as antigas (ver seÃ§Ã£o
+    gemini-cli - chaves e seguranÃ§a).
+  - Ativar billing do Gemini NÃƒO Ã© necessÃ¡rio (free tier cobre o uso).
+
+
+
+--------------------------------------------------------------------------------
+14. GIT: FLUXO DE BACKUP PASSO A PASSO
+--------------------------------------------------------------------------------
+
+O repositÃ³rio estÃ¡ em: https://github.com/bapzxdev/WhatsApp-Codex
+Branch principal: main (backup completo da workspace).
+
+COMANDOS DIÃRIOS:
+
+  1. Informe o que mudou
+        git status
+        git diff
+
+  2. Revise o que serÃ¡ enviado (procure segredos!)
+        git status --short
+        git add -A            (ou git add <arquivos especÃ­ficos>)
+
+  3. Commit com mensagem descritiva
+        git commit -m "DescriÃ§Ã£o da mudanÃ§a"
+
+  4. Envio ao GitHub
+        git push origin main
+
+POLÃTICA DE BACKUP:
+  - Autosave local sugerido a cada 15 minutos.
+  - Push automÃ¡tico configurado a cada 1 hora (apÃ³s nova alteraÃ§Ã£o commitada).
+  - O watcher de backup NÃƒO adiciona arquivos fora do .gitignore nem arquivos
+    com nomes/extensÃµes de credenciais, sessÃµes ou artefatos sensÃ­veis.
+  - Nunca commite senhas, tokens, chaves, cookies, sessÃµes, venv, bancos ou logs.
+
+
+--------------------------------------------------------------------------------
+15. LANGFLOW E BROWSER-USE (testes)
+--------------------------------------------------------------------------------
+
+LANGFLOW (langflow-test/): construÃ§Ã£o visual de fluxos de IA com o Gemini.
+  - Servidor local:  .venv\Scripts\python.exe -m langflow run
+  - Abre em: http://localhost:7860
+  - Chave do Gemini fica numa Global Variable (guardada criptografada no
+    banco local do Langflow, nunca no cÃ³digo/git).
+  - Fluxo de teste padrÃ£o: New Flow -> arrastar Chat Input + Google
+    Generative AI (modelo models/gemini-3.6-flash, API Key via Global
+    Variable) + Chat Output -> Playground.
+
+BROWSER-USE (browser-use-test/): automaÃ§Ã£o de navegador dirigida por IA
+(agente controla clique, digitaÃ§Ã£o, coleta de dados), em testes.
+  - Ambiente: .venv\Scripts\python.exe (browser-use instalado).
+
+COMO INICIAR OS SERVIDORES (apÃ³s reiniciar o PC):
+  1. Langflow:  navegue atÃ© langflow-test e rode o comando acima.
+  2. gemini-cli nÃ£o precisa de servidor: rode gemini-cli\gemini.bat.
+
+Regras de seguranÃ§a (SEC-001) valem para todos: credenciais sÃ³ em arquivos
+locais ignorados (.env / variÃ¡vel do Langflow), nunca em cÃ³digo, notas,
+manual ou git.
+
+
+
+--------------------------------------------------------------------------------
+16. LISTA DE VERIFICAÃ‡ÃƒO ANTES DE FINALIZAR QUALQUER ALTERAÃ‡ÃƒO
+--------------------------------------------------------------------------------
+
+  [ ] Li a documentaÃ§Ã£o (memoria-do-projeto.md / decisoes.md) do projeto.
+  [ ] Li as regras aplicÃ¡veis na BAPZX Knowledge Base (ficha em projects/).
+  [ ] Fiz a alteraÃ§Ã£o pequena e coerente, sem tocar em arquivos sem relaÃ§Ã£o.
+  [ ] Rodei a validaÃ§Ã£o/teste existente e registrei limitaÃ§Ãµes.
+  [ ] Incrementei a versÃ£o do programa quando houve mudanÃ§a funcional.
+  [ ] Atualizei a documentaÃ§Ã£o do projeto e (se aplicÃ¡vel) o index.md.
+  [ ] Revisei os arquivos staged no git procurando segredos.
+  [ ] Commit + push enviados (se pedido).
+
+
+================================================================================
+FIM DO MANUAL - MEUS PROJETOS
+================================================================================
