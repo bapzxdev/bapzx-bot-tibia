@@ -1550,6 +1550,162 @@ class TestMkBot(unittest.TestCase):
             self.assertIsNone(painel._ref_de_preco("War Hammer"))
         self.assertIsNone(painel._ref_de_preco(""))
 
+    # ---------- tier do anúncio (v2.10.23) ----------
+
+    def test_mk_max_tier_mapeamento_classe(self):
+        # Sem Wiki (fallback local): classe 1->1, 2->2, 3->3, 4->10, 0->0.
+        with mock.patch.object(painel, "_iteminfo", return_value={}):
+            self.assertEqual(painel._mk_max_tier("War Hammer"), 1)
+            self.assertEqual(painel._mk_max_tier("Dwarven Axe"), 2)
+            self.assertEqual(painel._mk_max_tier("Twin Axe"), 3)
+            self.assertEqual(painel._mk_max_tier("Sanguine Coil"), 10)
+            self.assertEqual(painel._mk_max_tier("Glooth Axe"), 0)
+            self.assertEqual(painel._mk_max_tier("Xyz Nao Existe"), 0)
+            self.assertEqual(painel._mk_max_tier(""), 0)
+
+    def test_mk_max_tier_wiki_tem_prioridade(self):
+        with mock.patch.object(painel, "_iteminfo", return_value={"tier": "10"}):
+            self.assertEqual(painel._mk_max_tier("Xyz Nao Existe"), 10)
+        with mock.patch.object(painel, "_iteminfo", return_value={"tier": "3"}):
+            self.assertEqual(painel._mk_max_tier("Xyz Nao Existe"), 3)
+
+    def test_mk_tier_txt_guardado_tem_prioridade(self):
+        self.assertEqual(painel._mk_tier_txt(3, "War Hammer"), "3")
+        self.assertEqual(painel._mk_tier_txt("7", "War Hammer"), "7")
+        self.assertEqual(painel._mk_tier_txt(0, "War Hammer"), "")
+        with mock.patch.object(painel, "_mk_tier", return_value="9"):
+            self.assertEqual(painel._mk_tier_txt(None, "War Hammer"), "9")
+
+    def test_cliente_troca_renderiza_com_tier(self):
+        def fake_getuser():
+            return {"email": "cliente@x.com", "name": "Cliente Teste"}
+
+        with mock.patch.object(bot, "current_user", fake_getuser), \
+             mock.patch.object(bot, "_cliente_header", lambda user, x: "top-mock"), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_profile", lambda email: {}), \
+             mock.patch.object(bot, "_marketplace_config", lambda: None), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []):
+            c = bot.app.test_client()
+            resp = c.get("/cliente/troca")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.get_data(as_text=True)
+        self.assertIn("<select name='tier'", html)
+        self.assertIn("Normal (sem upgrade)", html)
+        self.assertIn("id='mk_tier_hint'", html)
+
+    def _publicar_tier(self, form_extra, fakepost=None):
+        c = bot.app.test_client()
+        bot._SPRITE_CACHE.clear()
+        posts = []
+
+        def fakeget(url, **kw):
+            raise Exception("nao deve alcançar a rede")
+
+        def _post(url, **kw):
+            if fakepost is not None:
+                return fakepost(url, posts, **kw)
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            posts.append(body)
+            if url.rstrip("/").endswith("marketplace_listings"):
+                r = _FakeResp()
+                r.json = lambda: [{"id": 999}]
+                return r
+            return _FakeResp()
+
+        data = {
+            "_csrf": "tokenteste",
+            "item_name": "War Hammer",
+            "character_name": "Bapz",
+            "world": "Auroria",
+            "contact": "(19) 98765-4321",
+        }
+        data.update(form_extra)
+        with mock.patch.object(bot, "current_user", lambda: {"email": "lucascristianini1@gmail.com"}), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_limite", lambda: 5), \
+             mock.patch.object(bot, "_mk_duracao", lambda chave, default: 30), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot.requests, "get", side_effect=fakeget), \
+             mock.patch.object(bot.requests, "post", side_effect=_post), \
+             mock.patch.object(bot.requests, "patch", return_value=_FakeResp()), \
+             mock.patch.object(bot, "create_marketplace_pix", side_effect=lambda *a, **k: (_ for _ in ()).throw(Exception("nao deve gerar QR"))):
+            resp = c.post("/cliente/troca/publicar", data=data)
+        return c, resp, posts
+
+    def test_publicar_tier_valido_grava(self):
+        c, resp, posts = self._publicar_tier({"tier": "1"})
+        self.assertEqual(resp.status_code, 302)
+        listings = [p for p in posts if "marketplace_listings" in p.get("_url", "")]
+        self.assertTrue(listings)
+        self.assertEqual(listings[0]["tier"], 1)
+
+    def test_publicar_tier_zero_e_padrao(self):
+        c, resp, posts = self._publicar_tier({})
+        self.assertEqual(resp.status_code, 302)
+        listings = [p for p in posts if "marketplace_listings" in p.get("_url", "")]
+        self.assertTrue(listings)
+        self.assertEqual(listings[0]["tier"], 0)
+
+    def test_publicar_tier_acima_do_maximo_rejeita(self):
+        # War Hammer é classe 1: tier 5 deve voltar com erro e sem POST.
+        c, resp, posts = self._publicar_tier({"tier": "5"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse([p for p in posts if "marketplace_listings" in p.get("_url", "")])
+        with c.session_transaction() as sess:
+            msg = sess.get("_mk_msg") or []
+            self.assertEqual(msg[0], "erro")
+            self.assertIn("1", (msg[1] or ""))
+
+    def test_publicar_sem_coluna_tier_republica(self):
+        chamadas = []
+
+        def fakepost(url, posts, **kw):
+            body = dict(kw.get("json") or {})
+            body["_url"] = url
+            posts.append(body)
+            if url.rstrip("/").endswith("marketplace_listings") and "tier" in body and not chamadas:
+                chamadas.append(1)
+                r = _FakeResp()
+                r.status_code = 400
+                r.text = '{"message": "Could not find the \'tier\' column"}'
+                return r
+            r = _FakeResp()
+            r.json = lambda: [{"id": 999}]
+            return r
+
+        c, resp, posts = self._publicar_tier({"tier": "1"}, fakepost=fakepost)
+        self.assertEqual(resp.status_code, 302)
+        listings = [p for p in posts if "marketplace_listings" in p.get("_url", "")]
+        self.assertEqual(len(listings), 2)
+        self.assertNotIn("tier", listings[1])
+
+    def test_api_troca_lista_tier_guardado(self):
+        rows = [
+            dict(LISTING, tier=3),
+            dict(LISTING, id=2, tier=0),
+        ]
+        with mock.patch.object(painel, "_fetch_public", return_value=rows), \
+             mock.patch.object(painel, "_mk_vocs", return_value=[]):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca", headers={"Origin": "https://bapzxdev.github.io"})
+        self.assertEqual(resp.status_code, 200)
+        ans = resp.get_json()["anuncios"]
+        self.assertEqual(ans[0]["tier"], "3")
+        self.assertEqual(ans[1]["tier"], "")
+
+    def test_api_troca_detalhe_tier_guardado(self):
+        with mock.patch.object(painel, "_fetch_public", return_value=[dict(LISTING, tier=7)]):
+            c = bot.app.test_client()
+            resp = c.get("/api/troca/1", headers={"Origin": "https://bapzxdev.github.io"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()["anuncio"]["tier"], "7")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

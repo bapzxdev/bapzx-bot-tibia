@@ -18,11 +18,12 @@ from werkzeug.exceptions import HTTPException
 from vendas.pedidos import OrderStore
 from painel import bp as painel_bp
 from painel import _registra_invalidador_coins, _registra_invalidador_marketplace, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
+from painel import _mk_max_tier as _mk_max_tier, _mk_class_of as _mk_class_of
 from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.22"
+VERSION = "2.10.23"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -435,8 +436,39 @@ _MK_AC_SCRIPT = ("""
     if (!it) return;
     campo.value = it[0];
     dd.hidden = true;
+    tierSync();
+  }
+  var tierSel = document.getElementById("mk_tier");
+  var tierHint = document.getElementById("mk_tier_hint");
+  var CLASS_MAX = {"0": 0, "1": 1, "2": 2, "3": 3, "4": 10};
+  function tierSync() {
+    if (!tierSel) return;
+    var q = norm(campo.value).replace(/\\s+/g, " ").trim();
+    var max = 10, cls = "", achou = false;
+    if (q.length >= 2) {
+      for (var i = 0; i < ITENS.length; i++) {
+        if (norm(ITENS[i][0]) === q) {
+          cls = String(ITENS[i][8] != null ? ITENS[i][8] : "");
+          max = (cls in CLASS_MAX) ? CLASS_MAX[cls] : 0;
+          achou = true;
+          break;
+        }
+      }
+    }
+    for (var j = 0; j < tierSel.options.length; j++) {
+      var v = Number(tierSel.options[j].value);
+      tierSel.options[j].disabled = v > max;
+    }
+    if (Number(tierSel.value) > max) tierSel.value = String(max);
+    if (tierHint) {
+      tierHint.textContent = achou
+        ? campo.value.trim() + " \u2014 classe " + (cls === "" ? "?" : cls) + " \u2192 tier m\u00e1ximo " + max + "."
+        : "Itens normais usam tier 0. O m\u00e1ximo vai pela classifica\u00e7\u00e3o do item (classe 1 \u2192 1, 2 \u2192 2, 3 \u2192 3, 4 \u2192 10).";
+    }
   }
   campo.addEventListener("input", sedd);
+  campo.addEventListener("input", tierSync);
+  tierSync();
   campo.addEventListener("keydown", function (e) {
     if (!dd.hidden && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       e.preventDefault();
@@ -3441,6 +3473,12 @@ def cliente_troca():
             "<option value='compra'>Comprando</option>"
             "<option value='troca'>Quer trocar</option>"
             "</select>"
+            "<div><label>Tier do item *</label><select name='tier' id='mk_tier'>"
+            "<option value='0' selected>0 — Normal (sem upgrade)</option>"
+            + "".join(f"<option value='{t}'>Tier {t}</option>" for t in range(1, 11))
+            + "</select>"
+            "<p class='note' id='mk_tier_hint' style='margin-top:2px'>Itens normais usam tier 0. "
+            "O máximo vai pela classificação do item (classe 1 → 1, 2 → 2, 3 → 3, 4 → 10).</p></div>"
             "<label>Como quer negociar?</label>"
             "<div class='mk-seg'>"
             "<button type='button' class='mk-seg-opt on' data-target='preco_fixo'>Preço fixo</button>"
@@ -3501,11 +3539,20 @@ def cliente_troca():
                     if l.get("preco") is not None
                     else "Aceita ofertas"
                 )
+                try:
+                    _t = l.get("tier", None)
+                    tier_txt = (
+                        "—" if _t is None or str(_t).strip() == ""
+                        else (f"Tier {int(float(str(_t).strip()))}" if int(float(str(_t).strip())) > 0 else "Normal")
+                    )
+                except (TypeError, ValueError):
+                    tier_txt = "—"
                 return (
                     "<tr>"
                     f"<td><b>#{html.escape(str(lid or '-'))}</b></td>"
                     f"<td>{dest}{f'{ver}'}{html.escape(str(l.get('item_name') or '-'))}</td>"
                     f"<td>{html.escape(_mk_tipo_lbl(l.get('tipo_anuncio')))}</td>"
+                    f"<td>{html.escape(tier_txt)}</td>"
                     f"<td>{preco_txt}</td>"
                     f"<td>{html.escape(str(l.get('world') or '-'))}</td>"
                     f"<td>{html.escape(_mk_fmt_dt(l.get('created_at')))}</td>"
@@ -3518,7 +3565,7 @@ def cliente_troca():
             meus = (
                 "<div class='panel'><div class='panel-hd'><h2>&#128203; Meus anúncios</h2></div>"
                 "<div class='table-wrap'><table>"
-                "<tr><th>#</th><th>Item</th><th>Tipo</th><th>Preço</th><th>Mundo</th><th>Publicado</th>"
+                "<tr><th>#</th><th>Item</th><th>Tipo</th><th>Tier</th><th>Preço</th><th>Mundo</th><th>Publicado</th>"
                 "<th>Status</th><th>Ação</th></tr>"
                 + tabela
                 + "</table></div></div>"
@@ -3604,6 +3651,19 @@ def cliente_troca_publicar():
         aceita_ofertas = True
     destaque = request.form.get("destaque") == "1"
 
+    try:
+        tier = int(str(request.form.get("tier") or "0").strip())
+    except (TypeError, ValueError):
+        tier = 0
+    if tier < 0:
+        tier = 0
+    max_tier = _mk_max_tier(item_name)
+    if tier > max_tier:
+        cls = _mk_class_of(item_name)
+        detalhe = f"classe {cls} (máximo {max_tier})" if cls else f"máximo permitido {max_tier}"
+        _mk_flash("erro", f"{item_name} é {detalhe} — ajuste o tier do anúncio.")
+        return redirect("/cliente/troca")
+
     ativas = [l for l in _mk_minhas_listings(email) if (l.get("status") or "") in ("ativa", "pendente")]
     limite = _mk_limite()
     if email not in MASTER_EMAILS and len(ativas) >= limite:
@@ -3623,6 +3683,7 @@ def cliente_troca_publicar():
         "preco": preco,
         "aceita_ofertas": aceita_ofertas,
         "sprite": sprite,
+        "tier": tier,
         "verificado": _mk_vip_ativo(email),
         "expires_at": (agora + timedelta(days=_mk_duracao("duracao_publicacao_dias", 30))).isoformat(timespec="seconds"),
     }
@@ -3635,6 +3696,19 @@ def cliente_troca_publicar():
         )
     except Exception as exc:
         return f"Falha ao publicar: {exc}", 500
+    if response.status_code == 400 and "tier" in (response.text or "") and "tier" in payload:
+        # Coluna tier ainda não criada no Supabase: republica sem o campo
+        # para não travar a publicação (o tier passa a valer após a migration).
+        payload.pop("tier", None)
+        try:
+            response = requests.post(
+                f"{STORE.url}/rest/v1/marketplace_listings",
+                headers={**STORE._headers(), "Prefer": "return=representation"},
+                json=payload,
+                timeout=15,
+            )
+        except Exception as exc:
+            return f"Falha ao publicar: {exc}", 500
     if response.status_code not in (200, 201):
         return f"Falha ao publicar: {response.status_code} {response.text[:200]}", 500
     criado = (response.json() or [{}])[0]

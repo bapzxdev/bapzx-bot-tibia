@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.22"
+VERSION = "2.10.23"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -3235,7 +3235,7 @@ def api_troca():
             "is_destaque": bool(a.get("is_destaque")),
             "destaque_until": a.get("destaque_until") or "",
             "criado_em": a.get("created_at") or "",
-            "tier": (_iteminfo(a.get("item_name") or "").get("tier") or ""),
+            "tier": _mk_tier_txt(a.get("tier"), a.get("item_name") or ""),
             "voc": _mk_vocs(a.get("item_name") or ""),
         }
         for a in anuncios
@@ -3419,6 +3419,76 @@ _VOC_SINGULAR = {
 }
 
 
+def _mk_tier(item_name):
+    """Tier do item para o chip/filtro da vitrine (string ou "").
+
+    Fonte 1: Wiki (_iteminfo, max_tier/tier — ex. Sanguine Coil "10").
+    Fonte 2 (fallback): ficha local (mk_itens, campo "tier" — ex. War Hammer "1").
+    O fallback existe porque o Wiki pode bloquear o IP do Render (403), caso em
+    que a /api/troca devolvia tier="" para todos e o chip sumia da página."""
+    try:
+        wiki_tier = (_iteminfo(item_name or "").get("tier") or "").strip()
+    except Exception:
+        wiki_tier = ""
+    if wiki_tier:
+        return wiki_tier
+    try:
+        ficha = _ficha_local(item_name or "")
+        if ficha:
+            return (ficha.get("tier") or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+# Classificação -> tier máximo (regra do jogo: classe 1/2/3 vai até o
+# próprio número; classe 4 vai até 10; 0/sem classe = item normal, só tier 0).
+_MK_CLASS_MAX_TIER = {"0": 0, "1": 1, "2": 2, "3": 3, "4": 10}
+
+
+def _mk_class_of(item_name):
+    """Classificação do item (string "0".."4") pela ficha local, ou "" se
+    o item não estiver cadastrado. Nunca derruba."""
+    try:
+        ficha = _ficha_local(item_name or "")
+        if ficha:
+            return (ficha.get("tier") or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _mk_max_tier(item_name):
+    """Tier máximo que o item pode ter (0..10) para validar o publicar.
+
+    Fonte 1: Wiki (max_tier do item). Fonte 2 (fallback, Render-safe):
+    classificação local via _MK_CLASS_MAX_TIER. Desconhecido -> 0
+    (item tratado como normal). Nunca derruba."""
+    try:
+        wiki = (_iteminfo(item_name or "").get("tier") or "").strip()
+        if wiki:
+            return max(0, min(10, int(float(wiki))))
+    except Exception:
+        pass
+    cls = _mk_class_of(item_name)
+    if cls in _MK_CLASS_MAX_TIER:
+        return _MK_CLASS_MAX_TIER[cls]
+    return 0
+
+
+def _mk_tier_txt(valor_guardado, item_name):
+    """Texto do tier para o chip da vitrine a partir do tier guardado no
+    anúncio: >0 devolve "N"; 0 devolve "" (item normal, sem chip);
+    ausente (anúncio legado) cai no derivado por tipo (_mk_tier)."""
+    if valor_guardado is not None and str(valor_guardado).strip() != "":
+        try:
+            num = int(float(str(valor_guardado).strip()))
+        except (TypeError, ValueError):
+            num = 0
+        return str(num) if num > 0 else ""
+    return _mk_tier(item_name or "")
+
+
 def _mk_vocs(item_name):
     """Vocações do item normalizadas (ex.: ["knight"]) para o filtro da vitrine.
 
@@ -3515,7 +3585,7 @@ def api_troca_detalhe(aid):
         "destaque_until": a.get("destaque_until") or "",
         "criado_em": a.get("created_at") or "",
         "status": a.get("status") or "ativa",
-        "tier": (_iteminfo(a.get("item_name") or "").get("tier") or ""),
+        "tier": _mk_tier_txt(a.get("tier"), a.get("item_name") or ""),
         "ficha_local": _ficha_local(a.get("item_name") or ""),
     }
     resposta = jsonify({"ok": True, "anuncio": payload})
