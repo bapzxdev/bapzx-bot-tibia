@@ -1,4 +1,4 @@
-# MEMORIA_BIG_PICKLE — Permissão de execução (ALWAYS ALLOW)
+# MEMORIA_MUSE_SPARK_1_3 — Permissão de execução (ALWAYS ALLOW)
 
 > Memória ativa de permissão do dono para **todas as sessões** deste projeto.
 > Criada em 14/09/2026. Válida enquanto o dono não revogar.
