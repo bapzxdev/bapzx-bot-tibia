@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.24"
+VERSION = "2.10.25"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -475,9 +475,9 @@ _MK_AC_SCRIPT = ("""
     }
     if (Number(tierSel.value) > max) tierSel.value = String(max);
     if (tierHint) {
-      tierHint.textContent = achou
-        ? campo.value.trim() + " \u2014 classe " + (cls === "" ? "?" : cls) + " \u2192 tier m\u00e1ximo " + max + "."
-        : "Itens normais usam tier 0. O m\u00e1ximo vai pela classifica\u00e7\u00e3o do item (classe 1 \u2192 1, 2 \u2192 2, 3 \u2192 3, 4 \u2192 10).";
+      tierHint.innerHTML = achou
+        ? esc(campo.value.trim()) + " \u2014 classe <b>" + esc(cls === "" ? "?" : cls) + "</b> \u2192 tier m\u00e1ximo <b>" + max + "</b>."
+        : "Itens normais usam <b>tier 0</b>. O m\u00e1ximo vai pela classifica\u00e7\u00e3o do item (classe <b>1 \u2192 1</b>, <b>2 \u2192 2</b>, <b>3 \u2192 3</b>, <b>4 \u2192 10</b>).";
     }
   }
   campo.addEventListener("input", sedd);
@@ -532,6 +532,16 @@ _MK_FORM_CSS = """
 .mk-publish-btn{width:100%;text-align:center;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;letter-spacing:.3px;padding:12px 16px;border-radius:11px;background:linear-gradient(135deg,#059669 0%,#10b981 45%,#06b6d4 100%);color:#fff;border:0;cursor:pointer;box-shadow:0 11px 24px rgba(5,150,105,.32);transition:filter .15s,transform .05s}
 .mk-publish-btn:hover{filter:brightness(1.12);box-shadow:0 13px 28px rgba(5,150,105,.42)}
 .mk-publish-btn:active{transform:scale(.98)}
+.mk-form label{display:block;color:#eaf2ff;font-weight:600;font-size:13.5px}
+.mk-form .note{color:#a9bccd}
+.panel .note b,.mk-form .note b{color:#fbbf24}
+.mk-form input,.mk-form select{color:#fff}
+.mk-form input::placeholder{color:#647a93}
+.mk-form select option{background:#101a2c;color:#e6edf7}
+.mk-form input:focus,.mk-form select:focus{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.18);outline:none}
+.mk-seg-opt{color:#d7e2f2}
+.mk-seg-opt.on{color:#c4b5fd;border-color:var(--purple)}
+.mk-form .mk-destaque-note{color:#9fb2ca}
 </style>
 """
 
@@ -582,7 +592,7 @@ _MK_FORM_JS = """
   appl(modo ? modo.value : "preco_fixo");
   function somenteDigitos() {
     if (!preco) return;
-    preco.value = String(preco.value || "").replace(/\\D/g, "").slice(0, 9);
+    preco.value = String(preco.value || "").replace(/\\D/g, "");
   }
   if (preco) preco.addEventListener("input", somenteDigitos);
   function fone() {
@@ -3576,8 +3586,8 @@ def cliente_troca():
             "<option value='0' selected>0 — Normal (sem upgrade)</option>"
             + "".join(f"<option value='{t}'>Tier {t}</option>" for t in range(1, 11))
             + "</select>"
-            "<p class='note' id='mk_tier_hint' style='margin-top:2px'>Itens normais usam tier 0. "
-            "O máximo vai pela classificação do item (classe 1 → 1, 2 → 2, 3 → 3, 4 → 10).</p></div>"
+            "<p class='note' id='mk_tier_hint' style='margin-top:2px'>Itens normais usam <b>tier 0</b>. "
+            "O máximo vai pela classificação do item (classe <b>1 → 1</b>, <b>2 → 2</b>, <b>3 → 3</b>, <b>4 → 10</b>).</p></div>"
             "<label>Como quer negociar?</label>"
             "<div class='mk-seg'>"
             "<button type='button' class='mk-seg-opt on' data-target='preco_fixo'>Preço fixo</button>"

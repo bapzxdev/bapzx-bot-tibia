@@ -1685,6 +1685,32 @@ class TestMkBot(unittest.TestCase):
         self.assertEqual(len(listings), 2)
         self.assertNotIn("tier", listings[1])
 
+    def test_publicar_preco_gp_sem_limite(self):
+        # 13 digitos (1,5 tri) passam inteiros: sem teto de 9 digitos.
+        c, resp, posts = self._publicar_tier({"tier": "0", "preco": "1500000000000"})
+        self.assertEqual(resp.status_code, 302)
+        listings = [p for p in posts if "marketplace_listings" in p.get("_url", "")]
+        self.assertTrue(listings)
+        self.assertEqual(listings[0]["preco"], 1500000000000.0)
+
+    def test_cliente_troca_form_com_cor(self):
+        def fake_getuser():
+            return {"email": "cliente@x.com", "name": "Cliente Teste"}
+
+        with mock.patch.object(bot, "current_user", fake_getuser), \
+             mock.patch.object(bot, "_cliente_header", lambda user, x: "top-mock"), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_profile", lambda email: {}), \
+             mock.patch.object(bot, "_marketplace_config", lambda: None), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []):
+            c = bot.app.test_client()
+            resp = c.get("/cliente/troca")
+        html = resp.get_data(as_text=True)
+        self.assertIn(".mk-form label", html)
+        self.assertIn(".mk-form input:focus", html)
+
     def test_api_troca_lista_tier_guardado(self):
         rows = [
             dict(LISTING, tier=3),
