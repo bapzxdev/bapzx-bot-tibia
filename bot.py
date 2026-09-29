@@ -19,11 +19,12 @@ from vendas.pedidos import OrderStore
 from painel import bp as painel_bp
 from painel import _registra_invalidador_coins, _registra_invalidador_marketplace, _csrf_token as _csrf_token, _csrf_ok as _csrf_ok
 from painel import _mk_max_tier as _mk_max_tier, _mk_class_of as _mk_class_of
+from painel import _wiki_get as _mk_wiki_get
 from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.23"
+VERSION = "2.10.24"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -370,11 +371,16 @@ _MK_AC_CSS = """
 <style>
 .mk-pub-ac{position:relative}
 .mk-pub-ac-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:80;background:var(--panel-2);border:1px solid var(--border-2);border-radius:10px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.5);max-height:260px;overflow-y:auto}
-.mk-pub-ac-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;background:transparent;color:var(--text);font-size:14px;border-bottom:1px solid var(--border);text-align:left;width:100%}
+.mk-pub-ac-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;background:transparent;color:var(--text);font-size:14px;border-bottom:1px solid var(--border);text-align:left;width:100%;min-width:0}
 .mk-pub-ac-item:last-child{border-bottom:0}
 .mk-pub-ac-item:hover,.mk-pub-ac-item.on{background:rgba(96,165,250,.14)}
-.mk-pub-ac-item b{color:var(--green);font-weight:700}
-.mk-pub-ac-sub{margin-left:auto;color:var(--muted);font-size:12px;flex-shrink:0;white-space:nowrap}
+.mk-pub-ac-item b{color:var(--green);font-weight:700;white-space:nowrap}
+.mk-pub-ac-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk-pub-ac-sub{margin-left:auto;color:var(--muted);font-size:12px;flex-shrink:0;white-space:nowrap;padding-left:8px}
+.mk-pub-ac-drop::-webkit-scrollbar{width:8px}
+.mk-pub-ac-drop::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:8px}
+.mk-sprite-prev{display:inline-block;vertical-align:middle;margin-left:8px;line-height:0}
+.mk-sprite-prev img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated;border:1px solid var(--border-2);border-radius:10px;background:var(--panel-2)}
 </style>
 """
 
@@ -397,23 +403,31 @@ _MK_AC_SCRIPT = ("""
     return String(s || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
   }
   function sedd() {
-    var q = norm(campo.value).replace(/\\s+/g, " ").trim();
+    var raw = String(campo.value || "");
+    var q = norm(raw).replace(/\\s+/g, " ").trim();
     if (q.length < 2) { dd.hidden = true; sel = -1; return; }
-    var res = [];
-    for (var i = 0; i < ITENS.length && res.length < 8; i++) {
-      if (norm(ITENS[i][0]).indexOf(q) !== -1) { var e = ITENS[i].slice(); e.i = i; res.push(e); }
+    var qlow = raw.toLowerCase();
+    var found = [];
+    for (var i = 0; i < ITENS.length; i++) {
+      var nn = norm(ITENS[i][0]);
+      var at = nn.indexOf(q);
+      if (at < 0) continue;
+      found.push({it: ITENS[i], i: i, rank: (nn === q) ? 0 : (at === 0 ? 1 : 2)});
     }
+    found.sort(function (x, y) { return (x.rank - y.rank) || (String(x.it[0]).length - String(y.it[0]).length); });
+    var res = found.slice(0, 8);
     if (!res.length) { dd.hidden = true; sel = -1; return; }
     sel = -1;
-    dd.innerHTML = res.map(function (it, idx) {
+    dd.innerHTML = res.map(function (r) {
+      var it = r.it;
       var n = String(it[0]);
-      var k = norm(n).indexOf(q);
+      var k = n.toLowerCase().indexOf(qlow);
       var str = "";
       if (k < 0) { str = esc(n); } else {
-        str = esc(n.slice(0, k)) + "<b>" + esc(n.slice(k, k + q.length)) + "</b>" + esc(n.slice(k + q.length));
+        str = esc(n.slice(0, k)) + "<b>" + esc(n.slice(k, k + qlow.length)) + "</b>" + esc(n.slice(k + qlow.length));
       }
       var extra = (it[1] && it[1] !== "0") ? ('<span class="mk-pub-ac-sub">Nv ' + esc(it[1]) + (it[2] ? " · " + esc(it[2]) : "") + "</span>") : "";
-      return '<button type="button" class="mk-pub-ac-item" data-i="' + it.i + '">' + str + extra + "</button>";
+      return '<button type="button" class="mk-pub-ac-item" data-i="' + r.i + '"><span class="mk-pub-ac-name">' + str + "</span>" + extra + "</button>";
     }).join("");
     dd.hidden = false;
     vzFirst();
@@ -584,6 +598,93 @@ _MK_FORM_JS = """
 """
 
 
+_MK_SPRITE_JS = """
+<script>
+(function () {
+  var campo = document.getElementById("item_name");
+  var hid = document.getElementById("mk_sprite_url");
+  var prev = document.getElementById("mk_sprite_prev");
+  if (!campo || !hid) return;
+  var cache = {};
+  function api(params) {
+    return fetch("https://www.tibiawiki.com.br/api.php?" + params + "&origin=*").then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    });
+  }
+  function resolver(nome) {
+    nome = String(nome || "").trim();
+    if (!nome) return Promise.resolve("");
+    var k = nome.toLowerCase();
+    if (cache[k] !== undefined) return Promise.resolve(cache[k]);
+    var alvo = k.replace(/\\s+/g, "_");
+    function guarda(url) { cache[k] = url || ""; return cache[k]; }
+    return api("action=query&format=json&redirects=1&prop=images&imlimit=500&titles=" + encodeURIComponent(nome)).then(function (d) {
+      var achou = "";
+      var pages = ((d || {}).query || {}).pages || {};
+      Object.keys(pages).forEach(function (pid) {
+        var imgs = pages[pid].images || [];
+        for (var i = 0; i < imgs.length; i++) {
+          var t = String(imgs[i].title || "");
+          if (t.slice(0, 8).toLowerCase() !== "arquivo:") continue;
+          var stem = t.slice(8);
+          var dot = stem.lastIndexOf(".");
+          var base = (dot > 0 ? stem.slice(0, dot) : stem).toLowerCase().replace(/\\s+/g, "_");
+          if (base === alvo) { achou = t; break; }
+          if (!achou && base.indexOf(alvo) === 0) achou = t;
+        }
+      });
+      if (!achou) return "";
+      return api("action=query&format=json&prop=imageinfo&iiprop=url&iiurlwidth=96&titles=" + encodeURIComponent(achou)).then(function (d2) {
+        var p2 = ((d2 || {}).query || {}).pages || {};
+        var url = "";
+        Object.keys(p2).forEach(function (pid) {
+          var ii = p2[pid].imageinfo || [];
+          if (ii.length && ii[0].thumburl) url = ii[0].thumburl;
+        });
+        return url;
+      });
+    }).catch(function () { return ""; }).then(guarda);
+  }
+  function mostrar(url) {
+    if (!prev) return;
+    if (url) {
+      prev.innerHTML = '<img src="' + url.replace(/"/g, "&quot;") + '" alt="" width="44" height="44" loading="lazy">';
+      prev.hidden = false;
+    } else {
+      prev.innerHTML = "";
+      prev.hidden = true;
+    }
+  }
+  window.__mkResolverSprite = resolver;
+  var t = null;
+  campo.addEventListener("input", function () {
+    hid.value = "";
+    mostrar("");
+    if (t) clearTimeout(t);
+    t = setTimeout(function () {
+      var v = campo.value.trim();
+      if (v.length < 3) return;
+      resolver(v).then(function (url) {
+        if (campo.value.trim() === v) { hid.value = url; mostrar(url); }
+      });
+    }, 450);
+  });
+  var form = campo.closest("form");
+  if (form) form.addEventListener("submit", function (e) {
+    var v = campo.value.trim();
+    if (!v || hid.value) return;
+    e.preventDefault();
+    var feito = false;
+    function envia() { if (!feito) { feito = true; form.submit(); } }
+    setTimeout(envia, 6000);
+    resolver(v).then(function (url) { hid.value = url; envia(); });
+  });
+})();
+</script>
+"""
+
+
 def _mk_whatsapp(value):
     """Valida e normaliza WhatsApp brasileiro com DDD.
 
@@ -633,18 +734,14 @@ def _mk_itemsprite(item_name):
         return _SPRITE_CACHE[chave]
     resultado = ""
     try:
-        from urllib.parse import quote
-
-        base = "https://www.tibiawiki.com.br/api.php"
-        headers = {"User-Agent": f"BAPZX-MARKTRADE/{VERSION}"}
         alvo = nome.lower().replace(" ", "_")
         achou = None
 
         def _get(params):
-            qs = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
-            r = requests.get(f"{base}?{qs}", timeout=8, headers=headers)
-            r.raise_for_status()
-            return r.json() or {}
+            dados, diag = _mk_wiki_get(params, timeout=(5, 12))
+            if diag != "ok":
+                raise Exception(f"wiki:{diag}")
+            return dados
 
         dados = _get({
             "action": "query",
@@ -3458,7 +3555,9 @@ def cliente_troca():
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
             "<div class='grid2'>"
             "<div><label>Item *</label><input name='item_name' id='item_name' required maxlength='120' "
-            "placeholder='Ex.: War Hammer' autocomplete='off'></div>"
+            "placeholder='Ex.: War Hammer' autocomplete='off'>"
+            "<input type='hidden' name='sprite' id='mk_sprite_url' value=''>"
+            "<span id='mk_sprite_prev' class='mk-sprite-prev' hidden></span></div>"
             "<div><label>Personagem *</label><input name='character_name' required maxlength='60' "
             "placeholder='Ex.: Bapz'></div>"
             "<div><label>Mundo *</label><select name='world' required>"
@@ -3505,6 +3604,7 @@ def cliente_troca():
             "</form>"
             + _MK_AC_SCRIPT
             + _MK_FORM_JS
+            + _MK_SPRITE_JS
             + "</div>"
         )
 

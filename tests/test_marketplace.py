@@ -752,8 +752,8 @@ class TestMkBot(unittest.TestCase):
         self.assertIn("<select name='world'", html)
         self.assertNotIn("<select name='category'", html)
         self.assertNotIn("Automático (Wiki Tibia)", html)
-        self.assertNotIn("name='sprite'", html)
         self.assertNotIn("URL da imagem do item", html)
+        self.assertIn("name='sprite' id='mk_sprite_url'", html)
         self.assertIn("name='contact' required", html)
         self.assertIn(">Auroria<", html)
         self.assertIn(">Infernum I<", html)
@@ -1705,6 +1705,47 @@ class TestMkBot(unittest.TestCase):
             resp = c.get("/api/troca/1", headers={"Origin": "https://bapzxdev.github.io"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.get_json()["anuncio"]["tier"], "7")
+
+    # ---------- sprite + autocomplete (v2.10.24) ----------
+
+    def test_mk_itemsprite_usa_wiki_get_com_rotacao(self):
+        bot._SPRITE_CACHE.clear()
+        payload_images = {"query": {"pages": {"1": {"images": [{"title": "Arquivo:War Hammer.gif"}]}}}}
+        payload_info = {"query": {"pages": {"2": {"imageinfo": [{"thumburl": "https://x/War_Hammer.gif"}]}}}}
+
+        def fake_wiki(params, timeout=None):
+            if params.get("prop") == "images":
+                return payload_images, "ok"
+            return payload_info, "ok"
+
+        with mock.patch.object(bot, "_mk_wiki_get", side_effect=fake_wiki):
+            self.assertEqual(bot._mk_itemsprite("War Hammer"), "https://x/War_Hammer.gif")
+
+    def test_mk_itemsprite_wiki_bloqueado_devolve_vazio(self):
+        bot._SPRITE_CACHE.clear()
+        with mock.patch.object(bot, "_mk_wiki_get", return_value=({}, "status 403")):
+            self.assertEqual(bot._mk_itemsprite("War Hammer"), "")
+
+    def test_cliente_troca_renderiza_com_sprite_oculto(self):
+        def fake_getuser():
+            return {"email": "cliente@x.com", "name": "Cliente Teste"}
+
+        with mock.patch.object(bot, "current_user", fake_getuser), \
+             mock.patch.object(bot, "_cliente_header", lambda user, x: "top-mock"), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_profile", lambda email: {}), \
+             mock.patch.object(bot, "_marketplace_config", lambda: None), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []):
+            c = bot.app.test_client()
+            resp = c.get("/cliente/troca")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.get_data(as_text=True)
+        self.assertIn("id='mk_sprite_url'", html)
+        self.assertIn("id='mk_sprite_prev'", html)
+        self.assertIn("__mkResolverSprite", html)
+        self.assertIn("mk-pub-ac-name", html)
 
 
 if __name__ == "__main__":
