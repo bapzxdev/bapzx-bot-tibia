@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.24"
+VERSION = "2.10.27"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -2196,6 +2196,71 @@ def admin_ticket_excluir(ticket_id):
     return redirect("/admin/tickets")
 
 
+_ITENS_AC_CSS = """
+<style>
+.itens-ac{--panel-2:#111a2e;--border-2:#2a3a52;--border:#1e2c40;--text:#e2e8f0;--green:#34d399;--muted:#8ea0b8}
+.itens-ac .note{color:#8ea0b8;font-size:13px;margin:6px 0 0}
+</style>
+"""
+
+
+def _itens_bot():
+    """Devolve o módulo bot (import tardio: bot.py importa este painel no topo)."""
+    try:
+        import bot as _botmod
+
+        return _botmod
+    except Exception:
+        return None
+
+
+def _itens_ac_recursos():
+    """CSS+JS de autocomplete do banco local + sprite automático (reusa bot.py)."""
+    base = _ITENS_AC_CSS
+    mod = _itens_bot()
+    if mod is None:
+        return base, ""
+    try:
+        return base + mod._MK_AC_CSS, mod._MK_AC_SCRIPT + mod._MK_SPRITE_JS
+    except Exception:
+        return base, ""
+
+
+def _itens_nome_padrao(nome):
+    mod = _itens_bot()
+    try:
+        if mod is not None:
+            return mod._mk_title_case(nome)
+    except Exception:
+        pass
+    return (nome or "").strip()
+
+
+def _itens_sprite_auto(nome):
+    """Resolve o sprite do item (Wiki Tibia + hospedagem). Nunca derruba: "" se falhar."""
+    mod = _itens_bot()
+    if mod is None or not (nome or "").strip():
+        return ""
+    try:
+        url = mod._mk_itemsprite(nome) or ""
+        if url:
+            try:
+                url = mod._mk_sprite_host(url) or url
+            except Exception:
+                pass
+        return url
+    except Exception:
+        return ""
+
+
+def _itens_sprite_form(value):
+    """Valida a URL de sprite vinda do form (só http/https)."""
+    url = (value or "").strip()[:300]
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        return ""
+    return url
+
+
 def _item_card(item):
     image = html.escape(item.get("imagem") or "")
     img = f"<img src='{image}' alt='' class='preview' onerror=\"this.style.display='none'\">" if image else ""
@@ -2204,7 +2269,7 @@ def _item_card(item):
     return (
         f"<div class='card'>"
         f"{img}"
-        f"<div class='kicker'>{html.escape(item.get('categoria') or 'geral')} · "
+        f"<div class='kicker'>"
         f"{'publicado' if ativo else 'rascunho'}</div>"
         f"<h3 style='margin:6px 0 2px'>{html.escape(item.get('nome') or '-')}</h3>"
         f"<div class='num' style='font-size:18px'>{preco}</div>"
@@ -2231,19 +2296,27 @@ def admin_itens():
     cards = "".join(_item_card(i) for i in itens) or (
         "<p style='color:#64748b'>Nenhum item cadastrado ainda.</p>"
     )
+    ac_css, ac_js = _itens_ac_recursos()
     form = (
         "<section><h2>Novo item</h2>"
-        "<form method='post' action='/admin/itens/novo' enctype='multipart/form-data'>"
+        "<div class='itens-ac'>"
+        f"{ac_css}"
+        "<form method='post' action='/admin/itens/novo'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>Nome</label><input name='nome' required>"
+        "<label>Nome (do nosso banco de itens)</label>"
+        "<input name='nome' id='item_name' required maxlength='120' "
+        "placeholder='Ex.: War Hammer' autocomplete='off'>"
+        "<input type='hidden' name='sprite' id='mk_sprite_url' value=''>"
+        "<span id='mk_sprite_prev' class='mk-sprite-prev' hidden></span>"
+        "<p class='note'>A imagem é puxada automaticamente do nosso banco de itens.</p>"
         "<label>Preço</label><input name='preco' placeholder='R$ 20,00'>"
-        "<label>Categoria</label><input name='categoria' placeholder='geral'>"
         "<label>Descrição</label><textarea name='descricao' rows='3'></textarea>"
-        "<label>Imagem</label><input type='file' name='imagem' accept='image/png,image/jpeg,image/webp,image/gif'>"
         "<label>Publicado</label>"
         "<select name='ativo'><option value='1'>Sim</option><option value='0'>Não (rascunho)</option></select>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Criar item</button></p>"
-        "</form></section>"
+        "</form>"
+        f"{ac_js}"
+        "</div></section>"
     )
     order_form = (
         "<section><h2>Ordem de exibição</h2>"
@@ -2268,19 +2341,20 @@ def admin_item_novo():
         return "Acesso restrito.", 403
     if not _csrf_ok():
         return "Requisição inválida (CSRF).", 403
-    nome = (request.form.get("nome") or "").strip()[:200]
+    nome = _itens_nome_padrao((request.form.get("nome") or "").strip()[:200])
     if not nome:
         return "Nome obrigatório.", 400
     preco = (request.form.get("preco") or "").strip()[:60]
-    categoria = (request.form.get("categoria") or "geral").strip()[:60]
     descricao = (request.form.get("descricao") or "").strip()[:2000]
     ativo = request.form.get("ativo") == "1"
 
-    imagem, error = _storage_upload(request.files.get("imagem")) if request.files.get("imagem") else ("", None)
+    imagem = _itens_sprite_form(request.form.get("sprite"))
+    if not imagem:
+        imagem = _itens_sprite_auto(nome)
+    # Sem categoria (removida do form; coluna segue no banco com default 'geral').
     payload = {
         "nome": nome,
         "preco": preco,
-        "categoria": categoria,
         "descricao": descricao,
         "ativo": ativo,
         "imagem": imagem,
@@ -2294,7 +2368,7 @@ def admin_item_novo():
         )
         if response.status_code not in (200, 201):
             return f"Falha ao criar ({response.status_code}): {response.text[:200]}", 400
-        _audit(user, "item_criar", f"{nome} " + (f"| erro imagem: {error}" if error else ""))
+        _audit(user, "item_criar", nome)
     except Exception as exc:
         return f"Falha: {exc}", 500
     return redirect("/admin/itens")
@@ -2313,17 +2387,20 @@ def admin_item_editar(item_id):
     if request.method == "POST":
         if not _csrf_ok():
             return "Requisição inválida (CSRF).", 403
+        nome_novo = _itens_nome_padrao((request.form.get("nome") or "").strip()[:200])
+        sprite = _itens_sprite_form(request.form.get("sprite"))
+        if not sprite and nome_novo and nome_novo != (item.get("nome") or ""):
+            sprite = _itens_sprite_auto(nome_novo)
         payload = {
-            "nome": (request.form.get("nome") or "").strip()[:200],
+            "nome": nome_novo,
             "preco": (request.form.get("preco") or "").strip()[:60],
-            "categoria": (request.form.get("categoria") or "geral").strip()[:60],
             "descricao": (request.form.get("descricao") or "").strip()[:2000],
             "ativo": request.form.get("ativo") == "1",
         }
-        if request.files.get("imagem"):
-            imagem, error = _storage_upload(request.files.get("imagem"))
-            if imagem:
-                payload["imagem"] = imagem
+        if sprite:
+            payload["imagem"] = sprite
+        elif not item.get("imagem") and nome_novo:
+            payload["imagem"] = _itens_sprite_auto(nome_novo)
         try:
             response = requests.patch(
                 f"{SUPA_URL}/rest/v1/itens?id=eq.{item_id}",
@@ -2338,29 +2415,36 @@ def admin_item_editar(item_id):
             return f"Falha: {exc}", 500
         return redirect("/admin/itens")
 
-    image_html = (
-        f"<img src='{html.escape(item.get('imagem') or '')}' alt='' class='preview' "
-        f"onerror=\"this.style.display='none'\">"
+    imagem_atual = html.escape(item.get("imagem") or "")
+    prev_html = (
+        f"<span id='mk_sprite_prev' class='mk-sprite-prev'>"
+        f"<img src='{imagem_atual}' alt='' width='44' height='44' loading='lazy'></span>"
         if item.get("imagem")
-        else ""
+        else "<span id='mk_sprite_prev' class='mk-sprite-prev' hidden></span>"
     )
-    ativo_option = 'checked' if item.get("ativo") else ''
+    ac_css, ac_js = _itens_ac_recursos()
     form = (
         f"<section><h2>Editar item</h2>"
-        f"{image_html}"
-        f"<form method='post' enctype='multipart/form-data'>"
+        f"<div class='itens-ac'>"
+        f"{ac_css}"
+        f"<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        f"<label>Nome</label><input name='nome' required value='{html.escape(item.get('nome') or '')}'>"
+        f"<label>Nome (do nosso banco de itens)</label>"
+        f"<input name='nome' id='item_name' required maxlength='120' "
+        f"value='{html.escape(item.get('nome') or '')}' autocomplete='off'>"
+        f"<input type='hidden' name='sprite' id='mk_sprite_url' value=''>"
+        f"{prev_html}"
+        f"<p class='note'>A imagem é puxada automaticamente do nosso banco de itens.</p>"
         f"<label>Preço</label><input name='preco' value='{html.escape(item.get('preco') or '')}'>"
-        f"<label>Categoria</label><input name='categoria' value='{html.escape(item.get('categoria') or '')}'>"
         f"<label>Descrição</label><textarea name='descricao' rows='3'>{html.escape(item.get('descricao') or '')}</textarea>"
-        f"<label>Nova imagem (opcional)</label><input type='file' name='imagem' accept='image/png,image/jpeg,image/webp,image/gif'>"
         f"<label>Publicado</label>"
         f"<select name='ativo'><option value='1' {'selected' if item.get('ativo') else ''}>Sim</option>"
         f"<option value='0' {'' if item.get('ativo') else 'selected'}>Não (rascunho)</option></select>"
         f"<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
         f"<a class='btn ghost' href='/admin/itens'>Voltar</a></p>"
-        f"</form></section>"
+        f"</form>"
+        f"{ac_js}"
+        f"</div></section>"
     )
     return _admin_page(user, "Editar item", form, "itens")
 
@@ -3175,7 +3259,6 @@ def api_itens():
             "preco": it.get("preco"),
             "descricao": it.get("descricao"),
             "imagem": it.get("imagem"),
-            "categoria": it.get("categoria"),
         }
         for it in itens
     ]
