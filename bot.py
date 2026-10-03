@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.30"
+VERSION = "2.10.31"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3025,13 +3025,77 @@ def _cliente_header(user, active="visao"):
     return nav + _cliente_user_menu(user)
 
 
+TELEGRAM_BOT_LINK = "https://t.me/bapzx_bot"
+
 _CLIENTE_NAV_ITENS = (
-    ("visao", "&#127968; Visão Geral", "/cliente", "PRINCIPAL"),
+    ("visao", "&#127968; Dashboard", "/cliente", "PRINCIPAL"),
     ("pedidos", "&#128230; Meus Pedidos", "/cliente#pedidos", None),
+    ("pagamentos", "&#128176; Pagamentos", "/cliente/pagamentos", "FINANCEIRO"),
+    ("plano", "&#128142; Meu Plano", "/cliente/plano", None),
     ("troca", "&#127991; MARKTRADE", "/cliente/troca", "NEGOCIAÇÃO"),
-    ("suporte", "&#128172; Suporte", "/cliente/suporte", "AJUDA"),
-    ("perfil", "&#128100; Meu Perfil", "/cliente/perfil", None),
+    ("servicos", "&#128736; Meus Serviços", "/cliente/servicos", None),
+    ("automacoes", "&#9881; Automações", "/cliente/automacoes", "AUTOMAÇÃO"),
+    ("bot", "&#129302; Meu Bot", "/cliente/bot", None),
+    ("suporte", "&#127915; Suporte", "/cliente/suporte", "AJUDA"),
+    ("notificacoes", "&#128276; Notificações", "/cliente/notificacoes", None),
+    ("perfil", "&#128100; Meu Perfil", "/cliente/perfil", "CONTA"),
 )
+
+
+def _cliente_pedidos(email):
+    """Pedidos do cliente (mais recentes primeiro). Nunca derruba."""
+    try:
+        mine = [
+            o
+            for o in STORE.list()
+            if (o.get("email") or "").strip().lower() == email
+        ]
+    except Exception:
+        return []
+    return sorted(mine, key=lambda o: o.get("data") or "", reverse=True)
+
+
+def _so_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+
+def _cliente_servicos_catalogo():
+    """Catálogo de serviços contratáveis (tabela `servicos`). Nunca derruba."""
+    if not STORE.remote:
+        return []
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/servicos?ativo=eq.true&order=ordem.asc&select=*",
+            headers=STORE._headers(),
+            timeout=15,
+        )
+        if response.status_code == 200:
+            return response.json() or []
+    except Exception:
+        pass
+    return []
+
+
+def _cliente_servicos_meus(whatsapp):
+    """Serviços já contratados: casa pelo WhatsApp (só dígitos) nos últimos
+    50 registros de `servicos_manuais`. Nunca derruba."""
+    dig = _so_digitos(whatsapp)
+    if not (STORE.remote and dig):
+        return []
+    try:
+        response = requests.get(
+            f"{STORE.url}/rest/v1/servicos_manuais?order=criado_em.desc&limit=50&select=*",
+            headers={**STORE._headers(), "Range": "0-49"},
+            timeout=15,
+        )
+        if response.status_code != 200:
+            return []
+        return [
+            s for s in (response.json() or [])
+            if _so_digitos(s.get("whatsapp")) == dig
+        ]
+    except Exception:
+        return []
 
 _CLIENTE_DASH_CSS = """
 <style>
@@ -3865,6 +3929,351 @@ def cliente_suporte_detalhe(ticket_id):
         resposta,
     )
     return _cliente_dash_page("Chamado", "Suporte", "suporte", user, body)
+
+
+@app.route("/cliente/pagamentos", methods=["GET"])
+def cliente_pagamentos():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    mine = _cliente_pedidos(email)
+    pagos = [o for o in mine if (o.get("status") or "") == "pago"]
+    entregues = [o for o in mine if (o.get("status") or "") == "entregue"]
+    pendentes = [o for o in mine if (o.get("status") or "") == "pendente"]
+    try:
+        total = sum(parse_brl(o.get("preco")) for o in pagos + entregues)
+    except Exception:
+        total = 0
+    if mine:
+        tabela = "".join(
+            "<tr>"
+            f"<td><b>#{html.escape(str(o.get('id') or '-'))}</b></td>"
+            f"<td>{html.escape(str(o.get('data') or ''))[:16]}</td>"
+            f"<td>{html.escape(str(o.get('tc') or '-'))} RC</td>"
+            f"<td>{_fmt_brl(o.get('preco'))}</td>"
+            f"<td>Pix</td>"
+            f"<td>{_status_badge(o.get('status'))}</td>"
+            "</tr>"
+            for o in mine[:20]
+        )
+        corpo = (
+            "<div class='table-wrap'><table>"
+            "<tr><th>Pedido</th><th>Data</th><th>Produto</th><th>Valor</th><th>Método</th><th>Status</th></tr>"
+            + tabela
+            + "</table></div>"
+        )
+    else:
+        corpo = (
+            "<div class='empty-state'>"
+            "<div class='em-ic' aria-hidden='true'>&#128176;</div>"
+            "<h3>Nenhuma fatura ainda</h3>"
+            "<p>Quando você comprar, seus pagamentos Pix aparecem aqui.</p>"
+            f"<a class='btn blue' target='_blank' rel='noopener' href='{PORTFOLIO_URL}'>Ver ofertas</a>"
+            "</div>"
+        )
+    body = (
+        "<div class='kpis'>"
+        f"<div class='kpi green'><div class='ic' aria-hidden='true'>&#128176;</div>"
+        f"<div><div class='num'>{_fmt_brl(total)}</div><div class='lbl'>Total pago</div></div></div>"
+        f"<div class='kpi amber'><div class='ic' aria-hidden='true'>&#9203;</div>"
+        f"<div><div class='num'>{len(pendentes)}</div><div class='lbl'>Aguardando pagamento</div></div></div>"
+        f"<div class='kpi blue'><div class='ic' aria-hidden='true'>&#9989;</div>"
+        f"<div><div class='num'>{len(entregues)}</div><div class='lbl'>Entregues</div></div></div>"
+        "</div>"
+        "<div class='panel'><div class='panel-hd'><h2>&#128176; Faturas</h2></div>"
+        + corpo +
+        "</div>"
+        "<p class='note'>Pagamento via <b>Pix com confirmação automática</b> — "
+        "o status muda sozinho após a compensação.</p>"
+    )
+    return _cliente_dash_page("Pagamentos", "Pagamentos", "pagamentos", user, body)
+
+
+@app.route("/cliente/automacoes", methods=["GET", "POST"])
+def cliente_automacoes():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    if request.method == "POST":
+        if not _csrf_ok():
+            return "Requisição inválida (CSRF).", 403
+        ok = False
+        if STORE.remote:
+            try:
+                resposta = requests.patch(
+                    f"{STORE.url}/rest/v1/profiles?email=eq.{email}",
+                    headers=STORE._headers(),
+                    json={
+                        "notif_pedidos": request.form.get("notif_pedidos") == "1",
+                        "notif_promos": request.form.get("notif_promos") == "1",
+                    },
+                    timeout=15,
+                )
+                ok = resposta.status_code in (200, 204)
+            except Exception:
+                ok = False
+        return redirect("/cliente/automacoes?salvo=1" if ok else "/cliente/automacoes?salvo=0")
+    profile = _cliente_profile(email)
+    aviso = ""
+    if request.args.get("salvo") == "1":
+        aviso = "<div class='alert info'>Automações atualizadas.</div>"
+    elif request.args.get("salvo") == "0":
+        aviso = "<div class='alert'>Não foi possível salvar agora — tente de novo.</div>"
+    chk_ped = " checked" if profile.get("notif_pedidos", True) else ""
+    chk_pro = " checked" if profile.get("notif_promos", True) else ""
+    body = (
+        aviso
+        + "<div class='panel'><div class='panel-hd'><h2>&#9881; Minhas automações</h2></div>"
+        "<div class='grid2'>"
+        "<div class='help-card'><div class='h-ic' aria-hidden='true'>&#9889;</div>"
+        "<div class='h-t'>Confirmação automática de Pix</div>"
+        "<div class='h-s'>O pagamento é confirmado sozinho via webhook. Sem comprovante manual.</div>"
+        "<div style='margin-top:8px'>" + _status_badge("pago") + "</div></div>"
+        "<div class='help-card'><div class='h-ic' aria-hidden='true'>&#128142;</div>"
+        "<div class='h-t'>Renovação do VIP</div>"
+        "<div class='h-s'>Seu VIP dura 30 dias e pode ser renovado quando quiser.</div>"
+        "<div style='margin-top:8px'><a class='btn ghost small' href='/cliente/troca/vip'>Gerenciar VIP</a></div></div>"
+        "</div></div>"
+        "<div class='panel'><div class='panel-hd'><h2>&#128276; Avisos automáticos</h2></div>"
+        "<form method='post'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label class='switch-row'><input type='checkbox' name='notif_pedidos' value='1'"
+        f"{chk_ped}><span>Avisos de pedido<small>Status, Pix e entrega.</small></span></label>"
+        "<label class='switch-row'><input type='checkbox' name='notif_promos' value='1'"
+        f"{chk_pro}><span>Ofertas e novidades<small>Promoções e itens novos. Sem spam.</small></span></label>"
+        "<div class='pf-actions' style='margin-top:14px'>"
+        "<button class='btn' type='submit'>Salvar automações</button></div>"
+        "</form></div>"
+        + _PERFIL_CSS
+    )
+    return _cliente_dash_page("Automações", "Automações", "automacoes", user, body)
+
+
+@app.route("/cliente/bot", methods=["GET"])
+def cliente_bot():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    if _mk_vip_ativo(email):
+        corpo = (
+            "<div class='panel'><div class='panel-hd'><h2>&#129302; Meu Bot</h2></div>"
+            "<p>" + _status_badge("pago") + " <b>Bot liberado para você.</b></p>"
+            "<div class='grid2'>"
+            "<div class='help-card'><div class='h-ic' aria-hidden='true'>&#129302;</div>"
+            "<div class='h-t'>Atendimento 24/7</div>"
+            "<div class='h-s'>Comprar RC, tirar dúvidas e acompanhar pedidos no Telegram.</div></div>"
+            "<div class='help-card'><div class='h-ic' aria-hidden='true'>&#127991;</div>"
+            "<div class='h-t'>MARKTRADE</div>"
+            "<div class='h-s'>Publique e negocie anúncios com destaque.</div></div>"
+            "</div>"
+            f"<p style='margin-top:14px'><a class='btn' target='_blank' rel='noopener' href='{TELEGRAM_BOT_LINK}'>Abrir bot no Telegram</a> "
+            f"<a class='btn ghost' target='_blank' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>Falar no WhatsApp</a></p>"
+            "</div>"
+        )
+    else:
+        preco_vip = _mk_preco("preco_vip", 12.99)
+        corpo = (
+            "<div class='panel'><div class='panel-hd'><h2>&#129302; Meu Bot</h2></div>"
+            "<div class='empty-state'>"
+            "<div class='em-ic' aria-hidden='true'>&#128274;</div>"
+            "<h3>Recurso do plano VIP</h3>"
+            f"<p>O bot liberado com prioridade custa <b>{_mk_brl(preco_vip)}</b> e vale por 30 dias.</p>"
+            "<a class='btn blue' href='/cliente/troca/vip'>Assinar VIP</a>"
+            "</div></div>"
+        )
+    return _cliente_dash_page("Meu Bot", "Meu Bot", "bot", user, corpo)
+
+
+@app.route("/cliente/servicos", methods=["GET"])
+def cliente_servicos():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    profile = _cliente_profile(email)
+    meus = _cliente_servicos_meus(profile.get("whatsapp") or "")
+    if meus:
+        linhas = "".join(
+            "<tr>"
+            f"<td>{html.escape(str(s.get('criado_em') or s.get('data') or ''))[:10]}</td>"
+            f"<td>{html.escape(str(s.get('servico') or '-'))}</td>"
+            f"<td>{_fmt_brl(s.get('valor'))}</td>"
+            f"<td>{_status_badge(s.get('status'))}</td>"
+            "</tr>"
+            for s in meus[:20]
+        )
+        meus_html = (
+            "<div class='table-wrap'><table>"
+            "<tr><th>Data</th><th>Serviço</th><th>Valor</th><th>Status</th></tr>"
+            + linhas + "</table></div>"
+        )
+    else:
+        meus_html = (
+            "<div class='empty-state'>"
+            "<div class='em-ic' aria-hidden='true'>&#128736;</div>"
+            "<h3>Nenhum serviço contratado</h3>"
+            "<p>Os serviços que você contratar com seu WhatsApp aparecem aqui.</p>"
+            "</div>"
+        )
+    catalogo = _cliente_servicos_catalogo()
+    if catalogo:
+        cards = "".join(
+            "<div class='help-card'><div class='h-t'>"
+            f"{html.escape(str(s.get('nome') or '-'))}</div>"
+            f"<div class='h-s'>{html.escape(str(s.get('descricao') or ''))[:120]}</div>"
+            f"<div style='margin-top:8px;font-weight:800'>{html.escape(str(s.get('preco') or ''))}</div></div>"
+            for s in catalogo[:6]
+        )
+        cat_html = (
+            "<div class='panel'><div class='panel-hd'><h2>&#128722; Contratar serviço</h2></div>"
+            f"<div class='grid2'>{cards}</div>"
+            f"<p style='margin-top:12px'><a class='btn' target='_blank' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>Contratar no WhatsApp</a></p>"
+            "</div>"
+        )
+    else:
+        cat_html = ""
+    body = (
+        "<div class='panel'><div class='panel-hd'><h2>&#128736; Meus serviços</h2></div>"
+        + meus_html + "</div>" + cat_html
+    )
+    return _cliente_dash_page("Meus Serviços", "Meus Serviços", "servicos", user, body)
+
+
+@app.route("/cliente/plano", methods=["GET"])
+def cliente_plano():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    vip = _mk_vip_ativo(email)
+    preco_vip = _mk_preco("preco_vip", 12.99)
+    if vip:
+        validade = _mk_fmt_dt((_mk_profile(email) or {}).get("vip_until"))
+        atual = (
+            "<div class='kpi green'><div class='ic' aria-hidden='true'>&#128142;</div>"
+            f"<div><div class='num'>VIP Pro</div><div class='lbl'>Ativo até {html.escape(validade)}</div></div></div>"
+        )
+        cta = "<a class='btn ghost' href='/cliente/troca/vip'>Renovar VIP</a>"
+    else:
+        atual = (
+            "<div class='kpi amber'><div class='ic' aria-hidden='true'>&#128142;</div>"
+            "<div><div class='num'>Básico</div><div class='lbl'>Plano gratuito</div></div></div>"
+        )
+        cta = "<a class='btn blue' href='/cliente/troca/vip'>Assinar VIP</a>"
+    pags = _mk_meus_pagamentos(email)[:5]
+    if pags:
+        hist = "".join(
+            "<tr>"
+            f"<td>{html.escape(str(p.get('criado_em') or ''))[:10]}</td>"
+            f"<td>{html.escape(str(p.get('tipo') or '-')).upper()}</td>"
+            f"<td>{_mk_brl(p.get('valor'))}</td>"
+            f"<td>{_status_badge(p.get('status'))}</td>"
+            "</tr>"
+            for p in pags
+        )
+        hist_html = (
+            "<div class='panel'><div class='panel-hd'><h2>&#128179; Últimas cobranças</h2></div>"
+            "<div class='table-wrap'><table>"
+            "<tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Status</th></tr>"
+            + hist + "</table></div></div>"
+        )
+    else:
+        hist_html = ""
+    body = (
+        f"<div class='kpis'>{atual}</div>"
+        "<div class='panel'><div class='panel-hd'><h2>&#128142; Planos</h2></div>"
+        "<div class='table-wrap'><table>"
+        "<tr><th></th><th>Básico</th><th>VIP Pro</th></tr>"
+        "<tr><td>Preço</td><td>Grátis</td><td><b>" + _mk_brl(preco_vip) + " / 30 dias</b></td></tr>"
+        "<tr><td>Comprar RC e acompanhar pedidos</td><td>&#9989;</td><td>&#9989;</td></tr>"
+        "<tr><td>Publicar no MARKTRADE</td><td>&#9989;</td><td>&#9989;</td></tr>"
+        "<tr><td>Bot liberado com prioridade</td><td>&#10060;</td><td>&#9989;</td></tr>"
+        "<tr><td>Selo VIP nos anúncios</td><td>&#10060;</td><td>&#9989;</td></tr>"
+        "</table></div>"
+        f"<p style='margin-top:14px'>{cta}</p>"
+        "</div>" + hist_html
+    )
+    return _cliente_dash_page("Meu Plano", "Meu Plano", "plano", user, body)
+
+
+@app.route("/cliente/notificacoes", methods=["GET"])
+def cliente_notificacoes():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    profile = _cliente_profile(email)
+    tickets = _cliente_tickets(email)
+    mine = _cliente_pedidos(email)
+    feed = []
+    if not (profile.get("personagem") or "").strip():
+        feed.append(
+            ("&#128100;", "Complete seu perfil com personagem e mundo.",
+             "<a class='btn ghost small' href='/cliente/perfil'>Completar</a>")
+        )
+    for o in [x for x in mine if (x.get("status") or "") == "pendente"][:3]:
+        feed.append(
+            ("&#9203;", f"Pedido #{o.get('id')} aguarda pagamento "
+             f"({_fmt_brl(o.get('preco'))}).",
+             _status_badge("pendente"))
+        )
+    for o in mine[:3]:
+        if (o.get("status") or "") == "pago":
+            feed.append(
+                ("&#9989;", f"Pagamento do pedido #{o.get('id')} confirmado.",
+                 _status_badge("pago"))
+            )
+        elif (o.get("status") or "") == "entregue":
+            feed.append(
+                ("&#127881;", f"Pedido #{o.get('id')} concluído. Obrigado!",
+                 _status_badge("entregue"))
+            )
+    for t in tickets[:5]:
+        if (t.get("status") or "") == "respondido":
+            feed.append(
+                ("&#128172;", f"Nova resposta no chamado #{t.get('id')}.",
+                 f"<a class='btn ghost small' href='/cliente/suporte/{t.get('id')}'>Ver</a>")
+            )
+        elif (t.get("status") or "") == "aberto":
+            feed.append(
+                ("&#9203;", f"Chamado #{t.get('id')} em atendimento.",
+                 _status_badge("aberto"))
+            )
+    try:
+        from datetime import datetime as _dt
+
+        dt = _mk_parse_dt((_mk_profile(email) or {}).get("vip_until"))
+        if dt and _mk_vip_ativo(email) and (dt - _dt.utcnow()).days <= 7:
+            feed.append(
+                ("&#128142;", "Seu VIP vence em breve.",
+                 "<a class='btn ghost small' href='/cliente/troca/vip'>Renovar</a>")
+            )
+    except Exception:
+        pass
+    if feed:
+        itens = "".join(
+            f"<div class='help-card'><div class='h-ic' aria-hidden='true'>{icone}</div>"
+            f"<div class='h-t'>{texto}</div>"
+            f"<div style='margin-top:8px'>{acao}</div></div>"
+            for icone, texto, acao in feed[:8]
+        )
+        corpo = f"<div class='grid2'>{itens}</div>"
+    else:
+        corpo = (
+            "<div class='empty-state'>"
+            "<div class='em-ic' aria-hidden='true'>&#128276;</div>"
+            "<h3>Tudo em dia</h3>"
+            "<p>Nenhuma novidade por aqui.</p>"
+            "</div>"
+        )
+    body = (
+        "<div class='panel'><div class='panel-hd'><h2>&#128276; Notificações</h2></div>"
+        + corpo + "</div>"
+    )
+    return _cliente_dash_page("Notificações", "Notificações", "notificacoes", user, body)
 
 
 # ============ MARKETPLACE (MARKTRADE) — área do cliente ============

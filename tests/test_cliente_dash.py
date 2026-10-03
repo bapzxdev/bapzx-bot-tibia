@@ -123,5 +123,135 @@ class TestClienteDash(unittest.TestCase):
         self.assertIn("Publicar anúncio", corpo)
 
 
+PEDIDO = {
+    "id": 5, "email": "cliente@x.com", "tc": "1500",
+    "preco": "R$ 135,00", "mundo": "Auroria",
+    "status": "pago", "data": "2026-10-01T10:00:00",
+}
+
+
+class TestClienteNovasPaginas(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        bot.app.config["TESTING"] = True
+        bot.app.secret_key = "teste-cliente-dash"
+
+    def _get(self, path, extra=None):
+        patches = [
+            mock.patch.object(bot, "current_user", _user),
+            mock.patch.object(bot, "_mk_vip_ativo", lambda email: False),
+            mock.patch.object(bot, "_cliente_profile", lambda email: {}),
+            mock.patch.object(bot, "_cliente_tickets", lambda email: []),
+            mock.patch.object(bot.STORE, "list", lambda: [dict(PEDIDO)]),
+            mock.patch.object(bot, "_marketplace_config", lambda: {"preco_vip": 12.99}),
+            mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []),
+            mock.patch.object(bot, "_mk_profile", lambda email: {}),
+            mock.patch.object(bot, "_cliente_servicos_meus", lambda wpp: []),
+            mock.patch.object(bot, "_cliente_servicos_catalogo", lambda: []),
+        ] + (extra or [])
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        return bot.app.test_client().get(path)
+
+    def _assert_dash(self, corpo, ativo_href, page_title):
+        self.assertIn("c-sidebar", corpo)
+        self.assertIn(f"<a class='c-side-item active' href='{ativo_href}'", corpo)
+        self.assertIn(f"<h1>{page_title}</h1>", corpo)
+        self.assertNotIn("@@", corpo)
+
+    def test_pagamentos_mostra_faturas(self):
+        resp = self._get("/cliente/pagamentos")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/pagamentos", "Pagamentos")
+        self.assertIn("Faturas", corpo)
+        self.assertIn("#5", corpo)
+        self.assertIn("Pix", corpo)
+        self.assertIn("Total pago", corpo)
+
+    def test_automacoes_toggles_e_post(self):
+        resp = self._get("/cliente/automacoes")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/automacoes", "Automações")
+        self.assertIn("Confirmação automática de Pix", corpo)
+        self.assertIn("name='notif_pedidos'", corpo)
+
+    def test_automacoes_post_salva(self):
+        chamadas = []
+
+        def fake_patch(url, headers=None, json=None, timeout=None):
+            chamadas.append(dict(json or {}))
+            r = mock.Mock()
+            r.status_code = 204
+            return r
+
+        with mock.patch.object(bot, "current_user", _user), \
+             mock.patch.object(bot, "_csrf_ok", lambda: True), \
+             mock.patch.object(type(bot.STORE), "remote",
+                               new_callable=mock.PropertyMock, return_value=True), \
+             mock.patch.object(bot.requests, "patch", fake_patch):
+            c = bot.app.test_client()
+            resp = c.post("/cliente/automacoes",
+                          data={"_csrf": "x", "notif_pedidos": "1"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("salvo=1", resp.headers["Location"])
+        self.assertEqual(chamadas[0]["notif_pedidos"], True)
+        self.assertEqual(chamadas[0]["notif_promos"], False)
+
+    def test_bot_bloqueado_sem_vip(self):
+        resp = self._get("/cliente/bot")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/bot", "Meu Bot")
+        self.assertIn("plano VIP", corpo)
+        self.assertIn("/cliente/troca/vip", corpo)
+
+    def test_bot_liberado_com_vip(self):
+        patches = [
+            mock.patch.object(bot, "current_user", _user),
+            mock.patch.object(bot, "_mk_vip_ativo", lambda email: True),
+            mock.patch.object(bot, "_marketplace_config", lambda: {"preco_vip": 12.99}),
+        ]
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        resp = bot.app.test_client().get("/cliente/bot")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertIn("Bot liberado", corpo)
+        self.assertIn("t.me/bapzx_bot", corpo)
+
+    def test_servicos_vazio_mais_catalogo(self):
+        extra = [mock.patch.object(
+            bot, "_cliente_servicos_catalogo",
+            lambda: [{"nome": "Upar level", "preco": "R$ 20/h", "descricao": "d"}],
+        )]
+        resp = self._get("/cliente/servicos", extra)
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/servicos", "Meus Serviços")
+        self.assertIn("Nenhum serviço contratado", corpo)
+        self.assertIn("Upar level", corpo)
+
+    def test_plano_basico_com_tabela(self):
+        resp = self._get("/cliente/plano")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/plano", "Meu Plano")
+        self.assertIn("Básico", corpo)
+        self.assertIn("VIP Pro", corpo)
+        self.assertIn("/cliente/troca/vip", corpo)
+
+    def test_notificacoes_feed(self):
+        resp = self._get("/cliente/notificacoes")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/notificacoes", "Notificações")
+        self.assertIn("Pagamento do pedido #5 confirmado.", corpo)
+        self.assertIn("Complete seu perfil", corpo)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
