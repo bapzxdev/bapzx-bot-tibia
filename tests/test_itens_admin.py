@@ -97,6 +97,10 @@ class TestItensAdmin(unittest.TestCase):
         self.assertIn("id='item_name'", corpo)
         self.assertIn("id='mk_sprite_url'", corpo)
         self.assertIn("mk-pub-ac-drop", corpo)
+        self.assertIn("mk-form", corpo)
+        self.assertIn("id='item_preco'", corpo)
+        self.assertIn("id='item_desc'", corpo)
+        self.assertIn("mk-publish-btn", corpo)
         self.assertNotIn("name='categoria'", corpo)
         self.assertNotIn('name="categoria"', corpo)
         self.assertNotIn("type='file'", corpo)
@@ -126,7 +130,7 @@ class TestItensAdmin(unittest.TestCase):
                 "_csrf": "tokenteste",
                 "nome": "war hammer",
                 "preco": "R$ 20,00",
-                "descricao": "d",
+                "descricao": "texto digitado que deve ser ignorado",
                 "ativo": "1",
                 "sprite": "https://x/y/War_Hammer.gif",
             }
@@ -135,6 +139,50 @@ class TestItensAdmin(unittest.TestCase):
         self.assertEqual(posted["json"]["nome"], "War Hammer")
         self.assertEqual(posted["json"]["imagem"], "https://x/y/War_Hammer.gif")
         self.assertNotIn("categoria", posted["json"])
+        # descrição vem do banco local, não do digitado
+        self.assertIn("War Hammer", posted["json"]["descricao"])
+        self.assertIn("Armas", posted["json"]["descricao"])
+        self.assertNotIn("ignorado", posted["json"]["descricao"])
+
+    def test_novo_preco_com_letra_400(self):
+        resp, posted = self._post_novo(
+            {
+                "_csrf": "tokenteste",
+                "nome": "War Hammer",
+                "preco": "35ada",
+                "descricao": "",
+                "ativo": "1",
+                "sprite": "",
+            }
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(posted, {})
+
+    def test_preco_ok_aceita_moeda_e_vazio(self):
+        self.assertTrue(painel._itens_preco_ok("R$ 35,00"))
+        self.assertTrue(painel._itens_preco_ok("1500.50"))
+        self.assertTrue(painel._itens_preco_ok(""))
+        self.assertFalse(painel._itens_preco_ok("35ada"))
+        self.assertFalse(painel._itens_preco_ok("vinte"))
+
+    def test_desc_auto_do_banco_local(self):
+        desc = painel._itens_desc_auto("Gnome Helmet")
+        self.assertIn("Gnome Helmet", desc)
+        self.assertIn("Capacetes", desc)
+        self.assertIn("Armadura 8", desc)
+        self.assertNotIn("Nenhuma", desc)
+        self.assertEqual(painel._itens_desc_auto("Item Que Nao Existe Xyz"), "")
+
+    def test_endpoint_item_desc(self):
+        with mock.patch.object(painel, "_sessao_ativa", lambda sid: True), \
+             mock.patch.object(painel, "_notificacoes", lambda _u: ([], [], 0)), \
+             mock.patch.object(painel, "ADMIN_IP_ALLOWLIST", ""):
+            _login(self.client)
+            resp = self.client.get("/admin/item-desc?nome=War Hammer")
+        self.assertEqual(resp.status_code, 200)
+        dados = resp.get_json()
+        self.assertTrue(dados["ok"])
+        self.assertIn("Dano", dados["descricao"])
 
     def test_novo_sem_sprite_resolve_automatico(self):
         with mock.patch.object(

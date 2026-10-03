@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.27"
+VERSION = "2.10.29"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -2198,9 +2198,45 @@ def admin_ticket_excluir(ticket_id):
 
 _ITENS_AC_CSS = """
 <style>
-.itens-ac{--panel-2:#111a2e;--border-2:#2a3a52;--border:#1e2c40;--text:#e2e8f0;--green:#34d399;--muted:#8ea0b8}
+.itens-ac{--panel-2:#111a2e;--border-2:#2a3a52;--border:#1e2c40;--text:#e2e8f0;--green:#34d399;--muted:#8ea0b8;--purple:#a78bfa;--bg:#0b0f1a;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa}
 .itens-ac .note{color:#8ea0b8;font-size:13px;margin:6px 0 0}
+.itens-ac textarea[readonly]{opacity:.85}
 </style>
+"""
+
+_ITENS_AUTO_JS = """
+<script>
+(function () {
+  var nome = document.getElementById("item_name");
+  var preco = document.getElementById("item_preco");
+  var desc = document.getElementById("item_desc");
+  if (preco) preco.addEventListener("input", function () {
+    var v = preco.value.replace(/[^0-9.,R$% ]/gi, "");
+    if (v !== preco.value) preco.value = v;
+  });
+  if (!nome || !desc) return;
+  var t = null;
+  function busca() {
+    var v = (nome.value || "").trim();
+    if (v.length < 2) return;
+    fetch("/admin/item-desc?nome=" + encodeURIComponent(v), {credentials: "same-origin"})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && typeof d.descricao === "string" && (nome.value || "").trim() === v) {
+          desc.value = d.descricao;
+        }
+      })
+      .catch(function () {});
+  }
+  nome.addEventListener("input", function () {
+    if (t) clearTimeout(t);
+    t = setTimeout(busca, 450);
+  });
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest(".mk-pub-ac-item")) setTimeout(busca, 60);
+  });
+})();
+</script>
 """
 
 
@@ -2215,15 +2251,79 @@ def _itens_bot():
 
 
 def _itens_ac_recursos():
-    """CSS+JS de autocomplete do banco local + sprite automático (reusa bot.py)."""
+    """CSS+JS de autocomplete do banco local + sprite automático + visual
+    premium (reusa _MK_AC_CSS/_MK_FORM_CSS/_MK_AC_SCRIPT/_MK_SPRITE_JS do bot.py)."""
     base = _ITENS_AC_CSS
     mod = _itens_bot()
     if mod is None:
-        return base, ""
+        return base, _ITENS_AUTO_JS
     try:
-        return base + mod._MK_AC_CSS, mod._MK_AC_SCRIPT + mod._MK_SPRITE_JS
+        return (
+            base + mod._MK_AC_CSS + mod._MK_FORM_CSS,
+            mod._MK_AC_SCRIPT + mod._MK_SPRITE_JS + _ITENS_AUTO_JS,
+        )
     except Exception:
-        return base, ""
+        return base, _ITENS_AUTO_JS
+
+
+def _itens_preco_ok(preco):
+    """Preço da loja não aceita letras (só números e R$ 89,90). Vazio passa
+    (preço opcional)."""
+    txt = (preco or "").strip()
+    if not txt:
+        return True
+    sem_moeda = re.sub(r"[Rr]\$", "", txt)
+    return not re.search(r"[A-Za-zÀ-ÿ]", sem_moeda)
+
+
+_ITENS_DANO_ROTULO = {
+    "Armas de Arremesso": "Ataque",
+    "Bestas": "Ataque",
+    "Arcos": "Ataque",
+    "Aljavas": "Volume",
+    "Escudos": "Defesa",
+    "Spellbooks": "Defesa",
+    "Capacetes": "Armadura",
+    "Armaduras": "Armadura",
+    "Pernas": "Armadura",
+    "Botas": "Armadura",
+}
+
+
+def _itens_desc_auto(item_name):
+    """Monta a descrição do item a partir do banco local (sem digitação).
+    Devolve "" se o item não estiver cadastrado. Nunca derruba."""
+    try:
+        ficha = _ficha_local(item_name or "")
+    except Exception:
+        return ""
+    if not ficha:
+        return ""
+    nome = ficha.get("nome") or (item_name or "").strip()
+    cat = ficha.get("categoria") or ""
+    partes = []
+    if cat:
+        partes.append(cat)
+    nivel = (ficha.get("nivel") or "").strip()
+    if nivel and nivel != "0":
+        partes.append(f"Nv {nivel}")
+    voc = (ficha.get("vocacao") or "").strip()
+    if voc:
+        partes.append(voc)
+    dano = (ficha.get("dano_medio") or "").strip()
+    if dano:
+        partes.append(f"{_ITENS_DANO_ROTULO.get(cat, 'Dano médio')} {dano}")
+    for chave in ("tipo_dano", "bonus", "protecao"):
+        valor = (ficha.get(chave) or "").strip()
+        nucleo = valor.rstrip(".").strip().lower()
+        if valor and nucleo not in ("nenhum", "nenhuma", "nenhuns", "nenhumas", ""):
+            partes.append(valor)
+    peso = (ficha.get("peso") or "").strip()
+    if peso:
+        partes.append(f"Peso {peso} oz")
+    if not partes:
+        return nome
+    return f"{nome} — {' · '.join(partes)}"
 
 
 def _itens_nome_padrao(nome):
@@ -2287,6 +2387,15 @@ f"<p style='color:#8ea0b8;font-size:13px;margin:8px 0'>{html.escape(item.get('de
     )
 
 
+@bp.route("/admin/item-desc", methods=["GET"])
+def admin_item_desc():
+    user = _require_perm("ver_itens")
+    if not user:
+        return jsonify({"ok": False}), 403
+    nome = (request.args.get("nome") or "").strip()[:120]
+    return jsonify({"ok": True, "descricao": _itens_desc_auto(nome)})
+
+
 @bp.route("/admin/itens", methods=["GET"])
 def admin_itens():
     user = _require_perm("ver_itens")
@@ -2298,22 +2407,26 @@ def admin_itens():
     )
     ac_css, ac_js = _itens_ac_recursos()
     form = (
-        "<section><h2>Novo item</h2>"
+        "<section><h2>&#128722; Novo item</h2>"
         "<div class='itens-ac'>"
         f"{ac_css}"
-        "<form method='post' action='/admin/itens/novo'>"
+        "<form method='post' action='/admin/itens/novo' class='mk-form'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>Nome (do nosso banco de itens)</label>"
+        "<label><b>Nome</b> (do nosso banco de itens)</label>"
         "<input name='nome' id='item_name' required maxlength='120' "
         "placeholder='Ex.: War Hammer' autocomplete='off'>"
         "<input type='hidden' name='sprite' id='mk_sprite_url' value=''>"
         "<span id='mk_sprite_prev' class='mk-sprite-prev' hidden></span>"
-        "<p class='note'>A imagem é puxada automaticamente do nosso banco de itens.</p>"
-        "<label>Preço</label><input name='preco' placeholder='R$ 20,00'>"
-        "<label>Descrição</label><textarea name='descricao' rows='3'></textarea>"
-        "<label>Publicado</label>"
+        "<p class='note'>A <b>imagem</b> é puxada automaticamente do nosso <b>banco de itens</b>.</p>"
+        "<label><b>Preço</b></label>"
+        "<input name='preco' id='item_preco' inputmode='decimal' maxlength='30' placeholder='Ex.: R$ 35,00'>"
+        "<p class='note'>Só <b>números</b> — letras não entram.</p>"
+        "<label><b>Descrição</b> <span style='color:#8ea0b8;font-weight:400'>(automática)</span></label>"
+        "<textarea id='item_desc' rows='3' readonly placeholder='Preenchida sozinha ao escolher o nome...'></textarea>"
+        "<p class='note'>Puxada do <b>banco de itens</b> — não precisa digitar.</p>"
+        "<label><b>Publicado</b></label>"
         "<select name='ativo'><option value='1'>Sim</option><option value='0'>Não (rascunho)</option></select>"
-        "<p style='margin-top:14px'><button class='btn' type='submit'>Criar item</button></p>"
+        "<p style='margin-top:14px'><button class='mk-publish-btn' type='submit'>Criar item</button></p>"
         "</form>"
         f"{ac_js}"
         "</div></section>"
@@ -2345,7 +2458,9 @@ def admin_item_novo():
     if not nome:
         return "Nome obrigatório.", 400
     preco = (request.form.get("preco") or "").strip()[:60]
-    descricao = (request.form.get("descricao") or "").strip()[:2000]
+    if not _itens_preco_ok(preco):
+        return "Preço inválido (só números).", 400
+    descricao = _itens_desc_auto(nome)[:2000]
     ativo = request.form.get("ativo") == "1"
 
     imagem = _itens_sprite_form(request.form.get("sprite"))
@@ -2388,13 +2503,18 @@ def admin_item_editar(item_id):
         if not _csrf_ok():
             return "Requisição inválida (CSRF).", 403
         nome_novo = _itens_nome_padrao((request.form.get("nome") or "").strip()[:200])
+        if not nome_novo:
+            return "Nome obrigatório.", 400
+        preco_novo = (request.form.get("preco") or "").strip()[:60]
+        if not _itens_preco_ok(preco_novo):
+            return "Preço inválido (só números).", 400
         sprite = _itens_sprite_form(request.form.get("sprite"))
         if not sprite and nome_novo and nome_novo != (item.get("nome") or ""):
             sprite = _itens_sprite_auto(nome_novo)
         payload = {
             "nome": nome_novo,
-            "preco": (request.form.get("preco") or "").strip()[:60],
-            "descricao": (request.form.get("descricao") or "").strip()[:2000],
+            "preco": preco_novo,
+            "descricao": _itens_desc_auto(nome_novo)[:2000],
             "ativo": request.form.get("ativo") == "1",
         }
         if sprite:
@@ -2423,24 +2543,30 @@ def admin_item_editar(item_id):
         else "<span id='mk_sprite_prev' class='mk-sprite-prev' hidden></span>"
     )
     ac_css, ac_js = _itens_ac_recursos()
+    desc_atual = html.escape(_itens_desc_auto(item.get("nome") or "") or (item.get("descricao") or ""))
     form = (
-        f"<section><h2>Editar item</h2>"
+        f"<section><h2>&#128722; Editar item</h2>"
         f"<div class='itens-ac'>"
         f"{ac_css}"
-        f"<form method='post'>"
+        f"<form method='post' class='mk-form'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        f"<label>Nome (do nosso banco de itens)</label>"
+        f"<label><b>Nome</b> (do nosso banco de itens)</label>"
         f"<input name='nome' id='item_name' required maxlength='120' "
         f"value='{html.escape(item.get('nome') or '')}' autocomplete='off'>"
         f"<input type='hidden' name='sprite' id='mk_sprite_url' value=''>"
         f"{prev_html}"
-        f"<p class='note'>A imagem é puxada automaticamente do nosso banco de itens.</p>"
-        f"<label>Preço</label><input name='preco' value='{html.escape(item.get('preco') or '')}'>"
-        f"<label>Descrição</label><textarea name='descricao' rows='3'>{html.escape(item.get('descricao') or '')}</textarea>"
-        f"<label>Publicado</label>"
+        f"<p class='note'>A <b>imagem</b> é puxada automaticamente do nosso <b>banco de itens</b>.</p>"
+        f"<label><b>Preço</b></label>"
+        f"<input name='preco' id='item_preco' inputmode='decimal' maxlength='30' "
+        f"value='{html.escape(item.get('preco') or '')}'>"
+        f"<p class='note'>Só <b>números</b> — letras não entram.</p>"
+        f"<label><b>Descrição</b> <span style='color:#8ea0b8;font-weight:400'>(automática)</span></label>"
+        f"<textarea id='item_desc' rows='3' readonly>{desc_atual}</textarea>"
+        f"<p class='note'>Puxada do <b>banco de itens</b> — não precisa digitar.</p>"
+        f"<label><b>Publicado</b></label>"
         f"<select name='ativo'><option value='1' {'selected' if item.get('ativo') else ''}>Sim</option>"
         f"<option value='0' {'' if item.get('ativo') else 'selected'}>Não (rascunho)</option></select>"
-        f"<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "
+        f"<p style='margin-top:14px'><button class='mk-publish-btn' type='submit'>Salvar</button> "
         f"<a class='btn ghost' href='/admin/itens'>Voltar</a></p>"
         f"</form>"
         f"{ac_js}"
