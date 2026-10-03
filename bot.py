@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.26"
+VERSION = "2.10.28"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3080,6 +3080,199 @@ def _cliente_tickets(email):
     return []
 
 
+_PERFIL_VOCACOES = ("Knight", "Paladin", "Sorcerer", "Druid", "Monk")
+_PERFIL_TEMAS = (("escuro", "Escuro"), ("claro", "Claro"))
+_PERFIL_IDIOMAS = (("pt-BR", "Português (BR)"), ("en", "English"), ("es", "Español"))
+
+_PERFIL_CSS = """
+<style>
+.perfil-head{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.pf-avatar{width:84px;height:84px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+background:var(--grad);color:#04281a;font-weight:800;font-size:30px;overflow:hidden;border:2px solid var(--border-2)}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-id{flex:1;min-width:200px}
+.pf-id h2{margin:0 0 4px;font-size:20px}
+.pf-mail{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pf-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:999px;
+padding:2px 10px;border:1px solid rgba(74,222,128,.35);background:rgba(74,222,128,.12);color:var(--green)}
+.avatar-edit{cursor:pointer;display:inline-flex;align-items:center;gap:8px;color:var(--blue);
+border:1px solid var(--border-2);border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:600}
+.avatar-edit:hover{background:rgba(96,165,250,.10)}
+.avatar-edit input{display:none}
+.pf-sec-desc{margin:0 0 12px;color:var(--muted);font-size:13px}
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}
+@media (max-width:640px){.pf-grid{grid-template-columns:1fr}}
+label.req::after{content:' *';color:var(--red);font-weight:800}
+.pf-opt{font-size:12px;color:var(--muted);font-weight:400;margin-left:6px}
+.switch-row{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:14px}
+.switch-row input{width:18px;height:18px;accent-color:#4ade80;flex:none}
+.switch-row small{display:block;color:var(--muted);font-size:12px}
+.pf-actions{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
+.pf-actions .btn:disabled{opacity:.75;cursor:wait}
+.pf-dirty{font-size:12.5px;color:var(--amber);font-weight:600}
+.pf-toast{position:fixed;right:18px;bottom:18px;z-index:200;max-width:min(360px,calc(100vw - 36px));
+padding:12px 16px;border-radius:12px;font-size:13.5px;font-weight:600;border:1px solid;
+box-shadow:0 14px 34px rgba(0,0,0,.5);animation:pf-in .25s ease-out}
+.pf-toast.ok{background:#052e22;color:#6ee7b7;border-color:rgba(74,222,128,.4)}
+.pf-toast.erro{background:#3b0d0d;color:#fca5a5;border-color:rgba(248,113,113,.4)}
+.pf-toast.hide{opacity:0;transition:opacity .4s}
+@keyframes pf-in{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+</style>
+"""
+
+_PERFIL_JS = """
+<script>
+(function () {
+  var form = document.getElementById("perfil-form");
+  var toast = document.getElementById("perfil-toast");
+  if (toast) setTimeout(function () {
+    toast.classList.add("hide");
+    setTimeout(function () { toast.remove(); }, 450);
+  }, 5000);
+  if (!form) return;
+  var btn = document.getElementById("perfil-save");
+  var dirty = document.getElementById("perfil-dirty");
+  var snap = {};
+  function val(el) {
+    if (!el.name) return null;
+    if (el.type === "checkbox") return el.checked ? "1" : "0";
+    if (el.type === "file") return el.value ? "f:" + el.value : "";
+    return el.value;
+  }
+  function foto() {
+    snap = {};
+    form.querySelectorAll("[data-pf]").forEach(function (el) { snap[el.name] = val(el); });
+  }
+  function mudou() {
+    var els = form.querySelectorAll("[data-pf]");
+    for (var i = 0; i < els.length; i++) {
+      if (snap[els[i].name] !== val(els[i])) return true;
+    }
+    return false;
+  }
+  function marca() {
+    var m = mudou();
+    if (dirty) dirty.hidden = !m;
+    if (btn) btn.classList.toggle("has-changes", m);
+  }
+  foto();
+  form.addEventListener("input", marca);
+  form.addEventListener("change", marca);
+  var av = document.getElementById("pf-avatar-input");
+  var prev = document.getElementById("pf-avatar-prev");
+  if (av) av.addEventListener("change", function () {
+    var f = av.files && av.files[0];
+    if (!f || !prev) return;
+    var r = new FileReader();
+    r.onload = function (e) {
+      prev.innerHTML = "<img src='" + String(e.target.result).replace(/"/g, "&quot;") + "' alt='Prévia do avatar'>";
+    };
+    r.readAsDataURL(f);
+  });
+  form.addEventListener("submit", function () {
+    if (!btn) return;
+    btn.disabled = true;
+    var t = btn.querySelector(".t");
+    if (t) t.textContent = "Salvando\\u2026";
+  });
+})();
+</script>
+"""
+
+
+def _perfil_flash(tipo, texto):
+    session["_perfil_msg"] = [tipo, texto]
+
+
+def _perfil_consume_toast():
+    msg = session.pop("_perfil_msg", None)
+    if not msg:
+        return ""
+    tipo, texto = msg[0], msg[1]
+    cls = "ok" if tipo == "ok" else "erro"
+    return (
+        f"<div class='pf-toast {cls}' id='perfil-toast' role='status'>"
+        f"{html.escape(str(texto))}</div>"
+    )
+
+
+def _perfil_options(pares, atual, vazio=None):
+    out = []
+    if vazio is not None:
+        out.append(
+            f"<option value=''{(' selected' if not atual else '')}>"
+            f"{html.escape(vazio)}</option>"
+        )
+    for valor, rotulo in pares:
+        out.append(
+            f"<option value='{html.escape(valor)}'"
+            f"{(' selected' if atual == valor else '')}>"
+            f"{html.escape(rotulo)}</option>"
+        )
+    return "".join(out)
+
+
+def _perfil_mundo_options(atual):
+    atual = (atual or "").strip()
+    opts = [
+        f"<option value=''{(' selected' if not atual else '')}>"
+        "Selecione o mundo...</option>"
+    ]
+    if atual and atual not in _MK_MUNDOS:
+        opts.append(
+            f"<option value='{html.escape(atual)}' selected>"
+            f"{html.escape(atual)} (antigo)</option>"
+        )
+    for mundo in _MK_MUNDOS:
+        opts.append(
+            f"<option value='{html.escape(mundo)}'"
+            f"{(' selected' if atual == mundo else '')}>"
+            f"{html.escape(mundo)}</option>"
+        )
+    return "".join(opts)
+
+
+def _cliente_avatar_upload(file_storage):
+    """Sobe o avatar no bucket público 'avatares'. Devolve (url, erro)."""
+    from painel import SUPA_URL, SUPA_KEY
+
+    if not SUPA_URL or not SUPA_KEY:
+        return None, "Armazenamento indisponível."
+    try:
+        blob = file_storage.read()
+    except Exception:
+        return None, "Não foi possível ler o arquivo."
+    if not blob:
+        return None, "Arquivo vazio."
+    if len(blob) > 2 * 1024 * 1024:
+        return None, "Imagem maior que 2 MB."
+    nome = (getattr(file_storage, "filename", "") or "").lower()
+    ext = os.path.splitext(nome)[1] or ".png"
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+        return None, "Formato inválido (use png, jpg, webp ou gif)."
+    mime = {
+        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".webp": "image/webp", ".gif": "image/gif",
+    }[ext]
+    chave = f"avatar-{secrets.token_hex(8)}{ext}"
+    try:
+        resposta = requests.post(
+            f"{SUPA_URL}/storage/v1/object/avatares/{chave}",
+            headers={
+                "apikey": SUPA_KEY,
+                "Authorization": f"Bearer {SUPA_KEY}",
+                "Content-Type": getattr(file_storage, "mimetype", None) or mime,
+            },
+            data=blob,
+            timeout=30,
+        )
+    except Exception:
+        return None, "Falha de conexão no upload."
+    if resposta.status_code not in (200, 201):
+        return None, f"Upload falhou ({resposta.status_code})."
+    return f"{SUPA_URL}/storage/v1/object/public/avatares/{chave}", None
+
+
 @app.route("/cliente")
 def cliente():
     user = current_user()
@@ -3127,6 +3320,10 @@ def cliente():
         f"<div class='f-val'>{html.escape(str(profile.get('personagem') or '—'))}</div></div>"
         "<div class='field-card'><div class='f-lbl'>Mundo</div>"
         f"<div class='f-val'>{html.escape(str(profile.get('mundo') or '—'))}</div></div>"
+        "<div class='field-card'><div class='f-lbl'>Apelido</div>"
+        f"<div class='f-val'>{html.escape(str(profile.get('apelido') or '—'))}</div></div>"
+        "<div class='field-card'><div class='f-lbl'>Vocação</div>"
+        f"<div class='f-val'>{html.escape(str(profile.get('vocacao') or '—'))}</div></div>"
         "</div>"
     )
 
@@ -3228,45 +3425,169 @@ def cliente_perfil():
     if request.method == "POST":
         if not _csrf_ok():
             return "Requisição inválida (CSRF).", 403
+        personagem = (request.form.get("personagem") or "").strip()[:100]
+        if not personagem:
+            _perfil_flash("erro", "Informe seu personagem para salvar o perfil.")
+            return redirect("/cliente/perfil")
+        mundo = (request.form.get("mundo") or "").strip()[:100]
+        if mundo and mundo not in _MK_MUNDOS:
+            mundo = ""
+        vocacao = (request.form.get("vocacao") or "").strip()[:20]
+        if vocacao and vocacao not in _PERFIL_VOCACOES:
+            vocacao = ""
+        tema = (request.form.get("tema") or "escuro").strip()
+        if tema not in ("escuro", "claro"):
+            tema = "escuro"
+        idioma = (request.form.get("idioma") or "pt-BR").strip()
+        if idioma not in ("pt-BR", "en", "es"):
+            idioma = "pt-BR"
+        wpp_raw = (request.form.get("whatsapp") or "").strip()[:20]
+        whatsapp = _mk_whatsapp(wpp_raw)
+        if wpp_raw and not whatsapp:
+            _perfil_flash("erro", "WhatsApp inválido — use DDD + número, ex.: (19) 98765-4321.")
+            return redirect("/cliente/perfil")
+        avatar_url = str(profile.get("avatar_url") or "")
+        arq = request.files.get("avatar")
+        if arq and (arq.filename or "").strip():
+            avatar_url, erro = _cliente_avatar_upload(arq)
+            if erro:
+                _perfil_flash("erro", f"Avatar: {erro}")
+                return redirect("/cliente/perfil")
         payload = {
             "email": email,
             "name": user["name"],
             "sub": user.get("sub") or "",
             "role": user.get("role") or "cliente",
-            "personagem": (request.form.get("personagem") or "").strip()[:100],
-            "mundo": (request.form.get("mundo") or "").strip()[:100],
+            "personagem": personagem,
+            "mundo": mundo,
+            "apelido": (request.form.get("apelido") or "").strip()[:60],
+            "vocacao": vocacao,
+            "discord": (request.form.get("discord") or "").strip()[:60],
+            "whatsapp": whatsapp,
+            "avatar_url": avatar_url,
+            "notif_pedidos": request.form.get("notif_pedidos") == "1",
+            "notif_promos": request.form.get("notif_promos") == "1",
+            "tema": tema,
+            "idioma": idioma,
         }
+        legado = {
+            k: payload[k]
+            for k in ("email", "name", "sub", "role", "personagem", "mundo")
+        }
+        salvo = False
         if STORE.remote:
-            try:
-                requests.post(
-                    f"{STORE.url}/rest/v1/profiles?on_conflict=email",
-                    headers={**STORE._headers(), "Prefer": "resolution=merge-duplicates"},
-                    json=payload,
-                    timeout=15,
-                )
-            except Exception:
-                pass
+            for tentativa in (payload, legado):
+                try:
+                    resposta = requests.post(
+                        f"{STORE.url}/rest/v1/profiles?on_conflict=email",
+                        headers={**STORE._headers(), "Prefer": "resolution=merge-duplicates"},
+                        json=tentativa,
+                        timeout=15,
+                    )
+                    if resposta.status_code in (200, 201, 204):
+                        salvo = True
+                        break
+                except Exception:
+                    break
+        _perfil_flash(
+            "ok" if salvo else "erro",
+            "Perfil salvo com sucesso!" if salvo else "Não foi possível salvar agora — tente de novo.",
+        )
         return redirect("/cliente/perfil")
 
     top = _cliente_header(user, "perfil")
+    apelido = str(profile.get("apelido") or "")
+    titulo_id = apelido or user["name"]
+    avatar_atual = str(profile.get("avatar_url") or "")
+    if avatar_atual:
+        avatar_html = (
+            f"<span class='pf-avatar' id='pf-avatar-prev'>"
+            f"<img src='{html.escape(avatar_atual)}' alt='Avatar'></span>"
+        )
+    else:
+        avatar_html = (
+            f"<span class='pf-avatar' id='pf-avatar-prev' aria-hidden='true'>"
+            f"{_title_initials(titulo_id)}</span>"
+        )
+    vocacao_atual = str(profile.get("vocacao") or "")
+    if profile.get("notif_pedidos", True):
+        chk_ped = " checked"
+    else:
+        chk_ped = ""
+    if profile.get("notif_promos", True):
+        chk_pro = " checked"
+    else:
+        chk_pro = ""
     body = (
-        "<div class='panel'>"
-        "<div class='panel-hd'><h2>&#128100; Meu perfil</h2></div>"
-        "<p class='note'>"
-        "Informe seu personagem e mundo para agilizar seus próximos pedidos.</p>"
-        "<form method='post'>"
-        f"<label>E-mail</label><input value='{html.escape(email)}' disabled>"
-        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        f"<label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}' "
-        "placeholder='Nome do personagem'>"
-        f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}' "
-        "placeholder='Ex.: antica'>"
-        "<p style='margin-top:16px'><button class='btn' type='submit'>Salvar perfil</button></p>"
-        "</form>"
-        "<p class='legal-note'>Ao salvar seu perfil, seus dados (personagem e mundo) são usados "
-        "apenas para agilizar seus pedidos. Consulte nossa "
-        "<a href='/privacidade'>Política de Privacidade</a> (LGPD) para saber mais.</p>"
+        _perfil_consume_toast()
+        + "<div class='panel'><div class='perfil-head'>"
+        f"{avatar_html}"
+        "<div class='pf-id'>"
+        f"<h2>{html.escape(titulo_id)}</h2>"
+        f"<div class='pf-mail'>{html.escape(email)} "
+        "<span class='pf-chip'>&#10003; Verificado via Google</span></div>"
         "</div>"
+        "</div></div>"
+        "<form method='post' enctype='multipart/form-data' id='perfil-form'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#128100; Informações pessoais</h2></div>"
+        "<p class='pf-sec-desc'>Como você aparece para a equipe BAPZX.</p>"
+        "<div class='pf-grid'>"
+        "<div><label class='req'>Apelido</label>"
+        f"<input name='apelido' data-pf maxlength='60' placeholder='Ex.: Bapz' "
+        f"value='{html.escape(apelido)}'></div>"
+        "<div><label>E-mail</label>"
+        f"<input value='{html.escape(email)}' disabled>"
+        "<div class='size-note'>Login via Google — por segurança, o e-mail não pode ser alterado.</div></div>"
+        "</div>"
+        "<div><label>Foto de perfil<span class='pf-opt'>png, jpg, webp ou gif até 2 MB</span></label><br>"
+        "<label class='avatar-edit'>&#128247; Trocar foto"
+        "<input type='file' name='avatar' id='pf-avatar-input' data-pf accept='image/png,image/jpeg,image/webp,image/gif'>"
+        "</label></div>"
+        "<div><label>WhatsApp<span class='pf-opt'>opcional</span></label>"
+        f"<input name='whatsapp' data-pf maxlength='16' inputmode='numeric' placeholder='(19) 98765-4321' "
+        f"value='{html.escape(str(profile.get('whatsapp') or ''))}'></div>"
+        "</div>"
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#127918; Dados de jogo</h2></div>"
+        "<p class='pf-sec-desc'>Usados para agilizar seus próximos pedidos.</p>"
+        "<div class='pf-grid'>"
+        "<div><label class='req'>Personagem</label>"
+        f"<input name='personagem' data-pf required maxlength='100' placeholder='Nome do personagem' "
+        f"value='{html.escape(str(profile.get('personagem') or ''))}'></div>"
+        "<div><label>Mundo</label>"
+        f"<select name='mundo' data-pf>{_perfil_mundo_options(str(profile.get('mundo') or ''))}</select></div>"
+        "<div><label>Vocação preferida<span class='pf-opt'>opcional</span></label>"
+        f"<select name='vocacao' data-pf>{_perfil_options([(v, v) for v in _PERFIL_VOCACOES], vocacao_atual, 'Selecione...')}</select></div>"
+        "<div><label>Discord<span class='pf-opt'>opcional</span></label>"
+        f"<input name='discord' data-pf maxlength='60' placeholder='Ex.: bapz_01' "
+        f"value='{html.escape(str(profile.get('discord') or ''))}'></div>"
+        "</div>"
+        "</div>"
+        "<div class='panel'>"
+        "<div class='panel-hd'><h2>&#9881; Preferências</h2></div>"
+        "<p class='pf-sec-desc'>Como a BAPZX fala com você.</p>"
+        "<label class='switch-row'><input type='checkbox' name='notif_pedidos' data-pf value='1'"
+        f"{chk_ped}><span>Avisos de pedido<small>Status do pedido, Pix e entrega.</small></span></label>"
+        "<label class='switch-row'><input type='checkbox' name='notif_promos' data-pf value='1'"
+        f"{chk_pro}><span>Ofertas e novidades<small>Promoções e itens novos. Sem spam.</small></span></label>"
+        "<div class='pf-grid'>"
+        "<div><label>Tema</label>"
+        f"<select name='tema' data-pf>{_perfil_options(_PERFIL_TEMAS, str(profile.get('tema') or 'escuro'))}</select></div>"
+        "<div><label>Idioma</label>"
+        f"<select name='idioma' data-pf>{_perfil_options(_PERFIL_IDIOMAS, str(profile.get('idioma') or 'pt-BR'))}</select></div>"
+        "</div>"
+        "<div class='pf-actions'>"
+        "<button class='btn' type='submit' id='perfil-save'><span class='t'>Salvar perfil</span></button>"
+        "<span class='pf-dirty' id='perfil-dirty' hidden>&#9679; alterações não salvas</span>"
+        "</div>"
+        "</div>"
+        "</form>"
+        "<p class='legal-note'>Ao salvar, seus dados são usados apenas para agilizar seus pedidos. Consulte nossa "
+        "<a href='/privacidade'>Política de Privacidade</a> (LGPD) para saber mais.</p>"
+        + _PERFIL_CSS
+        + _PERFIL_JS
     )
     return _page("Meu perfil", "Meu perfil", top, body)
 
