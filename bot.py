@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.28"
+VERSION = "2.10.30"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -2977,6 +2977,35 @@ def _title_initials(name):
     return html.escape(base.upper() or "C")
 
 
+def _cliente_vip_chip(user):
+    if not _mk_vip_ativo(user.get("email") or ""):
+        return ""
+    return ("<span title='VIP BAPZX ativo' style='background:#0f2a22;border:1px solid #14532d;"
+            "color:#4ade80;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;"
+            "letter-spacing:.3px;flex-shrink:0'>VIP</span>")
+
+
+def _cliente_user_menu(user):
+    nome = user["name"] if user.get("name") else user["email"]
+    inicial = _title_initials(nome)
+    return (
+        "<div class='user' tabindex='0' aria-label='Menu da conta'>"
+        f"<span class='avatar' aria-hidden='true'>{inicial}</span>"
+        f"<span class='uname'>{html.escape(str(nome))}</span>"
+        f"{_cliente_vip_chip(user)}"
+        "<div class='user-menu'>"
+        f"<div class='u-name'>{html.escape(str(nome))}</div>"
+        f"<div class='u-mail'>{html.escape(user['email'])}</div>"
+        "<hr>"
+        "<a href='/cliente/perfil'>Meu perfil</a>"
+        "<a href='/cliente/troca'>MARKTRADE</a>"
+        "<a href='/cliente/suporte'>Suporte</a>"
+        "<a href='/acesso'>Trocar área</a>"
+        "<a class='danger' href='/logout'>Sair</a>"
+        "</div></div>"
+    )
+
+
 def _cliente_header(user, active="visao"):
     nav = (
         "<nav class='nav' aria-label='Navegação do cliente'>"
@@ -2993,30 +3022,151 @@ def _cliente_header(user, active="visao"):
         "active" if active == "suporte" else "",
         "active" if active == "perfil" else "",
     )
-    vip_chip = ""
-    if _mk_vip_ativo(user.get("email") or ""):
-        vip_chip = ("<span title='VIP BAPZX ativo' style='background:#0f2a22;border:1px solid #14532d;"
-                    "color:#4ade80;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;"
-                    "letter-spacing:.3px;flex-shrink:0'>VIP</span>")
-    nome = user["name"] if user.get("name") else user["email"]
-    inicial = _title_initials(nome)
-    drop = (
-        "<div class='user' tabindex='0' aria-label='Menu da conta'>"
-        f"<span class='avatar' aria-hidden='true'>{inicial}</span>"
-        f"<span class='uname'>{html.escape(str(nome))}</span>"
-        f"{vip_chip}"
-        "<div class='user-menu'>"
-        f"<div class='u-name'>{html.escape(str(nome))}</div>"
-        f"<div class='u-mail'>{html.escape(user['email'])}</div>"
-        "<hr>"
-        "<a href='/cliente/perfil'>Meu perfil</a>"
-        "<a href='/cliente/troca'>MARKTRADE</a>"
-        "<a href='/cliente/suporte'>Suporte</a>"
-        "<a href='/acesso'>Trocar área</a>"
-        "<a class='danger' href='/logout'>Sair</a>"
-        "</div></div>"
+    return nav + _cliente_user_menu(user)
+
+
+_CLIENTE_NAV_ITENS = (
+    ("visao", "&#127968; Visão Geral", "/cliente", "PRINCIPAL"),
+    ("pedidos", "&#128230; Meus Pedidos", "/cliente#pedidos", None),
+    ("troca", "&#127991; MARKTRADE", "/cliente/troca", "NEGOCIAÇÃO"),
+    ("suporte", "&#128172; Suporte", "/cliente/suporte", "AJUDA"),
+    ("perfil", "&#128100; Meu Perfil", "/cliente/perfil", None),
+)
+
+_CLIENTE_DASH_CSS = """
+<style>
+.c-shell{display:flex;min-height:100vh}
+.c-sidebar{position:fixed;top:0;left:0;bottom:0;width:250px;background:#0e1626;border-right:1px solid #1e2c40;
+display:flex;flex-direction:column;z-index:60}
+.c-side-brand{display:flex;align-items:center;gap:11px;padding:18px;border-bottom:1px solid #1e2c40}
+.c-side-logo{width:36px;height:36px;border-radius:10px;background:var(--grad);display:flex;align-items:center;
+justify-content:center;color:#04111b;font-weight:800;font-family:'Sora',sans-serif;font-size:11px;letter-spacing:1px;flex:none}
+.c-brand-name{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:2px;font-size:15px;color:#fff}
+.c-brand-name span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.c-side-nav{flex:1;overflow-y:auto;padding:14px 10px 8px}
+.c-side-group{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#5b6b82;margin:16px 10px 6px;font-weight:600}
+.c-side-group:first-child{margin-top:2px}
+.c-side-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;color:#8ea0b8;
+text-decoration:none;font-size:14px;margin:2px 0}
+.c-side-item:hover{color:#fff;background:rgba(52,211,153,.08);text-decoration:none}
+.c-side-item.active{color:#fff;background:linear-gradient(135deg,rgba(52,211,153,.16),rgba(96,165,250,.14));
+box-shadow:inset 0 0 0 1px rgba(52,211,153,.28)}
+.c-side-item .ic{width:20px;text-align:center;flex:none}
+.c-side-foot{padding:12px 10px;border-top:1px solid #1e2c40}
+.c-wrap{flex:1;margin-left:250px;min-width:0;display:flex;flex-direction:column}
+.c-topbar{position:sticky;top:0;z-index:50;background:rgba(11,17,32,.88);backdrop-filter:blur(8px);
+border-bottom:1px solid #1e2c40;display:flex;align-items:center;gap:14px;padding:12px 22px}
+.c-hamburger{display:none;background:transparent;border:1px solid #2a3a52;color:#e2e8f0;width:38px;height:38px;
+border-radius:9px;cursor:pointer;align-items:center;justify-content:center;font-size:17px;flex:none}
+.c-top-title{flex:1;min-width:0}
+.c-crumb{font-size:12px;color:#5b6b82;margin-bottom:3px}
+.c-top-title h1{margin:0;font-size:20px;font-weight:700;font-family:'Sora',sans-serif;line-height:1.2}
+.c-top-actions{display:flex;align-items:center;gap:10px}
+.c-wrap main{padding:26px 24px 46px;max-width:1080px;margin:0 auto;width:100%}
+.c-wrap footer{margin-top:auto}
+.c-scrim{position:fixed;inset:0;background:rgba(2,6,17,.62);z-index:55;display:none}
+.c-scrim.show{display:block}
+@media (max-width:1024px){
+.c-sidebar{transform:translateX(-100%);transition:transform .2s}
+.c-sidebar.open{transform:none}
+.c-wrap{margin-left:0}
+.c-hamburger{display:inline-flex}
+}
+@media (max-width:640px){.c-wrap main{padding:18px 14px 36px}.c-topbar{padding:10px 14px}}
+</style>
+"""
+
+_CLIENTE_DASH_DRAWER_JS = """
+<script>
+(function () {
+  var hb = document.getElementById("c-hamburger"), sd = document.getElementById("c-sidebar"),
+      sc = document.getElementById("c-scrim");
+  function fecha() { if (sd) sd.classList.remove("open"); if (sc) sc.classList.remove("show"); }
+  if (hb) hb.addEventListener("click", function () {
+    if (sd) sd.classList.toggle("open"); if (sc) sc.classList.toggle("show");
+  });
+  if (sc) sc.addEventListener("click", fecha);
+})();
+</script>
+"""
+
+
+def _cliente_dash_layout():
+    """Layout dashboard do cliente (sidebar + topbar), reaproveitando todo o
+    CSS do AUTH_LAYOUT. Montado por replace com fallback seguro: se algum
+    marcador mudar, a página cai no layout antigo em vez de quebrar."""
+    base = AUTH_LAYOUT
+    corpo_antigo = (
+        "<header>\n"
+        '  <h1><span class="brand">BAP<span>ZX</span></span> <span class="brand-tag">· @@BRAND@@</span></h1>\n'
+        "  @@TOP@@\n"
+        "</header>\n"
+        '<main class="fade-in">@@BODY@@</main>'
     )
-    return nav + drop
+    corpo_novo = (
+        "<div class='c-shell'>\n"
+        "<aside class='c-sidebar' id='c-sidebar'>\n"
+        "  <div class='c-side-brand'><span class='c-side-logo'>BAPZX</span>"
+        "<span class='c-brand-name'>BAP<span>ZX</span></span></div>\n"
+        "  <nav class='c-side-nav' aria-label='Navegação do cliente'>@@NAV@@</nav>\n"
+        "  <div class='c-side-foot'>@@FOOT@@</div>\n"
+        "</aside>\n"
+        "<div class='c-wrap'>\n"
+        "<div class='c-topbar'>\n"
+        "  <button class='c-hamburger' id='c-hamburger' aria-label='Abrir menu'>&#9776;</button>\n"
+        "  <div class='c-top-title'><div class='c-crumb'>Área do Cliente</div><h1>@@PAGE@@</h1></div>\n"
+        "  <div class='c-top-actions'>@@USER@@</div>\n"
+        "</div>\n"
+        '<main class="fade-in">@@BODY@@</main>'
+    )
+    if corpo_antigo in base:
+        base = base.replace(corpo_antigo, corpo_novo)
+    cauda_antiga = "</footer>\n</body>\n</html>"
+    cauda_nova = (
+        "</footer>\n</div>\n</div>\n"
+        "<div class='c-scrim' id='c-scrim'></div>\n"
+        + _CLIENTE_DASH_DRAWER_JS
+        + "\n</body>\n</html>"
+    )
+    if cauda_antiga in base:
+        base = base.replace(cauda_antiga, cauda_nova)
+    if _CLIENTE_DASH_CSS not in base:
+        base = base.replace("</style>", _CLIENTE_DASH_CSS + "\n</style>", 1)
+    return base
+
+
+_CLIENTE_DASH_LAYOUT = _cliente_dash_layout()
+
+
+def _cliente_dash_page(title, page, active, user, body):
+    nav = []
+    for chave, rotulo, href, grupo in _CLIENTE_NAV_ITENS:
+        if grupo:
+            nav.append(f"<div class='c-side-group'>{html.escape(grupo)}</div>")
+        nav.append(
+            f"<a class='c-side-item{' active' if chave == active else ''}' href='{href}'>"
+            f"<span class='ic' aria-hidden='true'>{rotulo.split(' ', 1)[0]}</span>"
+            f"<span>{html.escape(rotulo.split(' ', 1)[1])}</span></a>"
+        )
+    foot = (
+        "<a class='c-side-item' href='/acesso'><span class='ic' aria-hidden='true'>&#8646;</span>"
+        "<span>Trocar área</span></a>"
+        "<a class='c-side-item' href='/logout'><span class='ic' aria-hidden='true'>&#10162;</span>"
+        "<span>Sair</span></a>"
+    )
+    return (
+        _CLIENTE_DASH_LAYOUT.replace("@@TITLE@@", html.escape(title))
+        .replace("@@BRAND@@", "Área do Cliente")
+        .replace("@@NAV@@", "".join(nav))
+        .replace("@@FOOT@@", foot)
+        .replace("@@PAGE@@", html.escape(page))
+        .replace("@@USER@@", _cliente_user_menu(user))
+        .replace("@@BODY@@", body)
+        .replace("@@WHATSAPP@@", SERVICE_WHATSAPP_LINK)
+        .replace("@@TOP@@", ""),
+        200,
+        {"Content-Type": "text/html; charset=utf-8"},
+    )
 
 
 def _status_badge(status):
@@ -3410,8 +3560,7 @@ def cliente():
         "<b>mesmo e-mail</b> da sua conta Google. Se faltar algum pedido, finalize "
         "a compra no Telegram usando esse e-mail no Pix.</p>"
     )
-    top = _cliente_header(user, "visao")
-    return _page("Minha conta", "Área do Cliente", top, body)
+    return _cliente_dash_page("Minha conta", "Visão Geral", "visao", user, body)
 
 
 @app.route("/cliente/perfil", methods=["GET", "POST"])
@@ -3495,7 +3644,6 @@ def cliente_perfil():
         )
         return redirect("/cliente/perfil")
 
-    top = _cliente_header(user, "perfil")
     apelido = str(profile.get("apelido") or "")
     titulo_id = apelido or user["name"]
     avatar_atual = str(profile.get("avatar_url") or "")
@@ -3589,7 +3737,7 @@ def cliente_perfil():
         + _PERFIL_CSS
         + _PERFIL_JS
     )
-    return _page("Meu perfil", "Meu perfil", top, body)
+    return _cliente_dash_page("Meu perfil", "Meu Perfil", "perfil", user, body)
 
 
 @app.route("/cliente/suporte", methods=["GET", "POST"])
@@ -3597,7 +3745,6 @@ def cliente_suporte():
     user = current_user()
     if not user:
         return redirect("/login")
-    top = _cliente_header(user, "suporte")
     email = user["email"].lower()
 
     if request.method == "POST":
@@ -3669,7 +3816,7 @@ def cliente_suporte():
         + chamados
         + "</div>"
     )
-    return _page("Suporte", "Área do Cliente", top, body)
+    return _cliente_dash_page("Suporte", "Suporte", "suporte", user, body)
 
 
 @app.route("/cliente/suporte/<int:ticket_id>", methods=["GET"])
@@ -3693,7 +3840,6 @@ def cliente_suporte_detalhe(ticket_id):
     if not tickets:
         return "Chamado não encontrado.", 404
     ticket = tickets[0]
-    top = _cliente_header(user, "suporte")
     resposta = ""
     if ticket.get("resposta"):
         resposta = (
@@ -3718,7 +3864,7 @@ def cliente_suporte_detalhe(ticket_id):
         html.escape(str(ticket.get("mensagem") or "-")),
         resposta,
     )
-    return _page("Chamado", "Área do Cliente", top, body)
+    return _cliente_dash_page("Chamado", "Suporte", "suporte", user, body)
 
 
 # ============ MARKETPLACE (MARKTRADE) — área do cliente ============
