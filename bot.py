@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.31"
+VERSION = "2.10.32"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3029,7 +3029,7 @@ TELEGRAM_BOT_LINK = "https://t.me/bapzx_bot"
 
 _CLIENTE_NAV_ITENS = (
     ("visao", "&#127968; Dashboard", "/cliente", "PRINCIPAL"),
-    ("pedidos", "&#128230; Meus Pedidos", "/cliente#pedidos", None),
+    ("pedidos", "&#128230; Meus Pedidos", "/cliente/pedidos", None),
     ("pagamentos", "&#128176; Pagamentos", "/cliente/pagamentos", "FINANCEIRO"),
     ("plano", "&#128142; Meu Plano", "/cliente/plano", None),
     ("troca", "&#127991; MARKTRADE", "/cliente/troca", "NEGOCIAÇÃO"),
@@ -3507,57 +3507,165 @@ def cliente():
     total = len(mine)
     em_andamento = sum(1 for o in mine if (o.get("status") or "pendente") in ("pendente", "pago"))
     concluidos = sum(1 for o in mine if (o.get("status") or "pendente") == "entregue")
+    abertos = sum(1 for t in tickets if (t.get("status") or "") == "aberto")
+    resolvidos = sum(1 for t in tickets if (t.get("status") or "") in ("encerrado", "respondido"))
+    vip = _mk_vip_ativo(email)
+    preco_vip = _mk_preco("preco_vip", 12.99)
 
     nome_parts = re.split(r"[\s]+", user["name"].strip()) if user.get("name") else [email.split("@")[0]]
     primeiro = html.escape((nome_parts[0] if nome_parts else "Cliente").title())
 
-    kpis = (
-        "<div class='kpis'>"
-        f"<div class='kpi green'><div class='ic' aria-hidden='true'>&#128230;</div>"
-        f"<div><div class='num'>{total}</div><div class='lbl'>Total de pedidos</div></div></div>"
-        f"<div class='kpi amber'><div class='ic' aria-hidden='true'>&#9203;</div>"
-        f"<div><div class='num'>{em_andamento}</div><div class='lbl'>Em andamento</div></div></div>"
-        f"<div class='kpi blue'><div class='ic' aria-hidden='true'>&#9989;</div>"
-        f"<div><div class='num'>{concluidos}</div><div class='lbl'>Concluídos</div></div></div>"
-        f"<div class='kpi purple'><div class='ic' aria-hidden='true'>&#127903;</div>"
-        f"<div><div class='num'>{len(tickets)}</div><div class='lbl'>Tickets</div></div></div>"
-        "</div>"
-    )
-
-    perfis = (
-        "<div class='grid2'>"
-        "<div class='field-card'><div class='f-lbl'>Nome</div>"
-        f"<div class='f-val'>{html.escape(user['name'])}</div></div>"
-        "<div class='field-card'><div class='f-lbl'>E-mail</div>"
-        f"<div class='f-val'>{html.escape(email)}</div></div>"
-        "<div class='field-card'><div class='f-lbl'>Personagem</div>"
-        f"<div class='f-val'>{html.escape(str(profile.get('personagem') or '—'))}</div></div>"
-        "<div class='field-card'><div class='f-lbl'>Mundo</div>"
-        f"<div class='f-val'>{html.escape(str(profile.get('mundo') or '—'))}</div></div>"
-        "<div class='field-card'><div class='f-lbl'>Apelido</div>"
-        f"<div class='f-val'>{html.escape(str(profile.get('apelido') or '—'))}</div></div>"
-        "<div class='field-card'><div class='f-lbl'>Vocação</div>"
-        f"<div class='f-val'>{html.escape(str(profile.get('vocacao') or '—'))}</div></div>"
-        "</div>"
-    )
-
-    pedidos_panel = ""
-    if mine:
-        sorted_mine = sorted(mine, key=lambda o: o.get("data") or "", reverse=True)
-        ultimo = sorted_mine[0]
-        ultimo_b = (
-            "<div class='help-card' style='margin-top:12px'>"
-            "<div class='h-ic' aria-hidden='true'>&#127881;</div>"
-            "<div class='h-t'>Último pedido</div>"
-            "<div class='h-s' style='margin-top:8px'>"
-            f"<b>#{html.escape(str(ultimo.get('id') or '-'))}</b> · "
-            f"{html.escape(str(ultimo.get('tc') or '-'))} RC · "
-            f"<b>{_fmt_brl(ultimo.get('preco'))}</b><br>"
-            f"<span style='color:var(--muted)'>{html.escape(str(ultimo.get('data') or ''))[:16]} · "
-            f"{html.escape(str(ultimo.get('mundo') or '-'))}</span></div>"
-            "<div style='margin-top:10px'>" + _status_badge(ultimo.get("status")) + "</div>"
-            "</div>"
+    def _uso_barra(rotulo, feitos, total_q):
+        pct = round(100 * feitos / total_q) if total_q else 0
+        return (
+            f"<div class='uso'><div class='uso-top'><span>{html.escape(rotulo)}</span>"
+            f"<span>{feitos}/{total_q}</span></div>"
+            f"<div class='uso-bar'><span style='width:{pct}%'></span></div></div>"
         )
+
+    conta_chip = "&#128994; Conta ativa" if not profile.get("bloqueado") else "&#128308; Conta suspensa"
+    saudacao = (
+        "<div class='welcome'>"
+        f"<div><h2>Olá, {primeiro}! &#128075;</h2>"
+        "<p>Bem-vindo de volta à sua área do cliente BAPZX.</p></div>"
+        f"<span class='conta-chip'>{conta_chip}</span>"
+        "</div>"
+    )
+
+    plano_lbl = f"{_mk_brl(preco_vip)}/mês" if vip else "Grátis"
+    resumo = (
+        "<div class='kpis'>"
+        f"<div class='kpi purple'><div class='ic' aria-hidden='true'>&#128142;</div>"
+        f"<div><div class='num'>{'VIP' if vip else 'Básico'}</div><div class='lbl'>Plano · {plano_lbl}</div></div></div>"
+        f"<div class='kpi green'><div class='ic' aria-hidden='true'>&#128230;</div>"
+        f"<div><div class='num'>{total}</div><div class='lbl'>Pedidos · {em_andamento} em andamento</div></div></div>"
+        f"<div class='kpi blue'><div class='ic' aria-hidden='true'>&#127915;</div>"
+        f"<div><div class='num'>{abertos}</div><div class='lbl'>Tickets abertos</div></div></div>"
+        f"<div class='kpi amber'><div class='ic' aria-hidden='true'>&#129302;</div>"
+        f"<div><div class='num'>{1 if vip else 0}</div><div class='lbl'>Bots ativos</div></div></div>"
+        "</div>"
+    )
+
+    atv = []
+    for o in mine[:3]:
+        st = (o.get("status") or "pendente")
+        icone = "&#128994;" if st == "entregue" else ("&#128309;" if st == "pago" else "&#128993;")
+        atv.append(
+            f"<div class='atv'><span aria-hidden='true'>{icone}</span>"
+            f"<span><b>Pedido #{html.escape(str(o.get('id') or '-'))}</b> — "
+            f"RC {html.escape(str(o.get('tc') or '-'))}</span>{_status_badge(st)}</div>"
+        )
+    for t in tickets[:2]:
+        atv.append(
+            f"<div class='atv'><span aria-hidden='true'>&#128309;</span>"
+            f"<span><b>Ticket #{html.escape(str(t.get('id') or '-'))}</b> — "
+            f"{html.escape(str(t.get('assunto') or '-'))[:40]}</span>{_status_badge(t.get('status'))}</div>"
+        )
+    atividade = (
+        "<div class='panel'><div class='panel-hd'><h2>&#128230; Atividade recente</h2>"
+        "<a class='btn ghost small' href='/cliente/pedidos'>Ver tudo</a></div>"
+        + ("".join(atv) if atv else "<p class='note'>Nenhuma atividade ainda.</p>")
+        + "</div>"
+    )
+
+    acesso = (
+        "<div class='panel'><div class='panel-hd'><h2>&#9889; Acesso rápido</h2></div>"
+        "<div class='grid2'>"
+        f"<a class='help-card' target='_blank' rel='noopener' href='{PORTFOLIO_URL}'>"
+        "<div class='h-ic' aria-hidden='true'>&#128722;</div>"
+        "<div><div class='h-t'>Comprar RC</div>"
+        "<div class='h-s'>Ver ofertas e fechar pedido</div></div></a>"
+        f"<a class='help-card' target='_blank' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>"
+        "<div class='h-ic' aria-hidden='true'>&#128736;</div>"
+        "<div><div class='h-t'>Solicitar serviço</div>"
+        "<div class='h-s'>UP level e serviços no WhatsApp</div></div></a>"
+        "<a class='help-card' href='/cliente/suporte#novo'>"
+        "<div class='h-ic' aria-hidden='true'>&#128172;</div>"
+        "<div><div class='h-t'>Abrir ticket</div>"
+        "<div class='h-s'>Falar com a equipe BAPZX</div></div></a>"
+        "<a class='help-card' href='/cliente/bot'>"
+        "<div class='h-ic' aria-hidden='true'>&#129302;</div>"
+        "<div><div class='h-t'>Gerenciar bot</div>"
+        "<div class='h-s'>Acesso e recursos do seu bot</div></div></a>"
+        "</div></div>"
+    )
+
+    barras = ""
+    if vip:
+        try:
+            from datetime import datetime as _dt
+
+            dt = _mk_parse_dt((_mk_profile(email) or {}).get("vip_until"))
+            restam = max(0, (dt - _dt.utcnow()).days) if dt else 0
+            barras += _uso_barra("Validade do VIP", restam, 30)
+        except Exception:
+            pass
+    barras += _uso_barra("Pedidos concluídos", concluidos, total)
+    barras += _uso_barra("Tickets resolvidos", resolvidos, len(tickets))
+    plano = (
+        "<div class='panel'><div class='panel-hd'><h2>&#128142; Seu plano</h2>"
+        "<a class='btn ghost small' href='/cliente/plano'>Gerenciar plano</a></div>"
+        "<div class='grid2'>"
+        f"<div class='field-card'><div class='f-lbl'>Plano atual</div>"
+        f"<div class='f-val'>{'VIP Pro' if vip else 'Básico'} · {plano_lbl}</div></div>"
+        f"<div class='field-card'><div class='f-lbl'>Uso</div>{barras}</div>"
+        "</div></div>"
+    )
+
+    feed = _cliente_feed_itens(email, profile, tickets, mine)
+    if feed:
+        avisos = "".join(
+            f"<div class='atv'><span aria-hidden='true'>{icone}</span>"
+            f"<span>{texto}</span><span>{acao}</span></div>"
+            for icone, texto, acao in feed[:4]
+        )
+    else:
+        avisos = "<p class='note'>Tudo em dia. &#9989;</p>"
+    avisos_panel = (
+        "<div class='panel'><div class='panel-hd'><h2>&#128276; Avisos</h2>"
+        "<a class='btn ghost small' href='/cliente/notificacoes'>Ver todas</a></div>"
+        + avisos + "</div>"
+    )
+
+    sistema_ok = bool(STORE.remote)
+    status = (
+        "<div class='panel'><div class='panel-hd'><h2>&#127760; Status dos serviços</h2></div>"
+        f"<div class='atv'><span aria-hidden='true'>{'&#128994;' if sistema_ok else '&#128993;'}</span>"
+        f"<span>Sistema</span><span>{'Operacional' if sistema_ok else 'Em manutenção'}</span></div>"
+        f"<div class='atv'><span aria-hidden='true'>&#128994;</span><span>Bot</span>"
+        f"<span><a target='_blank' rel='noopener' href='{TELEGRAM_BOT_LINK}'>Online</a></span></div>"
+        f"<div class='atv'><span aria-hidden='true'>{'&#128994;' if MP_ACCESS_TOKEN else '&#128993;'}</span>"
+        f"<span>Pagamentos</span><span>{'Operacional' if MP_ACCESS_TOKEN else 'A configurar'}</span></div>"
+        "<div class='atv'><span aria-hidden='true'>&#128994;</span><span>Entregas</span><span>Operacional</span></div>"
+        "</div>"
+    )
+
+    dash_css = (
+        "<style>"
+        ".conta-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;"
+        "border-radius:999px;padding:5px 14px;border:1px solid rgba(74,222,128,.35);"
+        "background:rgba(74,222,128,.12);color:var(--green);white-space:nowrap}"
+        ".atv{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:13.5px}"
+        ".atv:last-child{border-bottom:0}"
+        ".atv span:nth-child(2){flex:1;min-width:0}"
+        ".uso{margin:8px 0}"
+        ".uso-top{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}"
+        ".uso-bar{height:8px;border-radius:99px;background:rgba(142,160,184,.15);overflow:hidden}"
+        ".uso-bar span{display:block;height:100%;border-radius:99px;background:var(--grad)}"
+        "</style>"
+    )
+    body = saudacao + resumo + atividade + acesso + plano + avisos_panel + status + dash_css
+    return _cliente_dash_page("Minha conta", "Visão Geral", "visao", user, body)
+
+
+@app.route("/cliente/pedidos", methods=["GET"])
+def cliente_pedidos():
+    user = current_user()
+    if not user:
+        return redirect("/login")
+    email = user["email"].lower()
+    mine = _cliente_pedidos(email)
+    if mine:
         tabela = "".join(
             "<tr>"
             f"<td><b>#{html.escape(str(o.get('id') or '-'))}</b></td>"
@@ -3567,64 +3675,32 @@ def cliente():
             f"<td>{_status_badge(o.get('status'))}</td>"
             "<td><a class='btn ghost small' href='/cliente/suporte'>Ajuda</a></td>"
             "</tr>"
-            for o in sorted_mine[:8]
+            for o in mine
         )
-        pedidos_panel = (
-            "<div class='panel' id='pedidos'>"
-            "<div class='panel-hd'><h2>&#128230; Pedidos recentes</h2>"
-            f"<a class='btn ghost small' href='/cliente'>Ver tudo</a></div>"
+        corpo = (
             "<div class='table-wrap'><table>"
             "<tr><th>Pedido</th><th>Produto</th><th>Data</th><th>Valor</th><th>Status</th><th>Ação</th></tr>"
             + tabela
             + "</table></div>"
-            + ultimo_b
-            + "</div>"
         )
     else:
-        pedidos_panel = (
-            "<div class='panel' id='pedidos'>"
+        corpo = (
             "<div class='empty-state'>"
             "<div class='em-ic' aria-hidden='true'>&#128232;</div>"
             "<h3>Você ainda não possui pedidos</h3>"
             "<p>Quando você fechar uma compra no Telegram com o mesmo e-mail da sua conta, "
             "seus pedidos aparecem aqui.</p>"
             "<a class='btn blue' target='_blank' rel='noopener' href='" + PORTFOLIO_URL + "'>Explorar serviços</a>"
-            "</div></div>"
+            "</div>"
         )
-
-    ajuda = (
-        "<div class='panel'>"
-        "<div class='panel-hd'><h2>&#129309; Precisa de ajuda?</h2></div>"
-        "<div class='grid2'>"
-        "<a class='help-card' href='/cliente/suporte'>"
-        "<div class='h-ic' aria-hidden='true'>&#128172;</div>"
-        "<div><div class='h-t'>Novo atendimento</div>"
-        "<div class='h-s'>Abra um chamado com a equipe BAPZX</div></div></a>"
-        "<a class='help-card' href='/cliente/suporte#chamados'>"
-        "<div class='h-ic' aria-hidden='true'>&#128279;</div>"
-        "<div><div class='h-t'>Meus tickets</div>"
-        "<div class='h-s'>Acompanhe seus chamados abertos</div></div></a>"
-        "</div></div>"
-    )
-
     body = (
-        "<div class='welcome'>"
-        f"<div><h2>Olá, {primeiro}! &#128075;</h2>"
-        "<p>Bem-vindo de volta à sua área do cliente BAPZX.</p></div>"
-        "<a class='btn' target='_blank' rel='noopener' href='" + PORTFOLIO_URL + "'>Fazer um novo pedido</a>"
-        "</div>"
-        + kpis
-        + pedidos_panel
-        + ajuda
-        + "<div class='panel'><div class='panel-hd'><h2>&#128100; Meu perfil</h2>"
-        "<a class='btn ghost small' href='/cliente/perfil'>Editar perfil</a></div>"
-        + perfis
-        + "</div>"
+        "<div class='panel'><div class='panel-hd'><h2>&#128230; Meus pedidos</h2></div>"
+        + corpo + "</div>"
         "<p class='note'>Os pedidos aparecem aqui quando o pagamento foi solicitado com o "
         "<b>mesmo e-mail</b> da sua conta Google. Se faltar algum pedido, finalize "
         "a compra no Telegram usando esse e-mail no Pix.</p>"
     )
-    return _cliente_dash_page("Minha conta", "Visão Geral", "visao", user, body)
+    return _cliente_dash_page("Meus Pedidos", "Meus Pedidos", "pedidos", user, body)
 
 
 @app.route("/cliente/perfil", methods=["GET", "POST"])
@@ -4199,6 +4275,60 @@ def cliente_plano():
     return _cliente_dash_page("Meu Plano", "Meu Plano", "plano", user, body)
 
 
+def _cliente_feed_itens(email, profile, tickets, mine):
+    """Itens do feed do cliente (avisos/notificações) como (icone, texto, acao).
+    Nunca derruba."""
+    feed = []
+    try:
+        if not (profile.get("personagem") or "").strip():
+            feed.append(
+                ("&#128100;", "Complete seu perfil com personagem e mundo.",
+                 "<a class='btn ghost small' href='/cliente/perfil'>Completar</a>")
+            )
+        for o in [x for x in mine if (x.get("status") or "") == "pendente"][:3]:
+            feed.append(
+                ("&#9203;", f"Pedido #{o.get('id')} aguarda pagamento "
+                 f"({_fmt_brl(o.get('preco'))}).",
+                 _status_badge("pendente"))
+            )
+        for o in mine[:3]:
+            if (o.get("status") or "") == "pago":
+                feed.append(
+                    ("&#9989;", f"Pagamento do pedido #{o.get('id')} confirmado.",
+                     _status_badge("pago"))
+                )
+            elif (o.get("status") or "") == "entregue":
+                feed.append(
+                    ("&#127881;", f"Pedido #{o.get('id')} concluído. Obrigado!",
+                     _status_badge("entregue"))
+                )
+        for t in tickets[:5]:
+            if (t.get("status") or "") == "respondido":
+                feed.append(
+                    ("&#128172;", f"Nova resposta no chamado #{t.get('id')}.",
+                     f"<a class='btn ghost small' href='/cliente/suporte/{t.get('id')}'>Ver</a>")
+                )
+            elif (t.get("status") or "") == "aberto":
+                feed.append(
+                    ("&#9203;", f"Chamado #{t.get('id')} em atendimento.",
+                     _status_badge("aberto"))
+                )
+        try:
+            from datetime import datetime as _dt
+
+            dt = _mk_parse_dt((_mk_profile(email) or {}).get("vip_until"))
+            if dt and _mk_vip_ativo(email) and (dt - _dt.utcnow()).days <= 7:
+                feed.append(
+                    ("&#128142;", "Seu VIP vence em breve.",
+                     "<a class='btn ghost small' href='/cliente/troca/vip'>Renovar</a>")
+                )
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return feed
+
+
 @app.route("/cliente/notificacoes", methods=["GET"])
 def cliente_notificacoes():
     user = current_user()
@@ -4208,51 +4338,7 @@ def cliente_notificacoes():
     profile = _cliente_profile(email)
     tickets = _cliente_tickets(email)
     mine = _cliente_pedidos(email)
-    feed = []
-    if not (profile.get("personagem") or "").strip():
-        feed.append(
-            ("&#128100;", "Complete seu perfil com personagem e mundo.",
-             "<a class='btn ghost small' href='/cliente/perfil'>Completar</a>")
-        )
-    for o in [x for x in mine if (x.get("status") or "") == "pendente"][:3]:
-        feed.append(
-            ("&#9203;", f"Pedido #{o.get('id')} aguarda pagamento "
-             f"({_fmt_brl(o.get('preco'))}).",
-             _status_badge("pendente"))
-        )
-    for o in mine[:3]:
-        if (o.get("status") or "") == "pago":
-            feed.append(
-                ("&#9989;", f"Pagamento do pedido #{o.get('id')} confirmado.",
-                 _status_badge("pago"))
-            )
-        elif (o.get("status") or "") == "entregue":
-            feed.append(
-                ("&#127881;", f"Pedido #{o.get('id')} concluído. Obrigado!",
-                 _status_badge("entregue"))
-            )
-    for t in tickets[:5]:
-        if (t.get("status") or "") == "respondido":
-            feed.append(
-                ("&#128172;", f"Nova resposta no chamado #{t.get('id')}.",
-                 f"<a class='btn ghost small' href='/cliente/suporte/{t.get('id')}'>Ver</a>")
-            )
-        elif (t.get("status") or "") == "aberto":
-            feed.append(
-                ("&#9203;", f"Chamado #{t.get('id')} em atendimento.",
-                 _status_badge("aberto"))
-            )
-    try:
-        from datetime import datetime as _dt
-
-        dt = _mk_parse_dt((_mk_profile(email) or {}).get("vip_until"))
-        if dt and _mk_vip_ativo(email) and (dt - _dt.utcnow()).days <= 7:
-            feed.append(
-                ("&#128142;", "Seu VIP vence em breve.",
-                 "<a class='btn ghost small' href='/cliente/troca/vip'>Renovar</a>")
-            )
-    except Exception:
-        pass
+    feed = _cliente_feed_itens(email, profile, tickets, mine)
     if feed:
         itens = "".join(
             f"<div class='help-card'><div class='h-ic' aria-hidden='true'>{icone}</div>"

@@ -62,9 +62,24 @@ class TestClienteDash(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         corpo = resp.get_data(as_text=True)
         self._assert_dash(corpo, "/cliente", "Visão Geral")
-        # dados reaproveitados
-        self.assertIn("Total de pedidos", corpo)
-        self.assertIn("Meu perfil", corpo)
+        # 7 blocos, sem poluição
+        self.assertIn("Conta ativa", corpo)
+        self.assertIn("Atividade recente", corpo)
+        self.assertIn("Acesso rápido", corpo)
+        self.assertIn("Seu plano", corpo)
+        self.assertIn("Avisos", corpo)
+        self.assertIn("Status dos serviços", corpo)
+        self.assertIn("Gerenciar plano", corpo)
+        self.assertNotIn("Últimos pedidos", corpo)
+        self.assertNotIn("Precisa de ajuda?", corpo)
+
+    def test_pedidos_pagina_propria(self):
+        extra = [mock.patch.object(bot.STORE, "list", lambda: [])]
+        resp = self._get("/cliente/pedidos", extra)
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self._assert_dash(corpo, "/cliente/pedidos", "Meus Pedidos")
+        self.assertIn("mesmo e-mail", corpo)
 
     def test_perfil_no_dash(self):
         resp = self._get("/cliente/perfil")
