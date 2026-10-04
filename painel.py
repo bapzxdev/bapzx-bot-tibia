@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.36"
+VERSION = "2.10.37"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -787,7 +787,7 @@ body { font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color
 .n-desc { font-size:12px; color:#5b6b82; margin-top:3px; }
 .n-desc a { color:#60a5fa; text-decoration:none; }
 .n-desc a:hover { text-decoration:underline; }
-.content { flex:1; width:100%; max-width:1200px; margin:0 auto; padding:24px 24px 64px; box-sizing:border-box; }
+.content { flex:1; width:100%; max-width:none; margin:0; padding:24px 32px 64px; box-sizing:border-box; }
 .scrim { position:fixed; inset:0; background:rgba(2,6,17,.62); z-index:45; display:none; }
 .scrim.show { display:block; }
 .page-sub { color:#8ea0b8; font-size:14px; margin:4px 0 6px; }

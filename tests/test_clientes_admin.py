@@ -251,6 +251,11 @@ class TestClientesAdmin(unittest.TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(posted["json"].get("nota_interna"), "Cliente recorrente.")
 
+    def test_conteudo_admin_largura_total(self):
+        # O .content nao pode travar em 1200px (site comprimido em monitor wide).
+        self.assertNotIn("max-width:1200px", painel.LAYOUT_HEAD)
+        self.assertIn(".content", painel.LAYOUT_HEAD)
+
     def test_editar_csrf_403(self):
         _login(self.client)
         with mock.patch.object(painel, "_audit", lambda *a, **k: None):
