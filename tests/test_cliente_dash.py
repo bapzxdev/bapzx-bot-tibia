@@ -122,7 +122,7 @@ class TestClienteDash(unittest.TestCase):
         self._assert_dash(corpo, "/cliente/suporte", "Suporte")
         self.assertIn("Chamado #7", corpo)
 
-    def test_troca_segue_no_layout_antigo(self):
+    def test_troca_com_sidebar_sincronizada(self):
         extra = [
             mock.patch.object(bot, "_cliente_header", lambda user, x: "top-mock"),
             mock.patch.object(bot, "_mk_ativo", lambda: True),
@@ -134,8 +134,12 @@ class TestClienteDash(unittest.TestCase):
         resp = self._get("/cliente/troca", extra)
         self.assertEqual(resp.status_code, 200)
         corpo = resp.get_data(as_text=True)
-        self.assertNotIn("c-sidebar", corpo)
-        self.assertNotIn("c-topbar", corpo)
+        self.assertIn("c-sidebar", corpo)
+        self.assertIn("c-topbar", corpo)
+        self.assertIn("<a class='c-side-item active' href='/cliente/troca'", corpo)
+        self.assertIn("MARKTRADE", corpo)
+        self.assertNotIn("@@", corpo)
+        self.assertNotIn("_blank", corpo)
         self.assertIn("Publicar anúncio", corpo)
 
 

@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.33"
+VERSION = "2.10.34"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -3007,6 +3007,8 @@ def _cliente_user_menu(user):
 
 
 def _cliente_header(user, active="visao"):
+    # Legado: todas as páginas do cliente usam o dashboard (_cliente_dash_page).
+    # Mantido para compatibilidade (testes o referenciam).
     nav = (
         "<nav class='nav' aria-label='Navegação do cliente'>"
         "<a class='nav-link %s' href='/cliente'>Visão Geral</a>"
@@ -4490,7 +4492,6 @@ def cliente_troca():
     if not user:
         return redirect("/login")
     email = user["email"].lower()
-    top = _cliente_header(user, "troca")
 
     cfg = _marketplace_config() or {}
     preco_pub = _mk_preco("preco_publicacao", 2.99)
@@ -4707,7 +4708,7 @@ def cliente_troca():
         + vip_card
         + tables
     )
-    return _page("MARKTRADE", "Área do Cliente", top, body)
+    return _cliente_dash_page("MARKTRADE", "MARKTRADE", "troca", user, body)
 
 
 @app.route("/cliente/troca/publicar", methods=["POST"])
@@ -4960,7 +4961,6 @@ def cliente_troca_pagar(lid):
     if (listing.get("status") or "") in ("encerrada", "bloqueada"):
         _mk_flash("erro", "Este anúncio foi encerrado.")
         return redirect("/cliente/troca")
-    top = _cliente_header(user, "troca")
 
     pag = None
     for p in _mk_meus_pagamentos(email):
@@ -5017,7 +5017,7 @@ def cliente_troca_pagar(lid):
         "<a href='/termos'>Termos de Uso</a> e <a href='/privacidade'>Política de Privacidade</a> (LGPD)."
         "</div>"
     )
-    return _page("Pagamento", "Área do Cliente", top, body)
+    return _cliente_dash_page("Pagamento", "MARKTRADE", "troca", user, body)
 
 
 @app.route("/cliente/troca/cancelar/<int:lid>", methods=["POST"])
@@ -5095,7 +5095,6 @@ def cliente_troca_vip():
     if not user:
         return redirect("/login")
     email = user["email"].lower()
-    top = _cliente_header(user, "troca")
 
     if request.method == "POST":
         if not _csrf_ok():
@@ -5224,7 +5223,7 @@ def cliente_troca_vip():
         + status_card
         + assinar
     )
-    return _page("VIP BAPZX", "Área do Cliente", top, body)
+    return _cliente_dash_page("VIP BAPZX", "MARKTRADE", "troca", user, body)
 
 
 def notify_owner(entry):

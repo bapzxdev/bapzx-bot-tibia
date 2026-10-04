@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.29"
+VERSION = "2.10.36"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -1715,10 +1715,44 @@ def _ultimos_acessos():
     return acessos
 
 
-def _clientes_rows(profiles, orders, acessos=None, pode_gerenciar=False):
-    acessos = acessos or {}
+def _clientes_vip_ativo(profile):
+    """True se profiles.vip_until está no futuro (plano PRO). Fail-soft."""
+    try:
+        raw = (profile.get("vip_until") or "").strip()
+        if not raw:
+            return False
+        iso = raw.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(iso)
+        now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.utcnow()
+        return dt > now
+    except Exception:
+        return False
+
+
+def _clientes_plano(profile):
+    """Plano derivado sem migration: MASTER (role admin) > PRO (vip ativo) > Básico."""
+    role = str(profile.get("role") or "cliente").lower()
+    if role in ("admin", "administrador", "master"):
+        return "MASTER"
+    if _clientes_vip_ativo(profile):
+        return "PRO"
+    return "Básico"
+
+
+def _clientes_whats_link(whatsapp):
+    """WhatsApp clicável (wa.me) quando houver número válido; senão '-'."""
+    raw = str(whatsapp or "").strip()
+    digits = re.sub(r"\D", "", raw)
+    if len(digits) < 10:
+        return "-"
+    label = html.escape(raw)
+    return f"<a href='https://wa.me/{digits}' target='_blank' rel='noopener'>📱 {label}</a>"
+
+
+def _clientes_stats(profiles, orders):
+    """Agrega pedidos por e-mail (união profiles + só-pedidos)."""
     pedidos_por_email = {}
-    for order in orders:
+    for order in orders or []:
         email = (order.get("email") or "").strip().lower()
         if not email:
             continue
@@ -1726,47 +1760,88 @@ def _clientes_rows(profiles, orders, acessos=None, pode_gerenciar=False):
         item["pedidos"] += 1
         if (order.get("status") or "") in ("pago", "entregue"):
             item["gasto"] += _parse_brl(order.get("preco"))
-    por_email = {p.get("email", "").strip().lower(): p for p in profiles}
+    por_email = {(p.get("email") or "").strip().lower(): p for p in profiles or [] if (p.get("email") or "").strip()}
     emails = sorted(set(list(por_email) + list(pedidos_por_email)))
+    return por_email, pedidos_por_email, emails
+
+
+def _clientes_rows(profiles, orders, acessos=None, pode_gerenciar=False, busca="", filtro="todos"):
+    acessos = acessos or {}
+    busca = (busca or "").strip().lower()
+    filtro = (filtro or "todos").strip().lower()
+    por_email, pedidos_por_email, emails = _clientes_stats(profiles, orders)
     rows = ""
     for email in emails:
         profile = por_email.get(email) or {}
-        stats = pedidos_por_email.get(email, {})
-        bloqueado = "<span class='status cancelado'>bloqueado</span>" if profile.get("bloqueado") else "<span class='status pago'>ativo</span>"
-        role = html.escape(str(profile.get("role") or "cliente"))
-        nome = html.escape(str(profile.get("name") or email))
-        whatsapp = html.escape(str(profile.get("whatsapp") or "-"))
-        cadastro = html.escape(_fmt_data(profile.get("created_at")))
+        stats = pedidos_por_email.get(email, {"pedidos": 0, "gasto": 0.0})
+        n_ped = stats.get("pedidos", 0)
+        bloqueado = bool(profile.get("bloqueado"))
+        role = str(profile.get("role") or "cliente")
+        plano = _clientes_plano(profile)
+        nome = str(profile.get("name") or email)
+        whats = str(profile.get("whatsapp") or "")
+        if busca and busca not in f"{email} {nome} {whats}".lower():
+            continue
+        if filtro == "ativos" and bloqueado:
+            continue
+        if filtro == "bloqueados" and not bloqueado:
+            continue
+        if filtro == "admin" and role.lower() not in ("admin", "administrador", "master"):
+            continue
+        if filtro == "cliente" and role.lower() in ("admin", "administrador", "master"):
+            continue
+        if filtro == "com_pedidos" and n_ped <= 0:
+            continue
+        if filtro == "sem_pedidos" and n_ped > 0:
+            continue
+        if filtro == "pro" and plano != "PRO" and plano != "MASTER":
+            # PRO inclui MASTER (tem tudo do PRO); filtro dedicado mostra só PRO puro?
+            # Mantém MASTER visível para não sumir o dono da lista.
+            if plano != "MASTER":
+                continue
+        badge = "<span class='status cancelado'>bloqueado</span>" if bloqueado else "<span class='status pago'>ativo</span>"
+        cadastro = html.escape(_fmt_data(profile.get("created_at") or profile.get("criado_em")))
         ultimo = html.escape(_fmt_dt(acessos.get(email), 16))
-        acoes = (
-            f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' "
-            f"href='/admin/clientes/{html.escape(email)}'>Ver perfil</a>"
-        )
+        whats_cell = _clientes_whats_link(whats)
+        plano_badge = {"MASTER": "⭐ MASTER", "PRO": "⭐ PRO"}.get(plano, html.escape(plano))
+        csrf = html.escape(_csrf_token())
+        rotulo = "Desbloquear" if bloqueado else "Bloquear"
+        detalhe = f"/admin/clientes/{html.escape(email)}"
         if pode_gerenciar:
-            rotulo = "Desbloquear" if profile.get("bloqueado") else "Bloquear"
-            cor = "#065f46" if profile.get("bloqueado") else "#7f1d1d"
-            texto = "#4ade80" if profile.get("bloqueado") else "#fca5a5"
-            acoes += (
-                f"<form method='post' action='/admin/clientes/{html.escape(email)}/bloquear' style='display:inline'>"
-                f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-                f"<button style='background:{cor};border:0;color:{texto};border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;margin-left:4px'>{rotulo}</button></form>"
+            menu = (
+                "<details style='position:relative;display:inline-block'>"
+                "<summary style='cursor:pointer;list-style:none;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:5px 10px;font-size:14px'>⋮</summary>"
+                "<div style='position:absolute;right:0;z-index:20;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:6px;min-width:190px'>"
+                f"<a class='btn ghost' style='display:block;text-align:left;margin:2px 0;font-size:12px' href='{detalhe}'>👁️ Ver perfil</a>"
+                f"<a class='btn ghost' style='display:block;text-align:left;margin:2px 0;font-size:12px' href='{detalhe}#dados'>✏️ Editar</a>"
+                f"<a class='btn ghost' style='display:block;text-align:left;margin:2px 0;font-size:12px' href='/admin/pedidos?busca={html.escape(email)}'>🛒 Pedidos</a>"
+                f"<a class='btn ghost' style='display:block;text-align:left;margin:2px 0;font-size:12px' href='{detalhe}#tickets'>🎫 Tickets</a>"
+                f"<a class='btn ghost' style='display:block;text-align:left;margin:2px 0;font-size:12px' href='{detalhe}#plano'>⭐ Alterar plano</a>"
+                f"<a class='btn ghost' style='display:block;text-align:left;margin:2px 0;font-size:12px' href='{detalhe}#nota'>📝 Nota interna</a>"
+                f"<form method='post' action='/admin/clientes/{html.escape(email)}/bloquear' style='margin:2px 0'>"
+                f"<input type='hidden' name='_csrf' value='{csrf}'>"
+                f"<button style='width:100%;text-align:left;background:transparent;border:0;color:#fca5a5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px'>🔒 {rotulo}</button></form>"
+                "</div></details>"
             )
+        else:
+            menu = f"<a class='btn ghost' style='padding:5px 10px;font-size:12px' href='{detalhe}'>Ver perfil</a>"
         rows += (
             "<tr>"
             f"<td>{html.escape(email)}</td>"
-            f"<td>{nome}</td>"
-            f"<td>{whatsapp}</td>"
+            f"<td>{html.escape(nome)}</td>"
+            f"<td>{whats_cell}</td>"
             f"<td>{cadastro}</td>"
-            f"<td>{role}</td>"
-            f"<td>{stats.get('pedidos', 0)}</td>"
+            f"<td>{html.escape(role)}</td>"
+            f"<td>{plano_badge}</td>"
+            f"<td>{n_ped}</td>"
             f"<td>{_fmt_brl(stats.get('gasto', 0))}</td>"
             f"<td>{ultimo}</td>"
-            f"<td>{bloqueado}</td>"
-            f"<td class='acts'>{acoes}</td>"
+            f"<td>{badge}</td>"
+            f"<td class='acts'>{menu}</td>"
             "</tr>"
         )
     if not rows:
-        rows = "<tr><td colspan='10' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum cliente encontrado.</td></tr>"
+        rows = "<tr><td colspan='11' class='empty' style='color:#64748b;padding:18px;text-align:center'>Nenhum cliente encontrado.</td></tr>"
     return rows
 
 
@@ -1779,19 +1854,43 @@ def admin_clientes():
     orders = _fetch("pedidos", order="data.asc")
     acessos = _ultimos_acessos()
     pode_gerenciar = rbac.tem_perm(user.get("cargo"), user.get("perms"), "gerenciar_clientes")
-    bloqueados = sum(1 for p in profiles if p.get("bloqueado"))
+    busca = (request.args.get("busca") or request.args.get("q") or "").strip()
+    filtro = (request.args.get("filtro") or request.args.get("f") or "todos").strip().lower()
+    por_email, pedidos_por_email, emails = _clientes_stats(profiles, orders)
+    total = len(emails)
+    bloqueados = sum(1 for e in emails if (por_email.get(e) or {}).get("bloqueado"))
+    ativos = total - bloqueados
+    compradores = sum(1 for e in emails if pedidos_por_email.get(e, {}).get("pedidos", 0) > 0)
+    faturado = sum(v.get("gasto", 0.0) for v in pedidos_por_email.values())
     body = (
         "<div class='cards'>"
-        f"<div class='card'><div class='num'>{len(profiles)}</div><div class='lbl'>Perfis</div></div>"
-        f"<div class='card'><div class='num'>{len(profiles) - bloqueados}</div><div class='lbl'>Ativos</div></div>"
-        f"<div class='card'><div class='num'>{bloqueados}</div><div class='lbl'>Bloqueados</div></div>"
+        f"<div class='card'><div class='num'>👥 {total}</div><div class='lbl'>Total clientes</div></div>"
+        f"<div class='card'><div class='num'>🟢 {ativos}</div><div class='lbl'>Ativos</div></div>"
+        f"<div class='card'><div class='num'>🔴 {bloqueados}</div><div class='lbl'>Bloqueados</div></div>"
+        f"<div class='card'><div class='num'>🛒 {compradores}</div><div class='lbl'>Compradores</div></div>"
+        f"<div class='card'><div class='num'>💰 {_fmt_brl(faturado)}</div><div class='lbl'>Faturamento</div></div>"
         "</div>"
+    )
+    filtros_opts = [("todos", "Todos"), ("ativos", "Ativos"), ("bloqueados", "Bloqueados"),
+                    ("admin", "Admin"), ("cliente", "Cliente"),
+                    ("com_pedidos", "Com pedidos"), ("sem_pedidos", "Sem pedidos"), ("pro", "PRO")]
+    chips = ""
+    for val, lbl in filtros_opts:
+        ativo = "background:#065f46;border-color:#10b981;color:#fff" if val == filtro else ""
+        chips += (f"<a class='btn ghost' style='font-size:12px;{ativo}' "
+                  f"href='/admin/clientes?busca={html.escape(busca)}&filtro={val}'>{lbl}</a> ")
+    body += (
+        "<section class='filtros'><form method='get' style='display:flex;gap:8px;flex-wrap:wrap;align-items:center'>"
+        f"<input type='search' name='busca' placeholder='Buscar cliente... nome / e-mail / WhatsApp' value='{html.escape(busca)}' style='min-width:280px'>"
+        f"<input type='hidden' name='filtro' value='{html.escape(filtro)}'>"
+        "<button class='ghost'>Buscar</button></form>"
+        f"<div style='margin-top:8px;display:flex;gap:6px;flex-wrap:wrap'>{chips}</div></section>"
     )
     body += (
         "<section><h2>Clientes</h2><table>"
         "<tr><th>E-mail</th><th>Nome</th><th>WhatsApp</th><th>Cadastro</th><th>Papel</th>"
-        "<th>Pedidos</th><th>Gasto total</th><th>Último acesso</th><th>Status</th><th>Ações</th></tr>"
-        + _clientes_rows(profiles, orders, acessos, pode_gerenciar)
+        "<th>Plano</th><th>Pedidos</th><th>Gasto total</th><th>Último acesso</th><th>Status</th><th>Ações</th></tr>"
+        + _clientes_rows(profiles, orders, acessos, pode_gerenciar, busca=busca, filtro=filtro)
         + "</table></section>"
     )
     return _admin_page(user, "Clientes", body, "clientes")
@@ -1813,15 +1912,51 @@ def admin_cliente_detalhe(email):
     orders = _fetch("pedidos", order="data.desc", range_="0-499")
     mine = [o for o in orders if (o.get("email") or "").strip().lower() == email_decoded]
     rows = _orders_rows(mine, with_actions=True, csrf=_csrf_token())
-    status_badge = "<span class='status cancelado'>bloqueado</span>" if profile.get("bloqueado") else "<span class='status pago'>ativo</span>"
+    try:
+        tickets = _fetch_soft("tickets", order="criado_em.desc", range_="0-200") or []
+    except Exception:
+        tickets = []
+    meus_tickets = [t for t in tickets if (t.get("email") or "").strip().lower() == email_decoded]
+    try:
+        servicos_all = _fetch_soft("servicos_manuais", order="criado_em.desc", range_="0-200") or []
+    except Exception:
+        servicos_all = []
+    whats_digits = re.sub(r"\D", "", str(profile.get("whatsapp") or ""))
+    nome_ref = str(profile.get("name") or "").strip().lower()
+    meus_servicos = []
+    for s in servicos_all:
+        s_whats = re.sub(r"\D", "", str(s.get("whatsapp") or ""))
+        s_nome = str(s.get("nome_cliente") or "").strip().lower()
+        if whats_digits and s_whats and s_whats == whats_digits:
+            meus_servicos.append(s)
+        elif nome_ref and s_nome and (s_nome == nome_ref or nome_ref in s_nome or s_nome in nome_ref):
+            meus_servicos.append(s)
+    acessos = _ultimos_acessos()
+    plano = _clientes_plano(profile)
+    vip_raw = str(profile.get("vip_until") or "")
+    status_badge = "<span class='status cancelado'>🔴 bloqueado</span>" if profile.get("bloqueado") else "<span class='status pago'>🟢 Ativo</span>"
+    papel = html.escape(str(profile.get("role") or "cliente"))
+    cadastro = html.escape(_fmt_data(profile.get("created_at") or profile.get("criado_em")))
+    ultimo = html.escape(_fmt_dt(acessos.get(email_decoded), 16))
+    whats_cell = _clientes_whats_link(profile.get("whatsapp"))
+    apelido = html.escape(str(profile.get("name") or email_decoded))
+    total_gasto = sum(_parse_brl(o.get("preco")) for o in mine if (o.get("status") or "") in ("pago", "entregue"))
+    total_ped = len(mine)
+    ticket_medio = (total_gasto / total_ped) if total_ped else 0.0
+    ultima_compra = max([str(o.get("data") or "") for o in mine if o.get("data")] or [""])
+    ult_pag = max([str(o.get("pix_confirmado_em") or o.get("data_pagamento") or o.get("data") or "") for o in mine if (o.get("status") or "") in ("pago", "entregue")] or [""])
+    nota_atual = str(profile.get("nota_interna") or profile.get("notas") or "")
     form = (
-        "<section><h2>Dados do perfil</h2>"
+        "<section id='dados'><h2>👤 Informações</h2>"
         f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/editar'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        f"<label>E-mail</label><input value='{html.escape(email_decoded)}' disabled>"
         f"<label>Nome</label><input name='name' value='{html.escape(str(profile.get('name') or ''))}'>"
-        f"<label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(profile.get('whatsapp') or ''))}' placeholder='(11) 99999-9999'>"
+        f"<label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(profile.get('whatsapp') or ''))}' placeholder='(19) 99999-9999'>"
         f"<label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}'>"
         f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}'>"
+        f"<label>Cadastro</label><input value='{cadastro}' disabled>"
+        f"<label>Último acesso</label><input value='{ultimo}' disabled>"
         "<label>Papel</label>"
         f"<select name='role'><option value='cliente' {'selected' if not profile.get('role') or profile.get('role') == 'cliente' else ''}>cliente</option>"
         f"<option value='admin' {'selected' if profile.get('role') == 'admin' else ''}>admin</option></select>"
@@ -1829,7 +1964,58 @@ def admin_cliente_detalhe(email):
         f"<a class='btn ghost' href='/admin/clientes'>Voltar</a></p>"
         "</form></section>"
     )
-    acoes = ""
+    financeiro = (
+        "<section><h2>💰 Financeiro</h2><div class='cards'>"
+        f"<div class='card'><div class='num'>{_fmt_brl(total_gasto)}</div><div class='lbl'>Total gasto</div></div>"
+        f"<div class='card'><div class='num'>{total_ped}</div><div class='lbl'>Total de pedidos</div></div>"
+        f"<div class='card'><div class='num'>{_fmt_brl(ticket_medio)}</div><div class='lbl'>Pedido médio</div></div>"
+        f"<div class='card'><div class='num'>{html.escape(_fmt_data(ultima_compra))}</div><div class='lbl'>Última compra</div></div>"
+        f"<div class='card'><div class='num'>{html.escape(_fmt_dt(ult_pag, 16))}</div><div class='lbl'>Último pagamento</div></div>"
+        "</div></section>"
+    )
+    plano_sec = (
+        "<section id='plano'><h2>⭐ Plano</h2>"
+        f"<p>Plano atual: <b>{html.escape(plano)}</b>" + (f" · VIP até {html.escape(_fmt_dt(vip_raw, 16))}" if vip_raw else "") + "</p>"
+        f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/plano'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        "<label>Alterar plano</label><select name='plano'><option value='basico'>Básico (Cliente)</option>"
+        "<option value='pro'>PRO (VIP 30 dias)</option><option value='master'>MASTER (admin)</option></select>"
+        "<label>Dias PRO (quando PRO)</label><input name='dias' value='30' inputmode='numeric'>"
+        "<p style='margin-top:10px'><button class='btn' type='submit'>Aplicar plano</button></p></form>"
+        "<p style='color:#64748b;font-size:12px'>Estrutura preparada: PRO usa vip_until; MASTER usa papel admin.</p></section>"
+    )
+    ticks_rows = ""
+    for t in meus_tickets[:50]:
+        ticks_rows += ("<tr>" f"<td>{html.escape(str(t.get('id') or '-'))}</td>"
+                       f"<td>{html.escape(_fmt_dt(t.get('criado_em'), 16))}</td>"
+                       f"<td>{html.escape(str(t.get('assunto') or t.get('titulo') or '-'))}</td>"
+                       f"<td>{html.escape(str(t.get('status') or '-'))}</td></tr>")
+    if not ticks_rows:
+        ticks_rows = "<tr><td colspan='4' class='empty' style='color:#64748b;padding:14px;text-align:center'>Sem tickets.</td></tr>"
+    tickets_sec = ("<section id='tickets'><h2>🎫 Tickets</h2><table>"
+                   "<tr><th>Id</th><th>Abertura</th><th>Assunto</th><th>Status</th></tr>" + ticks_rows + "</table></section>")
+    serv_rows = ""
+    for s in meus_servicos[:50]:
+        serv_rows += ("<tr>" f"<td>{html.escape(_fmt_data(s.get('data') or s.get('criado_em')))}</td>"
+                      f"<td>{html.escape(str(s.get('servico') or '-'))}</td>"
+                      f"<td>{html.escape(str(s.get('valor') or '-'))}</td>"
+                      f"<td>{html.escape(str(s.get('status') or '-'))}</td></tr>")
+    if not serv_rows:
+        serv_rows = "<tr><td colspan='4' class='empty' style='color:#64748b;padding:14px;text-align:center'>Sem serviços (UP Level etc.).</td></tr>"
+    serv_sec = ("<section id='servicos'><h2>⚙️ Serviços</h2><table>"
+                "<tr><th>Data</th><th>Serviço</th><th>Valor</th><th>Status</th></tr>" + serv_rows + "</table></section>")
+    nota_sec = (
+        "<section id='nota'><h2>📝 Notas internas (só ADM vê)</h2>"
+        f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/editar'>"
+        f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
+        f"<input type='hidden' name='name' value='{html.escape(str(profile.get('name') or ''))}'>"
+        f"<input type='hidden' name='whatsapp' value='{html.escape(str(profile.get('whatsapp') or ''))}'>"
+        f"<input type='hidden' name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}'>"
+        f"<input type='hidden' name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}'>"
+        f"<input type='hidden' name='role' value='{html.escape(str(profile.get('role') or 'cliente'))}'>"
+        f"<label>Nota</label><textarea name='nota_interna' rows='3' style='width:100%' placeholder='Ex.: Cliente recorrente. Costuma comprar RC e contratar UP.'>{html.escape(nota_atual)}</textarea>"
+        "<p style='margin-top:10px'><button class='btn' type='submit'>Salvar nota</button></p></form></section>"
+    )
     if profile.get("bloqueado"):
         acoes = (
             "<form method='post' action='/admin/clientes/{e}/bloquear' style='display:inline'>"
@@ -1843,15 +2029,23 @@ def admin_cliente_detalhe(email):
             "<button style='background:#7f1d1d;border:0;color:#fca5a5;border-radius:6px;padding:6px 12px;cursor:pointer'>Bloquear</button></form>"
         ).format(e=html.escape(email_decoded))
     body = (
-        f"<div class='cards'><div class='card'><div class='num'>{html.escape(email_decoded)}</div><div class='lbl'>E-mail</div></div>"
-        f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div></div>"
+        f"<div class='cards'><div class='card'><div class='num' style='font-size:15px;word-break:break-all'>{apelido}</div><div class='lbl'>{html.escape(email_decoded)}</div></div>"
+        f"<div class='card'><div class='num'>{status_badge}</div><div class='lbl'>Status</div></div>"
+        f"<div class='card'><div class='num'>{papel}</div><div class='lbl'>Papel</div></div>"
+        f"<div class='card'><div class='num'>⭐ {html.escape(plano)}</div><div class='lbl'>Plano</div></div>"
+        f"<div class='card'><div class='num'>{whats_cell}</div><div class='lbl'>WhatsApp</div></div></div>"
         + form
-        + "<section><h2>Ações</h2>" + acoes + "</section>"
-        + "<section><h2>Pedidos do cliente</h2><table>"
+        + financeiro
+        + plano_sec
+        + "<section id='pedidos'><h2>🛒 Pedidos do cliente</h2><table>"
         + "<tr><th>Quando</th><th>Cliente</th><th>Char</th><th>Qtd</th>"
         "<th>Valor</th><th>Mundo</th><th>E-mail</th><th>Status</th><th>Ações</th></tr>"
         + rows
         + "</table></section>"
+        + tickets_sec
+        + serv_sec
+        + nota_sec
+        + "<section><h2>Ações</h2>" + acoes + "</section>"
     )
     return _admin_page(user, "Cliente", body, "clientes")
 
@@ -1872,17 +2066,70 @@ def admin_cliente_editar(email):
         "mundo": (request.form.get("mundo") or "").strip()[:100],
         "role": (request.form.get("role") or "cliente")[:20],
     }
+    nota = (request.form.get("nota_interna") or "").strip()[:2000]
+    # Nota interna é fail-soft: se a coluna ainda não existir no Supabase,
+    # salva o resto e segue (sem 500).
+    tentativas = [{"nota_interna": nota}, {}] if nota else [{}]
+    for tentativa in tentativas:
+        try:
+            requests.post(
+                f"{SUPA_URL}/rest/v1/profiles?on_conflict=email",
+                headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+                json={"email": email_decoded, **payload, **tentativa},
+                timeout=15,
+            )
+            break
+        except Exception as exc:
+            msg = str(exc)
+            if tentativa and ("nota_interna" in msg or "PGRST" in msg or "column" in msg.lower()):
+                continue
+            return f"Falha: {exc}", 500
+    _audit(user, "cliente_editar", email_decoded)
+    return redirect(f"/admin/clientes/{email_decoded}")
+
+
+@bp.route("/admin/clientes/<email>/plano", methods=["POST"])
+def admin_cliente_plano(email):
+    """Alterar plano sem migration: basico=limpa vip, pro=vip+dias, master=role admin."""
+    user = _require_perm("gerenciar_clientes")
+    if not user:
+        return "Acesso restrito.", 403
+    if not _csrf_ok():
+        return "Requisição inválida (CSRF).", 403
+    from urllib.parse import unquote
+    email_decoded = unquote(email).lower()
+    plano = (request.form.get("plano") or "basico").strip().lower()
     try:
-        requests.post(
-            f"{SUPA_URL}/rest/v1/profiles?on_conflict=email",
-            headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
-            json={"email": email_decoded, **payload},
-            timeout=15,
-        )
-        _audit(user, "cliente_editar", email_decoded)
+        dias = int(re.sub(r"\D", "", request.form.get("dias") or "30") or 30)
+    except Exception:
+        dias = 30
+    dias = max(1, min(dias, 365))
+    try:
+        if plano == "master":
+            requests.post(
+                f"{SUPA_URL}/rest/v1/profiles?on_conflict=email",
+                headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+                json={"email": email_decoded, "role": "admin"},
+                timeout=15,
+            )
+        elif plano == "pro":
+            requests.post(
+                f"{SUPA_URL}/rest/v1/profiles?on_conflict=email",
+                headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+                json={"email": email_decoded, "vip_until": (datetime.utcnow() + timedelta(days=dias)).isoformat(timespec="seconds")},
+                timeout=15,
+            )
+        else:
+            requests.patch(
+                f"{SUPA_URL}/rest/v1/profiles?email=eq.{email_decoded}",
+                headers=_headers(),
+                json={"vip_until": None},
+                timeout=15,
+            )
+        _audit(user, f"cliente_plano_{plano}", f"{email_decoded} ({dias}d)" if plano == "pro" else email_decoded)
     except Exception as exc:
         return f"Falha: {exc}", 500
-    return redirect(f"/admin/clientes/{email_decoded}")
+    return redirect(f"/admin/clientes/{email_decoded}#plano")
 
 
 @bp.route("/admin/pagamentos", methods=["GET"])
@@ -2210,10 +2457,38 @@ _ITENS_AUTO_JS = """
   var nome = document.getElementById("item_name");
   var preco = document.getElementById("item_preco");
   var desc = document.getElementById("item_desc");
-  if (preco) preco.addEventListener("input", function () {
-    var v = preco.value.replace(/[^0-9.,R$% ]/gi, "");
-    if (v !== preco.value) preco.value = v;
-  });
+  if (preco) {
+    preco.addEventListener("input", function () {
+      var v = preco.value.replace(/[^0-9.,R$% ]/gi, "");
+      if (v !== preco.value) preco.value = v;
+    });
+    preco.addEventListener("blur", function () {
+      var f = brl(preco.value);
+      if (f) preco.value = f;
+    });
+    if (preco.value) {
+      var f0 = brl(preco.value);
+      if (f0) preco.value = f0;
+    }
+  }
+  function brl(v) {
+    v = String(v || "").replace(/[^0-9.,]/g, "");
+    if (!v) return "";
+    var n;
+    if (v.indexOf(",") >= 0) {
+      n = parseFloat(v.replace(/\./g, "").replace(",", "."));
+    } else if ((v.match(/\./g) || []).length > 1) {
+      n = parseFloat(v.replace(/\./g, ""));
+    } else if (v.indexOf(".") >= 0) {
+      n = parseFloat(v);
+    } else {
+      n = parseInt(v, 10);
+    }
+    if (isNaN(n)) return "";
+    var partes = n.toFixed(2).split(".");
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return "R$ " + partes[0] + "," + partes[1];
+  }
   if (!nome || !desc) return;
   var t = null;
   function busca() {

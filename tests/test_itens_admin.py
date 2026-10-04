@@ -160,10 +160,15 @@ class TestItensAdmin(unittest.TestCase):
 
     def test_preco_ok_aceita_moeda_e_vazio(self):
         self.assertTrue(painel._itens_preco_ok("R$ 35,00"))
+        self.assertTrue(painel._itens_preco_ok("R$ 1.500,00"))
         self.assertTrue(painel._itens_preco_ok("1500.50"))
         self.assertTrue(painel._itens_preco_ok(""))
         self.assertFalse(painel._itens_preco_ok("35ada"))
         self.assertFalse(painel._itens_preco_ok("vinte"))
+
+    def test_preco_tem_mascara_brl_no_form(self):
+        self.assertIn("R$ ", painel._ITENS_AUTO_JS)
+        self.assertIn('addEventListener("blur"', painel._ITENS_AUTO_JS)
 
     def test_desc_auto_do_banco_local(self):
         desc = painel._itens_desc_auto("Gnome Helmet")
