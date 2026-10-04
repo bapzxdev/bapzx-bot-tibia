@@ -350,5 +350,29 @@ class TestVoltarCards(unittest.TestCase):
         self.assertNotIn("_blank", corpo)
 
 
+class TestLarguraSite(unittest.TestCase):
+    # Site inteiro fluido (v2.10.35 bot + v2.10.37 painel): nenhum main/.content
+    # pode travar em 900/1080/1200px centralizado (aspecto comprimido no wide).
+    @classmethod
+    def setUpClass(cls):
+        bot.app.config["TESTING"] = True
+        bot.app.secret_key = "teste-largura-site"
+
+    def test_auth_layout_fluido(self):
+        self.assertNotIn("max-width: 1080px", bot.AUTH_LAYOUT)
+
+    def test_cliente_dash_css_fluido(self):
+        self.assertNotIn("max-width:1080px", bot._CLIENTE_DASH_CSS)
+
+    def test_dashboard_vendas_fluido(self):
+        with mock.patch.object(bot, "dashboard_allowed", lambda: True):
+            with mock.patch.object(bot.STORE, "list", lambda: []):
+                resp = bot.app.test_client().get("/dashboard")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertNotIn("max-width: 900px", corpo)
+        self.assertNotIn("max-width:900px", corpo)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

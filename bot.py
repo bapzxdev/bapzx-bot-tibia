@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.34"
+VERSION = "2.10.35"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -2372,7 +2372,7 @@ def dashboard():
 body {{ font-family: Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }}
 header {{ background: #1e293b; padding: 18px 24px; }}
 header h1 {{ margin: 0; font-size: 20px; }}
-main {{ padding: 24px; max-width: 900px; margin: 0 auto; }}
+main {{ padding: 24px 32px; max-width: none; margin: 0; }}
 .cards {{ display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }}
 .card {{ background: #1e293b; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 160px; }}
 .card .num {{ font-size: 26px; font-weight: bold; color: #4ade80; }}
@@ -2473,7 +2473,7 @@ header a:hover { color: #fff; }
 .brand { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 2px; color: #fff; }
 .brand span { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .brand-tag { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .4px; }
-main { padding: 26px 24px 46px; max-width: 1080px; margin: 0 auto; }
+main { padding: 26px 32px 46px; max-width: none; margin: 0; }
 label { display: block; margin-top: 12px; color: var(--muted); font-size: 13px; font-weight: 600; }
 input, select, textarea {
   width: 100%; margin-top: 5px; padding: 10px 12px;
@@ -3128,7 +3128,7 @@ border-radius:9px;cursor:pointer;align-items:center;justify-content:center;font-
 .c-crumb{font-size:12px;color:#5b6b82;margin-bottom:3px}
 .c-top-title h1{margin:0;font-size:20px;font-weight:700;font-family:'Sora',sans-serif;line-height:1.2}
 .c-top-actions{display:flex;align-items:center;gap:10px}
-.c-wrap main{padding:26px 24px 46px;max-width:1080px;margin:0 auto;width:100%}
+.c-wrap main{padding:26px 32px 46px;max-width:none;margin:0;width:100%}
 .c-wrap footer{margin-top:auto}
 .c-scrim{position:fixed;inset:0;background:rgba(2,6,17,.62);z-index:55;display:none}
 .c-scrim.show{display:block}
