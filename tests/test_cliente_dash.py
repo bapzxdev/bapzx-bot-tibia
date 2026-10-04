@@ -56,6 +56,7 @@ class TestClienteDash(unittest.TestCase):
         self.assertIn("Área do Cliente", corpo)
         self.assertNotIn("<nav class='nav'", corpo)
         self.assertNotIn("@@", corpo)
+        self.assertNotIn("_blank", corpo)
 
     def test_cliente_visao_geral_no_dash(self):
         resp = self._get("/cliente")
@@ -174,6 +175,7 @@ class TestClienteNovasPaginas(unittest.TestCase):
         self.assertIn(f"<a class='c-side-item active' href='{ativo_href}'", corpo)
         self.assertIn(f"<h1>{page_title}</h1>", corpo)
         self.assertNotIn("@@", corpo)
+        self.assertNotIn("_blank", corpo)
 
     def test_pagamentos_mostra_faturas(self):
         resp = self._get("/cliente/pagamentos")
@@ -266,6 +268,82 @@ class TestClienteNovasPaginas(unittest.TestCase):
         self._assert_dash(corpo, "/cliente/notificacoes", "Notificações")
         self.assertIn("Pagamento do pedido #5 confirmado.", corpo)
         self.assertIn("Complete seu perfil", corpo)
+
+
+
+
+class TestVoltarCards(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        bot.app.config["TESTING"] = True
+        bot.app.secret_key = "teste-voltar-cards"
+
+    def _get(self, path, extra=None):
+        patches = [
+            mock.patch.object(bot, "current_user", _user),
+            mock.patch.object(bot, "_mk_vip_ativo", lambda email: False),
+            mock.patch.object(bot, "_cliente_profile", lambda email: {}),
+            mock.patch.object(bot, "_cliente_tickets", lambda email: []),
+            mock.patch.object(bot.STORE, "list", lambda: []),
+            mock.patch.object(bot, "_marketplace_config", lambda: {"preco_vip": 12.99}),
+            mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []),
+            mock.patch.object(bot, "_mk_profile", lambda email: {}),
+            mock.patch.object(bot, "_cliente_servicos_meus", lambda wpp: []),
+            mock.patch.object(bot, "_cliente_servicos_catalogo", lambda: []),
+        ] + (extra or [])
+        for pc in patches:
+            pc.start()
+            self.addCleanup(pc.stop)
+        return bot.app.test_client().get(path)
+
+    def test_cards_dashboard(self):
+        for path in ("/cliente/pedidos", "/cliente/perfil", "/cliente/suporte",
+                     "/cliente/pagamentos", "/cliente/automacoes", "/cliente/bot",
+                     "/cliente/servicos", "/cliente/plano", "/cliente/notificacoes"):
+            resp = self._get(path)
+            self.assertEqual(resp.status_code, 200, path)
+            self.assertIn("Voltar ao Dashboard", resp.get_data(as_text=True), path)
+
+    def test_hub_sem_card(self):
+        resp = self._get("/cliente")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertNotIn("Voltar ao Dashboard", corpo)
+        self.assertNotIn("Voltar ao Suporte", corpo)
+
+    def test_detalhe_volta_ao_suporte(self):
+        ticket = {"id": 7, "criado_em": "2026-10-03T10:00:00", "assunto": "D",
+                  "mensagem": "Oi", "status": "aberto", "resposta": ""}
+
+        class _R:
+            status_code = 200
+
+            def json(self):
+                return [dict(ticket)]
+
+        extra = [
+            mock.patch.object(type(bot.STORE), "remote",
+                              new_callable=mock.PropertyMock, return_value=True),
+            mock.patch.object(bot.requests, "get", lambda *a, **k: _R()),
+        ]
+        resp = self._get("/cliente/suporte/7", extra)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Voltar ao Suporte", resp.get_data(as_text=True))
+
+    def test_troca_com_voltar_dashboard(self):
+        extra = [
+            mock.patch.object(bot, "_cliente_header", lambda user, x: "top-mock"),
+            mock.patch.object(bot, "_mk_ativo", lambda: True),
+            mock.patch.object(bot, "_mk_profile", lambda email: {}),
+            mock.patch.object(bot, "_marketplace_config", lambda: None),
+            mock.patch.object(bot, "_mk_minhas_listings", lambda email: []),
+            mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []),
+        ]
+        resp = self._get("/cliente/troca", extra)
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertIn("Voltar ao Dashboard", corpo)
+        self.assertNotIn("_blank", corpo)
 
 
 if __name__ == "__main__":

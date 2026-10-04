@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.32"
+VERSION = "2.10.33"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -2672,7 +2672,7 @@ tbody tr:hover { background: rgba(96,165,250,.06); }
     <a href="/privacidade">Política de Privacidade</a>
     <a href="/termos">Termos de Uso</a>
     <a href="/reembolso">Política de Reembolso</a>
-    <a href="@@WHATSAPP@@" rel="noopener" target="_blank">WhatsApp</a>
+    <a href="@@WHATSAPP@@" rel="noopener">WhatsApp</a>
   </div>
 </footer>
 </body>
@@ -3202,6 +3202,16 @@ def _cliente_dash_layout():
 _CLIENTE_DASH_LAYOUT = _cliente_dash_layout()
 
 
+def _voltar_card(titulo, subtitulo, botao, href):
+    """Card de voltar padrão (estilo VIP: título + descrição + botão ghost à
+    direita). Usa .welcome — proporcional em todas as páginas."""
+    return (
+        "<div class='welcome'><div><h2>" + html.escape(titulo) + "</h2>"
+        f"<p>{html.escape(subtitulo)}</p></div>"
+        f"<a class='btn ghost' href='{html.escape(href)}'>{html.escape(botao)}</a></div>"
+    )
+
+
 def _cliente_dash_page(title, page, active, user, body):
     nav = []
     for chave, rotulo, href, grupo in _CLIENTE_NAV_ITENS:
@@ -3571,11 +3581,11 @@ def cliente():
     acesso = (
         "<div class='panel'><div class='panel-hd'><h2>&#9889; Acesso rápido</h2></div>"
         "<div class='grid2'>"
-        f"<a class='help-card' target='_blank' rel='noopener' href='{PORTFOLIO_URL}'>"
+        f"<a class='help-card' rel='noopener' href='{PORTFOLIO_URL}'>"
         "<div class='h-ic' aria-hidden='true'>&#128722;</div>"
         "<div><div class='h-t'>Comprar RC</div>"
         "<div class='h-s'>Ver ofertas e fechar pedido</div></div></a>"
-        f"<a class='help-card' target='_blank' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>"
+        f"<a class='help-card' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>"
         "<div class='h-ic' aria-hidden='true'>&#128736;</div>"
         "<div><div class='h-t'>Solicitar serviço</div>"
         "<div class='h-s'>UP level e serviços no WhatsApp</div></div></a>"
@@ -3633,7 +3643,7 @@ def cliente():
         f"<div class='atv'><span aria-hidden='true'>{'&#128994;' if sistema_ok else '&#128993;'}</span>"
         f"<span>Sistema</span><span>{'Operacional' if sistema_ok else 'Em manutenção'}</span></div>"
         f"<div class='atv'><span aria-hidden='true'>&#128994;</span><span>Bot</span>"
-        f"<span><a target='_blank' rel='noopener' href='{TELEGRAM_BOT_LINK}'>Online</a></span></div>"
+        f"<span><a rel='noopener' href='{TELEGRAM_BOT_LINK}'>Online</a></span></div>"
         f"<div class='atv'><span aria-hidden='true'>{'&#128994;' if MP_ACCESS_TOKEN else '&#128993;'}</span>"
         f"<span>Pagamentos</span><span>{'Operacional' if MP_ACCESS_TOKEN else 'A configurar'}</span></div>"
         "<div class='atv'><span aria-hidden='true'>&#128994;</span><span>Entregas</span><span>Operacional</span></div>"
@@ -3690,7 +3700,7 @@ def cliente_pedidos():
             "<h3>Você ainda não possui pedidos</h3>"
             "<p>Quando você fechar uma compra no Telegram com o mesmo e-mail da sua conta, "
             "seus pedidos aparecem aqui.</p>"
-            "<a class='btn blue' target='_blank' rel='noopener' href='" + PORTFOLIO_URL + "'>Explorar serviços</a>"
+            "<a class='btn blue' rel='noopener' href='" + PORTFOLIO_URL + "'>Explorar serviços</a>"
             "</div>"
         )
     body = (
@@ -3700,6 +3710,8 @@ def cliente_pedidos():
         "<b>mesmo e-mail</b> da sua conta Google. Se faltar algum pedido, finalize "
         "a compra no Telegram usando esse e-mail no Pix.</p>"
     )
+    body = _voltar_card("Meus Pedidos", "Todos os seus pedidos em um só lugar.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Meus Pedidos", "Meus Pedidos", "pedidos", user, body)
 
 
@@ -3877,6 +3889,8 @@ def cliente_perfil():
         + _PERFIL_CSS
         + _PERFIL_JS
     )
+    body = _voltar_card("Meu Perfil", "Seus dados e preferências.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Meu perfil", "Meu Perfil", "perfil", user, body)
 
 
@@ -3956,6 +3970,8 @@ def cliente_suporte():
         + chamados
         + "</div>"
     )
+    body = _voltar_card("Suporte", "Atendimento e chamados.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Suporte", "Suporte", "suporte", user, body)
 
 
@@ -4004,6 +4020,8 @@ def cliente_suporte_detalhe(ticket_id):
         html.escape(str(ticket.get("mensagem") or "-")),
         resposta,
     )
+    body = _voltar_card(f"Chamado #{ticket.get('id')}", "Detalhes do atendimento.",
+                        "Voltar ao Suporte", "/cliente/suporte") + body
     return _cliente_dash_page("Chamado", "Suporte", "suporte", user, body)
 
 
@@ -4045,7 +4063,7 @@ def cliente_pagamentos():
             "<div class='em-ic' aria-hidden='true'>&#128176;</div>"
             "<h3>Nenhuma fatura ainda</h3>"
             "<p>Quando você comprar, seus pagamentos Pix aparecem aqui.</p>"
-            f"<a class='btn blue' target='_blank' rel='noopener' href='{PORTFOLIO_URL}'>Ver ofertas</a>"
+            f"<a class='btn blue' rel='noopener' href='{PORTFOLIO_URL}'>Ver ofertas</a>"
             "</div>"
         )
     body = (
@@ -4063,6 +4081,8 @@ def cliente_pagamentos():
         "<p class='note'>Pagamento via <b>Pix com confirmação automática</b> — "
         "o status muda sozinho após a compensação.</p>"
     )
+    body = _voltar_card("Pagamentos", "Suas faturas e cobranças Pix.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Pagamentos", "Pagamentos", "pagamentos", user, body)
 
 
@@ -4124,6 +4144,8 @@ def cliente_automacoes():
         "</form></div>"
         + _PERFIL_CSS
     )
+    body = _voltar_card("Automações", "Confirmações e avisos automáticos.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Automações", "Automações", "automacoes", user, body)
 
 
@@ -4145,8 +4167,8 @@ def cliente_bot():
             "<div class='h-t'>MARKTRADE</div>"
             "<div class='h-s'>Publique e negocie anúncios com destaque.</div></div>"
             "</div>"
-            f"<p style='margin-top:14px'><a class='btn' target='_blank' rel='noopener' href='{TELEGRAM_BOT_LINK}'>Abrir bot no Telegram</a> "
-            f"<a class='btn ghost' target='_blank' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>Falar no WhatsApp</a></p>"
+            f"<p style='margin-top:14px'><a class='btn' rel='noopener' href='{TELEGRAM_BOT_LINK}'>Abrir bot no Telegram</a> "
+            f"<a class='btn ghost' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>Falar no WhatsApp</a></p>"
             "</div>"
         )
     else:
@@ -4160,6 +4182,8 @@ def cliente_bot():
             "<a class='btn blue' href='/cliente/troca/vip'>Assinar VIP</a>"
             "</div></div>"
         )
+    corpo = _voltar_card("Meu Bot", "Atendimento automático no Telegram.",
+                         "Voltar ao Dashboard", "/cliente") + corpo
     return _cliente_dash_page("Meu Bot", "Meu Bot", "bot", user, corpo)
 
 
@@ -4206,7 +4230,7 @@ def cliente_servicos():
         cat_html = (
             "<div class='panel'><div class='panel-hd'><h2>&#128722; Contratar serviço</h2></div>"
             f"<div class='grid2'>{cards}</div>"
-            f"<p style='margin-top:12px'><a class='btn' target='_blank' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>Contratar no WhatsApp</a></p>"
+            f"<p style='margin-top:12px'><a class='btn' rel='noopener' href='{SERVICE_WHATSAPP_LINK}'>Contratar no WhatsApp</a></p>"
             "</div>"
         )
     else:
@@ -4215,6 +4239,8 @@ def cliente_servicos():
         "<div class='panel'><div class='panel-hd'><h2>&#128736; Meus serviços</h2></div>"
         + meus_html + "</div>" + cat_html
     )
+    body = _voltar_card("Meus Serviços", "Serviços contratados e catálogo.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Meus Serviços", "Meus Serviços", "servicos", user, body)
 
 
@@ -4272,6 +4298,8 @@ def cliente_plano():
         f"<p style='margin-top:14px'>{cta}</p>"
         "</div>" + hist_html
     )
+    body = _voltar_card("Meu Plano", "Assinatura, benefícios e cobranças.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Meu Plano", "Meu Plano", "plano", user, body)
 
 
@@ -4359,6 +4387,8 @@ def cliente_notificacoes():
         "<div class='panel'><div class='panel-hd'><h2>&#128276; Notificações</h2></div>"
         + corpo + "</div>"
     )
+    body = _voltar_card("Notificações", "Tudo que precisa da sua atenção.",
+                        "Voltar ao Dashboard", "/cliente") + body
     return _cliente_dash_page("Notificações", "Notificações", "notificacoes", user, body)
 
 
@@ -4664,8 +4694,8 @@ def cliente_troca():
         + "<div class='welcome'>"
         "<div><h2>MARKTRADE &#128176;</h2>"
         "<p>Troca de itens do Tibia — publique venda, compra ou troca e negocie entre jogadores.</p></div>"
-        f"<a class='btn' target='_blank' rel='noopener' href='{PORTFOLIO_URL}troca.html'>Ver anúncios públicos</a>"
-        "</div>"
+        f"<a class='btn' href='{PORTFOLIO_URL}troca.html'>Ver anúncios públicos</a>"
+        "<a class='btn ghost' href='/cliente'>Voltar ao Dashboard</a></div>"
         + _mk_consume_flash()
         + (
             "<div class='notice' style='color:#fbbf24'>Você está no <b>modo teste do dono</b> — "
@@ -4973,7 +5003,9 @@ def cliente_troca_pagar(lid):
         )
 
     body = (
-        "<div class='panel'>"
+        _voltar_card("Pagamento", "Conclua o Pix para ativar seu anúncio.",
+                     "Voltar ao MARKTRADE", "/cliente/troca")
+        + "<div class='panel'>"
         f"<div class='panel-hd'><h2>&#128179; Pagamento da publicação #{html.escape(str(lid or '-'))}</h2></div>"
         f"<p><b>{html.escape(str(listing.get('item_name') or '-'))}</b> · "
         f"{html.escape(_mk_tipo_lbl(listing.get('tipo_anuncio')))} · "
@@ -4984,7 +5016,6 @@ def cliente_troca_pagar(lid):
         + "<p class='legal-note'>Ao publicar, você concorda com nossos "
         "<a href='/termos'>Termos de Uso</a> e <a href='/privacidade'>Política de Privacidade</a> (LGPD)."
         "</div>"
-        "<p><a class='btn ghost' href='/cliente/troca'>Voltar ao MARKTRADE</a></p>"
     )
     return _page("Pagamento", "Área do Cliente", top, body)
 
