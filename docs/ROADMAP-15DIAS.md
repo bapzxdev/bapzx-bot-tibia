@@ -608,3 +608,7 @@ Dia 27 (03/10, v2.10.31, CLIENTE 10 ITENS - lista do dono) - mantidos Dashboard/
 Dia 27 (03/10, v2.10.32, DASH ENXUTO - 7 blocos + pagina Pedidos, referencia do dono) - /cliente: saudacao/conta, resumo 4 cards, atividade 3+2, acesso rapido, plano c/ barras reais, avisos top4, status c/ check STORE/MP; tabela full em /cliente/pedidos; feed em helper reusado. Sem migration. VERSION bot 2.10.32. Validado: test_cliente_dash 14 OK + regressao 105+26+17+13 OK. Pendente: commit+push e re-deploy Render.
 
 Dia 27 (03/10, v2.10.33, VOLTAR CARD + MESMA ABA - print do dono) - helper _voltar_card estilo VIP nas 11 paginas do cliente (hub sem card; detalhe->Suporte; pagar->MARKTRADE); zero target=_blank no bot.py (9) e no portfolio (10 pgs). VERSION bot 2.10.33. Validado: test_cliente_dash 18 OK + regressao 105+26+17+13 OK. Pendente: commit+push (bot+portfolio) e re-deploy Render.
+
+Dia 27 (03/10, v2.10.34, TROCA SIDEBAR - pedido do dono) - troca/pagar/vip no dash (sidebar sincronizada); MK CSS/JS intactos; _cliente_header legado. VERSION bot 2.10.34. Validado: dash 18 OK + regressao 105+26+17+13 OK. Pendente: commit+push e re-deploy Render.
+
+Dia 27 (04/10, LOJA - cards c/ contato + sem bloco interesse, pedido do dono c/ print) - itens.html: botoes WhatsApp/Telegram menores + legenda 'Venda feita pela bapzx'; sprite contain 120px pixelated; removidos bloco ANUNCIAR/COMPRAR COINS + linha previsao; sub atualizada. Portfolio only.
