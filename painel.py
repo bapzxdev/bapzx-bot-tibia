@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.37"
+VERSION = "2.10.38"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -817,7 +817,7 @@ body { font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color
 .card { background:#16203a; border:1px solid #1e2c40; border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:5px; }
 .card .num { font-size:22px; font-weight:800; color:#34d399; font-family:'Sora',sans-serif; line-height:1.1; }
 .card .lbl { font-size:12px; color:#8ea0b8; }
-section { background:#16203a; border:1px solid #1e2c40; border-radius:14px; padding:16px 18px; margin:14px 0; min-width:0; overflow-x:auto; }
+section { background:#16203a; border:1px solid #1e2c40; border-radius:14px; padding:14px 16px; margin:12px 0; min-width:0; overflow-x:auto; }
 section h2 { margin:0 0 10px; font-size:15px; }
 .chart-card .stat-chips, .chart-card table { min-width:0; }
 table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -879,12 +879,18 @@ dialog.dlg::backdrop { background:rgba(2,6,17,.62); backdrop-filter:blur(3px); -
   .dlg .acts { justify-content:stretch; }
   .dlg .acts form, .dlg .acts button { flex:1 1 auto; }
 }
-input, textarea, select { background:#0b1120; border:1px solid #2a3a52; color:#e2e8f0; border-radius:9px; padding:10px 12px; font-size:14px; width:100%; box-sizing:border-box; }
+input, textarea, select { background:#0b1120; border:1px solid #2a3a52; color:#e2e8f0; border-radius:9px; padding:9px 12px; font-size:14px; width:100%; box-sizing:border-box; }
 input:focus, textarea:focus, select:focus { outline:none; border-color:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.12); }
-label { display:block; font-size:13px; color:#8ea0b8; margin:12px 0 4px; }
+label { display:block; font-size:13px; color:#8ea0b8; margin:8px 0 4px; }
 img.preview { max-width:120px; border-radius:8px; border:1px solid #1e2c40; margin-bottom:8px; }
 .kicker { color:#34d399; font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
-.box { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.box { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.frow { display:grid; gap:10px 12px; margin:0 0 10px; }
+.frow>div { min-width:0; }
+.frow.c2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.frow.c3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media(max-width:900px){.frow.c3{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:640px){.frow.c2,.frow.c3{grid-template-columns:minmax(0,1fr);}}
 .notice { background:#0f2a22; border:1px solid #14532d; color:#4ade80; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
 .error { background:#2a1020; border:1px solid #7f1d1d; color:#f87171; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
 @media (max-width:1023px) {
@@ -1951,12 +1957,18 @@ def admin_cliente_detalhe(email):
         f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/editar'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
         f"<label>E-mail</label><input value='{html.escape(email_decoded)}' disabled>"
-        f"<label>Nome</label><input name='name' value='{html.escape(str(profile.get('name') or ''))}'>"
-        f"<label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(profile.get('whatsapp') or ''))}' placeholder='(19) 99999-9999'>"
-        f"<label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}'>"
-        f"<label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}'>"
-        f"<label>Cadastro</label><input value='{cadastro}' disabled>"
-        f"<label>Último acesso</label><input value='{ultimo}' disabled>"
+        "<div class='frow c2'>"
+        f"<div><label>Nome</label><input name='name' value='{html.escape(str(profile.get('name') or ''))}'></div>"
+        f"<div><label>WhatsApp</label><input name='whatsapp' value='{html.escape(str(profile.get('whatsapp') or ''))}' placeholder='(19) 99999-9999'></div>"
+        "</div>"
+        "<div class='frow c2'>"
+        f"<div><label>Personagem</label><input name='personagem' value='{html.escape(str(profile.get('personagem') or ''))}'></div>"
+        f"<div><label>Mundo</label><input name='mundo' value='{html.escape(str(profile.get('mundo') or ''))}'></div>"
+        "</div>"
+        "<div class='frow c2'>"
+        f"<div><label>Cadastro</label><input value='{cadastro}' disabled></div>"
+        f"<div><label>Último acesso</label><input value='{ultimo}' disabled></div>"
+        "</div>"
         "<label>Papel</label>"
         f"<select name='role'><option value='cliente' {'selected' if not profile.get('role') or profile.get('role') == 'cliente' else ''}>cliente</option>"
         f"<option value='admin' {'selected' if profile.get('role') == 'admin' else ''}>admin</option></select>"
@@ -1978,9 +1990,11 @@ def admin_cliente_detalhe(email):
         f"<p>Plano atual: <b>{html.escape(plano)}</b>" + (f" · VIP até {html.escape(_fmt_dt(vip_raw, 16))}" if vip_raw else "") + "</p>"
         f"<form method='post' action='/admin/clientes/{html.escape(email_decoded)}/plano'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>Alterar plano</label><select name='plano'><option value='basico'>Básico (Cliente)</option>"
-        "<option value='pro'>PRO (VIP 30 dias)</option><option value='master'>MASTER (admin)</option></select>"
-        "<label>Dias PRO (quando PRO)</label><input name='dias' value='30' inputmode='numeric'>"
+        "<div class='frow c2'>"
+        "<div><label>Alterar plano</label><select name='plano'><option value='basico'>Básico (Cliente)</option>"
+        "<option value='pro'>PRO (VIP 30 dias)</option><option value='master'>MASTER (admin)</option></select></div>"
+        "<div><label>Dias PRO (quando PRO)</label><input name='dias' value='30' inputmode='numeric'></div>"
+        "</div>"
         "<p style='margin-top:10px'><button class='btn' type='submit'>Aplicar plano</button></p></form>"
         "<p style='color:#64748b;font-size:12px'>Estrutura preparada: PRO usa vip_until; MASTER usa papel admin.</p></section>"
     )
@@ -3177,8 +3191,10 @@ def admin_usuario_novo():
         "<section><h2>Novo usuário</h2>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>E-mail</label><input name='email' type='email' required placeholder='usuario@email.com'>"
-        "<label>Nome</label><input name='nome' type='text' placeholder='Nome completo'>"
+        "<div class='frow c2'>"
+        "<div><label>E-mail</label><input name='email' type='email' required placeholder='usuario@email.com'></div>"
+        "<div><label>Nome</label><input name='nome' type='text' placeholder='Nome completo'></div>"
+        "</div>"
         "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
         "<p style='color:#8ea0b8;font-size:12px;margin-top:6px'>" + _cargos_desc_html() + "</p>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Criar usuário</button></p>"
@@ -3233,8 +3249,10 @@ def admin_usuario_detalhe(email):
         f"<p style='color:#8ea0b8;font-size:13px'>E-mail: <b>{html.escape(email)}</b></p>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\">"
-        "<label>Cargo</label><select name='cargo'>" + cargo_opts + "</select>"
+        "<div class='frow c2'>"
+        "<div><label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\"></div>"
+        "<div><label>Cargo</label><select name='cargo'>" + cargo_opts + "</select></div>"
+        "</div>"
         "<p style='color:#8ea0b8;font-size:12px;margin-top:6px'>" + _cargos_desc_html() + "</p>"
         f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='ativo' {checked}> Ativo</label>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
@@ -3557,9 +3575,11 @@ def admin_grupo_detalhe(gid):
         "<section><h2>Editar grupo</h2>"
         "<form method='post'>"
         f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-        "<label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\" required>"
+        "<div class='frow c2'>"
+        "<div><label>Nome</label><input name='nome' type='text' value=\"" + nome_val + "\" required></div>"
+        "<div><label>Ordem</label><input name='ordem' type='number' value='" + str(ordem_val) + "'></div>"
+        "</div>"
         "<label>Link (WhatsApp /wa.me/...)</label><input name='link' type='url' value=\"" + link_val + "\" placeholder='https://chat.whatsapp.com/...'>"
-        "<label>Ordem</label><input name='ordem' type='number' value='" + str(ordem_val) + "'>"
         f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='ativo' {checked}> Ativo</label>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button></p>"
         "</form></section>"
@@ -4321,9 +4341,11 @@ def admin_cupons():
             "<div><label>Limite de usos (0 = ilimitado)</label>"
             "<input name='limite_usos' type='number' min='0' value='0'></div>"
             "</div>"
-            f"<label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, None, 'Qualquer item')}</select>"
-            f"<label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, None, 'Qualquer serviço')}</select>"
-            f"<label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, None, 'Qualquer grupo')}</select>"
+            f"<div class='frow c3'>"
+            f"<div><label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, None, 'Qualquer item')}</select></div>"
+            f"<div><label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, None, 'Qualquer serviço')}</select></div>"
+            f"<div><label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, None, 'Qualquer grupo')}</select></div>"
+            "</div>"
             "<label style='display:flex;gap:8px;align-items:center;margin-top:8px'>"
             "<input type='checkbox' name='ativo' checked> Ativo</label>"
             "<p style='margin-top:14px'><button class='btn' type='submit'>Criar cupom</button></p>"
@@ -4425,9 +4447,11 @@ def admin_cupom_detalhe(cupom_id):
         "<div><label>Limite de usos (0 = ilimitado)</label>"
         f"<input name='limite_usos' type='number' min='0' value='{limite}'></div>"
         "</div>"
-        f"<label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, c.get('produto_id'), 'Qualquer item')}</select>"
-        f"<label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, c.get('servico_id'), 'Qualquer serviço')}</select>"
-        f"<label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, c.get('grupo_id'), 'Qualquer grupo')}</select>"
+        f"<div class='frow c3'>"
+        f"<div><label>Produto específico (opcional)</label><select name='produto_id'>{_cupons_select(itens, c.get('produto_id'), 'Qualquer item')}</select></div>"
+        f"<div><label>Serviço específico (opcional)</label><select name='servico_id'>{_cupons_select(servicos, c.get('servico_id'), 'Qualquer serviço')}</select></div>"
+        f"<div><label>Grupo específico (opcional)</label><select name='grupo_id'>{_cupons_select(grupos, c.get('grupo_id'), 'Qualquer grupo')}</select></div>"
+        "</div>"
         f"<label style='display:flex;gap:8px;align-items:center;margin-top:8px'>"
         f"<input type='checkbox' name='ativo' {checked}> Ativo</label>"
         "<p style='margin-top:14px'><button class='btn' type='submit'>Salvar</button> "

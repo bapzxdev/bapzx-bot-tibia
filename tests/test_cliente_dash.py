@@ -382,6 +382,18 @@ class TestLarguraSite(unittest.TestCase):
             self.assertNotIn("Voltar ao site", resp.get_data(as_text=True), path)
         self.assertIn("WhatsApp", client.get("/privacidade").get_data(as_text=True))
 
+    def test_logo_sidebar_iniciais(self):
+        self.assertIn("c-side-logo'>BZ<", bot._CLIENTE_DASH_LAYOUT)
+        self.assertNotIn("c-side-logo'>BAPZX", bot._CLIENTE_DASH_LAYOUT)
+
+    def test_form_publicar_largura_limitada(self):
+        self.assertIn("form.mk-form{max-width:920px}", bot._MK_FORM_CSS)
+
+    def test_css_cliente_compacto_com_frow(self):
+        self.assertIn("margin-top: 8px", bot.AUTH_LAYOUT)
+        self.assertIn(".frow.c2", bot.AUTH_LAYOUT)
+        self.assertIn(".frow.c3", bot.AUTH_LAYOUT)
+
     def test_dashboard_vendas_fluido(self):
         with mock.patch.object(bot, "dashboard_allowed", lambda: True):
             with mock.patch.object(bot.STORE, "list", lambda: []):

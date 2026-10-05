@@ -759,6 +759,29 @@ class TestMkBot(unittest.TestCase):
         self.assertIn(">Infernum I<", html)
         self.assertNotIn("tipo_pvp", html)
 
+    def test_publicar_grid_compacto_campos_preservados(self):
+        with mock.patch.object(bot, "current_user", lambda: {"email": "cliente@x.com"}), \
+             mock.patch.object(bot, "_mk_vip_ativo", lambda email: False), \
+             mock.patch.object(bot, "_mk_ativo", lambda: True), \
+             mock.patch.object(bot, "_mk_profile", lambda email: {}), \
+             mock.patch.object(bot, "_marketplace_config", lambda: None), \
+             mock.patch.object(bot, "_mk_minhas_listings", lambda email: []), \
+             mock.patch.object(bot, "_mk_meus_pagamentos", lambda email: []):
+            resp = bot.app.test_client().get("/cliente/troca")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.get_data(as_text=True)
+        # grid: item/personagem/mundo em 3 colunas; tipo+tier e preco+whats em 2
+        self.assertIn("mk-row c3", html)
+        self.assertEqual(html.count("mk-row c2"), 2)
+        # todos os campos, ids e nomes intactos (JS depende deles)
+        for agulha in ("name='item_name' id='item_name'", "name='character_name'",
+                       "name='world'", "name='tipo_anuncio'", "name='tier' id='mk_tier'",
+                       "name='modo_preco' id='mk_modo_preco'", "id='mk_bloco_preco'",
+                       "name='preco' id='mk_preco'", "name='contact'", "id='mk_contato'",
+                       "name='destaque'", "mk-publish-btn", "Publicar agora",
+                       "form.mk-form{max-width:920px}"):
+            self.assertIn(agulha, html)
+
     # ---------- POST /cliente/troca/publicar ----------
 
     def test_publicar_mundo_invalido_rejeita(self):

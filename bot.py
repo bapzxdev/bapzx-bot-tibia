@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.36"
+VERSION = "2.10.40"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -510,6 +510,7 @@ _MK_AC_SCRIPT = ("""
 
 _MK_FORM_CSS = """
 <style>
+form.mk-form{max-width:920px}
 .mk-seg{display:flex;gap:8px;margin:6px 0 10px}
 .mk-seg-opt{flex:1;padding:10px;border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;transition:.15s}
 .mk-seg-opt:hover{border-color:var(--purple)}
@@ -542,6 +543,18 @@ _MK_FORM_CSS = """
 .mk-seg-opt{color:#d7e2f2}
 .mk-seg-opt.on{color:#c4b5fd;border-color:var(--purple)}
 .mk-form .mk-destaque-note{color:#9fb2ca}
+.mk-form p{margin:8px 0}
+.mk-form label{margin:2px 0 5px}
+.mk-form input,.mk-form select{padding:9px 12px}
+.mk-form{min-width:0}
+.mk-row{display:grid;gap:10px 12px;margin:0 0 10px}
+.mk-row>div{min-width:0}
+.mk-row.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mk-row.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mk-seg{margin:4px 0 8px}
+.mk-destaque-box{padding:12px 14px}
+@media(max-width:900px){.mk-row.c3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.mk-row.c2,.mk-row.c3{grid-template-columns:minmax(0,1fr)}}
 </style>
 """
 
@@ -2474,9 +2487,15 @@ header a:hover { color: #fff; }
 .brand span { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .brand-tag { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .4px; }
 main { padding: 26px 32px 46px; max-width: none; margin: 0; }
-label { display: block; margin-top: 12px; color: var(--muted); font-size: 13px; font-weight: 600; }
+label { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.frow { display:grid; gap:10px 12px; margin:0 0 10px; }
+.frow>div { min-width:0; }
+.frow.c2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.frow.c3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media(max-width:900px){.frow.c3{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:640px){.frow.c2,.frow.c3{grid-template-columns:minmax(0,1fr);}}
 input, select, textarea {
-  width: 100%; margin-top: 5px; padding: 10px 12px;
+  width: 100%; margin-top: 5px; padding: 9px 12px;
   border: 1px solid var(--border-2); border-radius: 10px;
   background: var(--bg); color: var(--text); font-size: 14px; box-sizing: border-box;
   transition: border-color .15s;
@@ -3162,7 +3181,7 @@ def _cliente_dash_layout():
     corpo_novo = (
         "<div class='c-shell'>\n"
         "<aside class='c-sidebar' id='c-sidebar'>\n"
-        "  <div class='c-side-brand'><span class='c-side-logo'>BAPZX</span>"
+        "  <div class='c-side-brand'><span class='c-side-logo'>BZ</span>"
         "<span class='c-brand-name'>BAP<span>ZX</span></span></div>\n"
         "  <nav class='c-side-nav' aria-label='Navegação do cliente'>@@NAV@@</nav>\n"
         "  <div class='c-side-foot'>@@FOOT@@</div>\n"
@@ -4546,7 +4565,7 @@ def cliente_troca():
             + _MK_FORM_CSS
             + "<form method='post' action='/cliente/troca/publicar' class='mk-form'>"
             f"<input type='hidden' name='_csrf' value='{html.escape(_csrf_token())}'>"
-            "<div class='grid2'>"
+            "<div class='mk-row c3'>"
             "<div><label>Item *</label><input name='item_name' id='item_name' required maxlength='120' "
             "placeholder='Ex.: War Hammer' autocomplete='off'>"
             "<input type='hidden' name='sprite' id='mk_sprite_url' value=''>"
@@ -4558,15 +4577,17 @@ def cliente_troca():
             + "".join(f"<option value='{html.escape(m)}'>{html.escape(m)}</option>" for m in _MK_MUNDOS)
             + "</select></div>"
             "</div>"
-            "<label>Tipo de anúncio</label><select name='tipo_anuncio'>"
+            "<div class='mk-row c2'>"
+            "<div><label>Tipo de anúncio</label><select name='tipo_anuncio'>"
             "<option value='venda'>Vendendo</option>"
             "<option value='compra'>Comprando</option>"
             "<option value='troca'>Quer trocar</option>"
-            "</select>"
+            "</select></div>"
             "<div><label>Tier do item *</label><select name='tier' id='mk_tier'>"
             "<option value='0' selected>0 — Normal (sem upgrade)</option>"
             + "".join(f"<option value='{t}'>Tier {t}</option>" for t in range(1, 11))
             + "</select>"
+            "</div>"
             "</div>"
             "<label>Como quer negociar?</label>"
             "<div class='mk-seg'>"
@@ -4574,12 +4595,14 @@ def cliente_troca():
             "<button type='button' class='mk-seg-opt' data-target='aceito_ofertas'>Aceito ofertas</button>"
             "</div>"
             "<input type='hidden' name='modo_preco' id='mk_modo_preco' value='preco_fixo'>"
+            "<div class='mk-row c2'>"
             "<div id='mk_bloco_preco'><label>Preço em gp *</label>"
             "<input name='preco' id='mk_preco' type='text' inputmode='numeric' required placeholder='Ex.: 250000'></div>"
             "<div><label>WhatsApp com DDD *</label>"
             "<input name='contact' required id='mk_contato' maxlength='16' inputmode='numeric' "
             "autocomplete='tel' placeholder='(19) 98765-4321'>"
             "<p class='note' style='margin-top:2px'>Só aceitamos WhatsApp com DDD — ex.: <b>(19) 98765-4321</b>.</p></div>"
+            "</div>"
 "<p><label class='mk-destaque'>"
             "<input type='checkbox' name='destaque' value='1'>"
             "<span class='mk-destaque-box'>"
@@ -4590,7 +4613,7 @@ def cliente_troca():
             f"<b class='mk-destaque-price'>(+ {_mk_brl(preco_des)})</b></span>"
             "<span class='mk-destaque-note'>Fica no topo da lista pública do MARKTRADE com a tag de destaque.</span>"
             "</span></span></label></p>"
-            "<p style='margin-top:14px'><button class='btn mk-publish-btn' type='submit'>Publicar agora</button></p>"
+            "<p style='margin-top:10px'><button class='btn mk-publish-btn' type='submit'>Publicar agora</button></p>"
             "</form>"
             + _MK_AC_SCRIPT
             + _MK_FORM_JS

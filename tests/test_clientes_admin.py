@@ -256,6 +256,93 @@ class TestClientesAdmin(unittest.TestCase):
         self.assertNotIn("max-width:1200px", painel.LAYOUT_HEAD)
         self.assertIn(".content", painel.LAYOUT_HEAD)
 
+    def test_css_compacto_global_e_frow(self):
+        # Compacto em tudo: labels coladas + helpers frow.
+        self.assertIn("margin:8px 0 4px", painel.LAYOUT_HEAD)
+        self.assertIn(".frow.c2", painel.LAYOUT_HEAD)
+        self.assertIn(".frow.c3", painel.LAYOUT_HEAD)
+
+    def _login_admin(self, client):
+        with client.session_transaction() as s:
+            s["email"] = "admin@bapzx.com"
+            s["cargo"] = "ADMINISTRADOR"
+            s["perms"] = ["ALL"]
+            s["_csrf"] = "tokenteste"
+
+    def _base_patches(self):
+        return [
+            mock.patch.object(painel, "_sessao_ativa", lambda sid: True),
+            mock.patch.object(painel, "_notificacoes", lambda _u: ([], [], 0)),
+            mock.patch.object(painel, "ADMIN_IP_ALLOWLIST", ""),
+        ]
+
+    def test_form_cliente_detalhe_em_grid(self):
+        prof = {"email": "c@x.com", "name": "C", "role": "cliente",
+                "bloqueado": False, "created_at": "2026-09-01T10:00:00"}
+
+        def fake_fetch(table, select="*", order="", query="", range_="0-999"):
+            if table == "profiles":
+                return [dict(prof)]
+            return []
+
+        for p in self._base_patches():
+            p.start()
+            self.addCleanup(p.stop)
+        with mock.patch.object(painel, "_fetch", fake_fetch):
+            with mock.patch.object(painel, "_fetch_soft", lambda *a, **k: []):
+                with mock.patch.object(painel, "_ultimos_acessos", lambda: {}):
+                    client = bot.app.test_client()
+                    self._login_admin(client)
+                    resp = client.get("/admin/clientes/c@x.com")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertIn("frow c2", corpo)
+        for campo in ("name='name'", "name='whatsapp'", "name='personagem'",
+                      "name='mundo'", "name='role'", "name='nota_interna'",
+                      "name='plano'", "name='dias'"):
+            self.assertIn(campo, corpo)
+
+    def test_form_cupons_em_grid(self):
+        for p in self._base_patches():
+            p.start()
+            self.addCleanup(p.stop)
+        with mock.patch.object(painel, "_fetch_soft", lambda *a, **k: []):
+            with mock.patch.object(painel, "_cupons_lista_referencias",
+                                   lambda: ([], [], [])):
+                client = bot.app.test_client()
+                self._login_admin(client)
+                resp = client.get("/admin/cupons")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertIn("frow c3", corpo)
+        for campo in ("name='codigo'", "name='tipo'", "name='valor'",
+                      "name='validade'", "name='limite_usos'", "name='produto_id'",
+                      "name='servico_id'", "name='grupo_id'"):
+            self.assertIn(campo, corpo)
+
+    def test_form_usuarios_grupos_em_grid(self):
+        for p in self._base_patches():
+            p.start()
+            self.addCleanup(p.stop)
+        with mock.patch.object(painel, "_fetch_soft",
+                               lambda *a, **k: [{"id": 1, "nome": "G",
+                                                "link": "", "ativo": True,
+                                                "ordem": 1}]):
+                client = bot.app.test_client()
+                self._login_admin(client)
+                r1 = client.get("/admin/usuarios/novo")
+                r2 = client.get("/admin/grupos/1")
+        for resp in (r1, r2):
+            self.assertEqual(resp.status_code, 200)
+        c1 = r1.get_data(as_text=True)
+        self.assertIn("frow c2", c1)
+        for campo in ("name='email'", "name='nome'", "name='cargo'"):
+            self.assertIn(campo, c1)
+        c2 = r2.get_data(as_text=True)
+        self.assertIn("frow c2", c2)
+        for campo in ("name='nome'", "name='link'", "name='ordem'"):
+            self.assertIn(campo, c2)
+
     def test_editar_csrf_403(self):
         _login(self.client)
         with mock.patch.object(painel, "_audit", lambda *a, **k: None):
