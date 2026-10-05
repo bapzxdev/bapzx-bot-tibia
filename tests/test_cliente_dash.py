@@ -364,6 +364,24 @@ class TestLarguraSite(unittest.TestCase):
     def test_cliente_dash_css_fluido(self):
         self.assertNotIn("max-width:1080px", bot._CLIENTE_DASH_CSS)
 
+    def test_acesso_sem_voltar_ao_site(self):
+        with mock.patch.object(bot, "current_user",
+                               lambda: {"email": "c@x.com", "name": "C",
+                                         "cargo": "CLIENTE", "perms": []}):
+            resp = bot.app.test_client().get("/acesso")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertNotIn("Voltar ao site", corpo)
+        self.assertIn("Sair", corpo)
+
+    def test_legais_sem_voltar_ao_site(self):
+        client = bot.app.test_client()
+        for path in ("/privacidade", "/termos", "/reembolso"):
+            resp = client.get(path)
+            self.assertEqual(resp.status_code, 200, path)
+            self.assertNotIn("Voltar ao site", resp.get_data(as_text=True), path)
+        self.assertIn("WhatsApp", client.get("/privacidade").get_data(as_text=True))
+
     def test_dashboard_vendas_fluido(self):
         with mock.patch.object(bot, "dashboard_allowed", lambda: True):
             with mock.patch.object(bot.STORE, "list", lambda: []):

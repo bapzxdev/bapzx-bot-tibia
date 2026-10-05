@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.35"
+VERSION = "2.10.36"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -2803,9 +2803,7 @@ def _orders_rows(orders, with_actions=False):
 @app.route("/privacidade")
 def privacidade():
     top = (
-        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
-        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a> "
-        "<a href='https://wa.me/5519991813598' style='margin-left:8px' rel='noopener'>WhatsApp</a>"
+        "<a href='https://wa.me/5519991813598' rel='noopener'>WhatsApp</a>"
     )
     body, _ = legais._render_legal_page(
         "Política de Privacidade",
@@ -2820,10 +2818,7 @@ def privacidade():
 
 @app.route("/termos")
 def termos():
-    top = (
-        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
-        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a>"
-    )
+    top = ""
     body, _ = legais._render_legal_page(
         "Termos de Uso",
         legais.termos_html(),
@@ -2836,10 +2831,7 @@ def termos():
 
 @app.route("/reembolso")
 def reembolso():
-    top = (
-        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
-        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a>"
-    )
+    top = ""
     body, _ = legais._render_legal_page(
         "Política de Reembolso",
         legais.reembolso_html(),
@@ -2939,8 +2931,6 @@ def acesso():
     if not user:
         return redirect("/login")
     top = (
-        "<a href='" + PORTFOLIO_URL + "' style='padding:6px 12px;background:rgba(96,165,250,.12);"
-        "border-radius:6px;text-decoration:none;color:#60a5fa;font-size:13px'>Voltar ao site</a> "
         "<span style='color:#94a3b8;font-size:12px'>"
         f"Bem-vindo, {html.escape(user['name'])}</span> "
         "<a href='/logout' style='margin-left:8px'>Sair</a>"
