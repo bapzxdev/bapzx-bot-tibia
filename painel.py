@@ -21,7 +21,7 @@ except Exception:
 bp = Blueprint("painel", __name__)
 
 BRAND = "BAPZX"
-VERSION = "2.10.38"
+VERSION = "2.10.39"
 PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://bapzxdev.github.io/bapzx-portfolio/")
 
 _invalidate_coins_cache = lambda: None
@@ -724,7 +724,8 @@ body { font-family:'Inter',Arial,sans-serif; margin:0; background:#0b1120; color
 .shell { display:flex; min-height:100vh; }
 .sidebar { position:fixed; top:0; left:0; bottom:0; width:250px; background:#0e1626; border-right:1px solid #1e2c40; display:flex; flex-direction:column; z-index:50; }
 .side-brand { display:flex; align-items:center; gap:11px; padding:18px 18px 16px; border-bottom:1px solid #1e2c40; }
-.side-logo { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#34d399,#60a5fa); display:flex; align-items:center; justify-content:center; color:#04111b; font-weight:800; font-family:'Sora',sans-serif; font-size:12px; letter-spacing:1px; }
+.side-logo { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#34d399,#60a5fa); display:flex; align-items:center; justify-content:center; color:#04111b; font-weight:800; font-family:'Sora',sans-serif; font-size:12px; letter-spacing:1px; flex:none; }
+a.brand-home { display:flex; align-items:center; gap:11px; text-decoration:none; color:inherit; }
 .brand-name { font-family:'Sora',sans-serif; font-weight:800; letter-spacing:2px; font-size:15px; color:#fff; }
 .brand-name span { background:linear-gradient(135deg,#34d399,#60a5fa); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
 .side-nav { flex:1; overflow-y:auto; padding:14px 10px 8px; }
@@ -1018,8 +1019,8 @@ def _page(user, title, body, active=""):
     layout = (
         "<div class='shell'>"
         "<aside class='sidebar' id='sidebar'>"
-        "<div class='side-brand'><span class='side-logo'>BZ</span>"
-        "<span class='brand-name'>BAP<span>ZX</span></span></div>"
+        "<div class='side-brand'><a class='brand-home' href='" + PORTFOLIO_URL + "'><span class='side-logo'>BZ</span>"
+        "<span class='brand-name'>BAP<span>ZX</span></span></a></div>"
         "<nav class='side-nav' id='sidenav'>" + side_links + "</nav>"
         "<div class='side-foot'>" + side_foot + "</div>"
         "</aside>"

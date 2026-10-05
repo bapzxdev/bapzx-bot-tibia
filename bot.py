@@ -24,7 +24,7 @@ from acesso import rbac as rbac
 from legal import legais as legais
 from marktrade.dados.mk_itens import _MK_ITENS_DB
 
-VERSION = "2.10.40"
+VERSION = "2.10.41"
 
 BRAND = "BAPZX"
 STORE = "RUBINI COINS"
@@ -2485,6 +2485,7 @@ header a { color: var(--muted); font-size: 13px; text-decoration: none; }
 header a:hover { color: #fff; }
 .brand { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 2px; color: #fff; }
 .brand span { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+a.brand-home { text-decoration: none; color: inherit; }
 .brand-tag { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .4px; }
 main { padding: 26px 32px 46px; max-width: none; margin: 0; }
 label { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
@@ -2679,7 +2680,7 @@ tbody tr:hover { background: rgba(96,165,250,.06); }
 </head>
 <body>
 <header>
-  <h1><span class="brand">BAP<span>ZX</span></span> <span class="brand-tag">· @@BRAND@@</span></h1>
+  <h1><a class="brand-home" href="@@PORTFOLIO@@"><span class="brand">BAP<span>ZX</span></span></a> <span class="brand-tag">· @@BRAND@@</span></h1>
   @@TOP@@
 </header>
 <main class="fade-in">@@BODY@@</main>
@@ -2704,7 +2705,8 @@ def _render_layout(title, brand, top, body):
         .replace("@@BRAND@@", html.escape(brand))
         .replace("@@TOP@@", top)
         .replace("@@BODY@@", body)
-        .replace("@@WHATSAPP@@", SERVICE_WHATSAPP_LINK),
+        .replace("@@WHATSAPP@@", SERVICE_WHATSAPP_LINK)
+        .replace("@@PORTFOLIO@@", PORTFOLIO_URL),
         200,
         {"Content-Type": "text/html; charset=utf-8"},
     )
@@ -3118,6 +3120,7 @@ display:flex;flex-direction:column;z-index:60}
 justify-content:center;color:#04111b;font-weight:800;font-family:'Sora',sans-serif;font-size:11px;letter-spacing:1px;flex:none}
 .c-brand-name{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:2px;font-size:15px;color:#fff}
 .c-brand-name span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.c-brand-home{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit}
 .c-side-nav{flex:1;overflow-y:auto;padding:14px 10px 8px}
 .c-side-group{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#5b6b82;margin:16px 10px 6px;font-weight:600}
 .c-side-group:first-child{margin-top:2px}
@@ -3173,7 +3176,7 @@ def _cliente_dash_layout():
     base = AUTH_LAYOUT
     corpo_antigo = (
         "<header>\n"
-        '  <h1><span class="brand">BAP<span>ZX</span></span> <span class="brand-tag">· @@BRAND@@</span></h1>\n'
+        '  <h1><a class="brand-home" href="@@PORTFOLIO@@"><span class="brand">BAP<span>ZX</span></span></a> <span class="brand-tag">· @@BRAND@@</span></h1>\n'
         "  @@TOP@@\n"
         "</header>\n"
         '<main class="fade-in">@@BODY@@</main>'
@@ -3181,8 +3184,8 @@ def _cliente_dash_layout():
     corpo_novo = (
         "<div class='c-shell'>\n"
         "<aside class='c-sidebar' id='c-sidebar'>\n"
-        "  <div class='c-side-brand'><span class='c-side-logo'>BZ</span>"
-        "<span class='c-brand-name'>BAP<span>ZX</span></span></div>\n"
+        "  <div class='c-side-brand'><a class='c-brand-home' href='@@PORTFOLIO@@'><span class='c-side-logo'>BZ</span>"
+        "<span class='c-brand-name'>BAP<span>ZX</span></span></a></div>\n"
         "  <nav class='c-side-nav' aria-label='Navegação do cliente'>@@NAV@@</nav>\n"
         "  <div class='c-side-foot'>@@FOOT@@</div>\n"
         "</aside>\n"
@@ -3248,6 +3251,7 @@ def _cliente_dash_page(title, page, active, user, body):
         .replace("@@USER@@", _cliente_user_menu(user))
         .replace("@@BODY@@", body)
         .replace("@@WHATSAPP@@", SERVICE_WHATSAPP_LINK)
+        .replace("@@PORTFOLIO@@", PORTFOLIO_URL)
         .replace("@@TOP@@", ""),
         200,
         {"Content-Type": "text/html; charset=utf-8"},

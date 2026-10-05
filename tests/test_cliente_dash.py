@@ -394,6 +394,31 @@ class TestLarguraSite(unittest.TestCase):
         self.assertIn(".frow.c2", bot.AUTH_LAYOUT)
         self.assertIn(".frow.c3", bot.AUTH_LAYOUT)
 
+    def test_logo_topo_link_home(self):
+        # Todo BAPZX do topo volta p/ a primeira pagina (home do portfolio).
+        home = bot.PORTFOLIO_URL
+        self.assertIn("brand-home", bot.AUTH_LAYOUT)
+        self.assertIn("c-brand-home", bot._CLIENTE_DASH_LAYOUT)
+        client = bot.app.test_client()
+        r1 = client.get("/privacidade")
+        self.assertEqual(r1.status_code, 200)
+        c1 = r1.get_data(as_text=True)
+        self.assertIn("brand-home", c1)
+        self.assertIn(home, c1)
+        self.assertNotIn("@@PORTFOLIO@@", c1)
+        with mock.patch.object(bot, "current_user",
+                               lambda: {"email": "c@x.com", "name": "C",
+                                         "cargo": "CLIENTE", "perms": []}):
+            with mock.patch.object(bot, "_mk_vip_ativo", lambda email: False):
+                with mock.patch.object(bot, "_cliente_profile", lambda email: {}):
+                    with mock.patch.object(bot, "_cliente_tickets", lambda email: []):
+                        r2 = client.get("/cliente")
+        self.assertEqual(r2.status_code, 200)
+        c2 = r2.get_data(as_text=True)
+        self.assertIn("c-brand-home", c2)
+        self.assertIn(home, c2)
+        self.assertNotIn("@@PORTFOLIO@@", c2)
+
     def test_dashboard_vendas_fluido(self):
         with mock.patch.object(bot, "dashboard_allowed", lambda: True):
             with mock.patch.object(bot.STORE, "list", lambda: []):

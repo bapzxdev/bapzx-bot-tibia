@@ -302,6 +302,21 @@ class TestClientesAdmin(unittest.TestCase):
                       "name='plano'", "name='dias'"):
             self.assertIn(campo, corpo)
 
+    def test_logo_admin_link_home(self):
+        for p in self._base_patches():
+            p.start()
+            self.addCleanup(p.stop)
+        with mock.patch.object(painel, "_fetch_soft", lambda *a, **k: []):
+            with mock.patch.object(painel, "_cupons_lista_referencias",
+                                   lambda: ([], [], [])):
+                client = bot.app.test_client()
+                self._login_admin(client)
+                resp = client.get("/admin/cupons")
+        self.assertEqual(resp.status_code, 200)
+        corpo = resp.get_data(as_text=True)
+        self.assertIn("brand-home", corpo)
+        self.assertIn(painel.PORTFOLIO_URL, corpo)
+
     def test_form_cupons_em_grid(self):
         for p in self._base_patches():
             p.start()
